@@ -28,7 +28,7 @@ export default function LandingPage() {
       title: "Admin",
       icon: Shield,
       description: "Manage retailers, vouchers, and platform settings",
-      href: "/admin",
+      href: "/auth/admin",
       gradient: "linear-gradient(to bottom right, #3b82f6, #4f46e5)",
       textColor: "#e0f2fe",
       iconColor: "#3b82f6",
@@ -39,7 +39,7 @@ export default function LandingPage() {
       title: "Retailer",
       icon: Store,
       description: "Sell vouchers and manage your inventory",
-      href: "/retailer",
+      href: "/auth/retailer",
       gradient: "linear-gradient(to bottom right, #10b981, #16a34a)",
       textColor: "#d1fae5",
       iconColor: "#10b981",
@@ -50,7 +50,7 @@ export default function LandingPage() {
       title: "Agent",
       icon: Users,
       description: "Manage your retailer network and track commissions",
-      href: "/agent",
+      href: "/auth/agent",
       gradient: "linear-gradient(to bottom right, #f59e0b, #ea580c)",
       textColor: "#fef3c7",
       iconColor: "#f59e0b",
@@ -130,6 +130,19 @@ export default function LandingPage() {
             <Link href="#" style={{ color: "hsl(var(--muted-foreground))" }}>
               Support
             </Link>
+            <Link
+              href="/auth/admin"
+              style={{
+                padding: "0.35rem 0.75rem",
+                borderRadius: "0.375rem",
+                backgroundColor: "hsl(var(--primary))",
+                color: "hsl(var(--primary-foreground))",
+                fontWeight: "500",
+                fontSize: "0.875rem",
+              }}
+            >
+              Sign In
+            </Link>
           </div>
         </div>
       </header>
@@ -164,7 +177,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               The complete solution for managing and selling vouchers in South
-              Africa. Select your role below to get started.
+              Africa. Select your portal below to sign in or create an account.
             </motion.p>
           </div>
 
@@ -257,7 +270,7 @@ export default function LandingPage() {
                         color: "white",
                       }}
                     >
-                      Enter Portal
+                      Sign In
                     </span>
                     <div
                       style={{
@@ -301,7 +314,7 @@ export default function LandingPage() {
                 fontWeight: 600,
               }}
             >
-              Quick Access
+              Portal Access
             </h2>
             <div
               className="grid grid-cols-1 gap-4 md:grid-cols-3"
@@ -352,7 +365,7 @@ export default function LandingPage() {
                         color: "hsl(var(--muted-foreground))",
                       }}
                     >
-                      {role.title} Portal
+                      {role.title} Authentication
                     </div>
                   </div>
                 </Link>

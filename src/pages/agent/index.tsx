@@ -13,8 +13,21 @@ import {
 } from "@/components/ui/carousel";
 import { agents, retailers, getAgentCommissionSummary } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import useRequireRole from "@/hooks/useRequireRole";
 
 export default function AgentDashboard() {
+  // Protect this route - only allow agent role
+  const { isLoading } = useRequireRole("agent");
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
   // Get the first active agent for demo purposes
   const agent = agents.find((a) => a.status === "active") || agents[0];
 

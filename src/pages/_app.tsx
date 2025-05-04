@@ -4,10 +4,13 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { Layout } from "@/components/Layout";
 import { useRouter } from "next/router";
 import type { AppProps } from "next/app";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import supabase from "@/lib/supabaseClient";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const isLandingPage = router.pathname === "/";
+  const isAuthPage = router.pathname.startsWith("/auth/");
 
   // Determine user role based on URL path
   let role: "admin" | "retailer" | "agent" = "admin";
@@ -18,16 +21,18 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        {isLandingPage ? (
-          <Component {...pageProps} />
-        ) : (
-          <Layout role={role}>
+    <ThemeProvider attribute="class">
+      <SessionContextProvider supabaseClient={supabase}>
+        <ToastProvider>
+          {isLandingPage || isAuthPage ? (
             <Component {...pageProps} />
-          </Layout>
-        )}
-      </ToastProvider>
+          ) : (
+            <Layout role={role}>
+              <Component {...pageProps} />
+            </Layout>
+          )}
+        </ToastProvider>
+      </SessionContextProvider>
     </ThemeProvider>
   );
 }

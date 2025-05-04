@@ -12,8 +12,21 @@ import {
   CarouselDots,
 } from "@/components/ui/carousel";
 import { getTodaySales, retailers, agents } from "@/lib/MockData";
+import useRequireRole from "@/hooks/useRequireRole";
 
 export default function AdminDashboard() {
+  // Protect this route - only allow admin role
+  const { isLoading } = useRequireRole("admin");
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
   // Calculate dashboard metrics
   const todaySales = getTodaySales();
   const todaySalesTotal = todaySales.reduce(

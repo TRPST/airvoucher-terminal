@@ -6,6 +6,7 @@ import { StatsTile } from "@/components/ui/stats-tile";
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import { retailers, vouchers } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import useRequireRole from "@/hooks/useRequireRole";
 
 type VoucherCategoryProps = {
   name: string;
@@ -39,6 +40,18 @@ const VoucherCategory = ({
 );
 
 export default function RetailerPOS() {
+  // Protect this route - only allow retailer role
+  const { isLoading } = useRequireRole("retailer");
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
   // Get the first active retailer for demo purposes
   const retailer = retailers.find((r) => r.status === "active") || retailers[0];
 

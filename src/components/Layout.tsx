@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -18,6 +18,10 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+import {
+  useSupabaseClient,
+  useSessionContext,
+} from "@supabase/auth-helpers-react";
 
 import { cn } from "@/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -31,7 +35,16 @@ interface LayoutProps {
 
 export function Layout({ children, role = "admin" }: LayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const supabase = useSupabaseClient();
+  const { session } = useSessionContext();
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
 
   // Generate navigation items based on user role
   const getNavItems = (role: UserRole) => {
@@ -144,13 +157,23 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             <div className="mb-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">AirVoucher</h1>
-                <Link
-                  href="/"
-                  className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                  aria-label="Exit to landing page"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Link>
+                {session ? (
+                  <button
+                    onClick={handleSignOut}
+                    className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                ) : (
+                  <Link
+                    href="/"
+                    className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                    aria-label="Exit to landing page"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Link>
+                )}
               </div>
               <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
                 {role.charAt(0).toUpperCase() + role.slice(1)} Portal
@@ -192,13 +215,23 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold">AirVoucher</h1>
-              <Link
-                href="/"
-                className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                aria-label="Exit to landing page"
-              >
-                <LogOut className="h-5 w-5" />
-              </Link>
+              {session ? (
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                  aria-label="Sign out"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              ) : (
+                <Link
+                  href="/"
+                  className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                  aria-label="Exit to landing page"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Link>
+              )}
             </div>
             <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
               {role.charAt(0).toUpperCase() + role.slice(1)} Portal
