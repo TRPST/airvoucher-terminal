@@ -111,35 +111,9 @@ export default function AuthPage() {
             height: "4rem",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-start",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span
-              style={{
-                fontWeight: "bold",
-                fontSize: "1.5rem",
-                background:
-                  "linear-gradient(to right, hsl(var(--primary)), hsla(var(--primary), 0.7))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              AirVoucher
-            </span>
-            <span
-              style={{
-                borderRadius: "9999px",
-                backgroundColor: "hsla(var(--primary), 0.1)",
-                padding: "0.125rem 0.5rem",
-                fontSize: "0.75rem",
-                fontWeight: 500,
-                color: "hsl(var(--primary))",
-              }}
-            >
-              MVP
-            </span>
-          </div>
           <div
             style={{
               display: "flex",
@@ -227,9 +201,9 @@ export default function AuthPage() {
             }}
             providers={[]}
             redirectTo={role ? `/${role}` : "/"}
-            showLinks={true}
+            showLinks={false}
             view="sign_in"
-            magicLink={true}
+            magicLink={false}
             authOptions={{
               emailRedirectTo:
                 window?.location?.origin + (role ? `/${role}` : "/"),

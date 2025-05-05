@@ -18,10 +18,11 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import {
-  useSupabaseClient,
-  useSessionContext,
-} from "@supabase/auth-helpers-react";
+// Import Supabase client directly
+import supabase from "@/lib/supabaseClient";
+import * as Avatar from "@radix-ui/react-avatar";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { motion } from "framer-motion";
 
 import { cn } from "@/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -37,13 +38,43 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const supabase = useSupabaseClient();
-  const { session } = useSessionContext();
+  // State to manage user and session
+  const [user, setUser] = React.useState<any>(null);
+  const [session, setSession] = React.useState<any>(null);
+
+  // Fetch user session on component mount
+  React.useEffect(() => {
+    // Get current session
+    const fetchSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setUser(data.session?.user || null);
+
+      // Listen for auth changes
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        (event: string, currentSession: any) => {
+          setSession(currentSession);
+          setUser(currentSession?.user || null);
+        }
+      );
+
+      // Cleanup listener on unmount
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
+    };
+
+    fetchSession();
+  }, []);
 
   // Handle sign out
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   // Generate navigation items based on user role
@@ -76,6 +107,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             href: "/admin/reports",
             icon: FileText,
           },
+          // Profile removed from sidebar nav
         ];
       case "retailer":
         return [
@@ -112,6 +144,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             href: "/agent/commissions",
             icon: Percent,
           },
+          // Profile removed from sidebar nav
         ];
       default:
         return [];
@@ -157,23 +190,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             <div className="mb-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">AirVoucher</h1>
-                {session ? (
-                  <button
-                    onClick={handleSignOut}
-                    className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                    aria-label="Sign out"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </button>
-                ) : (
-                  <Link
-                    href="/"
-                    className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                    aria-label="Exit to landing page"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </Link>
-                )}
+                {/* Logout button removed from top of sidebar */}
+                <div className="w-8 h-5"></div>{" "}
+                {/* Spacer to maintain layout */}
               </div>
               <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
                 {role.charAt(0).toUpperCase() + role.slice(1)} Portal
@@ -197,6 +216,91 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                 </Link>
               ))}
             </nav>
+            {user && (
+              <div className="absolute bottom-16 left-4 right-4">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      className="w-full p-3 rounded-md flex items-center hover:bg-muted transition-colors outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 focus-visible:outline-none"
+                      aria-label="User menu"
+                      style={{
+                        outline: "none !important",
+                        border: "none !important",
+                      }}
+                    >
+                      <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground mr-3">
+                        <Avatar.Fallback>
+                          {user.email.charAt(0).toUpperCase()}
+                        </Avatar.Fallback>
+                      </Avatar.Root>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium truncate">
+                          {user.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </p>
+                      </div>
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      side="top"
+                      align="start"
+                      sideOffset={8}
+                      className="z-50 min-w-[200px] bg-background shadow-none overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 p-1 border-0 outline-none ring-0 focus:outline-none focus:border-0 focus:ring-0"
+                      style={{
+                        boxShadow: "none !important",
+                        outline: "none !important",
+                        border: "none !important",
+                        borderRadius: "0.375rem",
+                      }}
+                    >
+                      <DropdownMenu.Item
+                        className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
+                        onSelect={() => {
+                          // Navigate to profile based on role
+                          const profilePath =
+                            role === "retailer"
+                              ? "/retailer/account"
+                              : `/${role}/profile`;
+                          router.push(profilePath);
+                          setSidebarOpen(false); // Close sidebar after navigation
+                        }}
+                      >
+                        <motion.div
+                          className="flex items-center justify-between w-full"
+                          whileHover={{ scale: 1.01 }}
+                          transition={{ duration: 0.1, ease: "easeOut" }}
+                        >
+                          <div className="flex items-center">
+                            <User className="mr-3 h-5 w-5" />
+                            View Profile
+                          </div>
+                          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </motion.div>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
+                        onSelect={handleSignOut}
+                      >
+                        <motion.div
+                          className="flex items-center justify-between w-full"
+                          whileHover={{ scale: 1.01 }}
+                          transition={{ duration: 0.1, ease: "easeOut" }}
+                        >
+                          <div className="flex items-center">
+                            <LogOut className="mr-3 h-5 w-5" />
+                            Sign Out
+                          </div>
+                          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </motion.div>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              </div>
+            )}
             <div className="absolute bottom-4 left-4 right-4">
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
@@ -215,29 +319,16 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold">AirVoucher</h1>
-              {session ? (
-                <button
-                  onClick={handleSignOut}
-                  className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                  aria-label="Sign out"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
-              ) : (
-                <Link
-                  href="/"
-                  className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                  aria-label="Exit to landing page"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Link>
-              )}
+              {/* Logout button removed from top of sidebar */}
+              <div className="w-8 h-5"></div> {/* Spacer to maintain layout */}
             </div>
             <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
               {role.charAt(0).toUpperCase() + role.slice(1)} Portal
             </div>
           </div>
-          <nav className="mt-8 flex flex-1 flex-col space-y-1">
+          {/* User info removed from here - moved to bottom */}
+
+          <nav className="flex flex-1 flex-col space-y-1">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -262,7 +353,96 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               </Link>
             ))}
           </nav>
-          <div className="mt-auto pt-4 border-t border-border">
+          {/* Spacer to push user info and footer to bottom */}
+          <div className="flex-1"></div>
+
+          {/* User info placed at bottom of sidebar with drop-up menu */}
+          {user && (
+            <div className="mb-4 mt-auto">
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    className="w-full p-3 rounded-md flex items-center hover:bg-muted transition-colors outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 focus-visible:outline-none"
+                    aria-label="User menu"
+                    style={{
+                      outline: "none !important",
+                      border: "none !important",
+                    }}
+                  >
+                    <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground mr-3">
+                      <Avatar.Fallback>
+                        {user.email ? user.email.charAt(0).toUpperCase() : "U"}
+                      </Avatar.Fallback>
+                    </Avatar.Root>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium truncate">
+                        {user?.email || "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </p>
+                    </div>
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    side="top"
+                    align="start"
+                    sideOffset={8}
+                    className="z-50 min-w-[200px] bg-background shadow-none overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200 p-1 border-0 outline-none ring-0 focus:outline-none focus:border-0 focus:ring-0"
+                    style={{
+                      boxShadow: "none !important",
+                      outline: "none !important",
+                      border: "none !important",
+                      borderRadius: "0.375rem",
+                    }}
+                  >
+                    <DropdownMenu.Item
+                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
+                      onSelect={() => {
+                        // Navigate to profile based on role
+                        const profilePath =
+                          role === "retailer"
+                            ? "/retailer/account"
+                            : `/${role}/profile`;
+                        router.push(profilePath);
+                      }}
+                    >
+                      <motion.div
+                        className="flex items-center justify-between w-full"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                      >
+                        <div className="flex items-center">
+                          <User className="mr-3 h-5 w-5" />
+                          View Profile
+                        </div>
+                        <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </motion.div>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
+                      onSelect={handleSignOut}
+                    >
+                      <motion.div
+                        className="flex items-center justify-between w-full"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.1, ease: "easeOut" }}
+                      >
+                        <div className="flex items-center">
+                          <LogOut className="mr-3 h-5 w-5" />
+                          Sign Out
+                        </div>
+                        <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </motion.div>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-border">
             <div className="flex items-center justify-between">
               <div className="text-xs text-muted-foreground">
                 © 2025 AirVoucher
