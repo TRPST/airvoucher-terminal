@@ -3,14 +3,6 @@ import { Activity, DollarSign, Store, Users } from "lucide-react";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  CarouselDots,
-} from "@/components/ui/carousel";
 import { getTodaySales, retailers, agents } from "@/lib/MockData";
 import useRequireRole from "@/hooks/useRequireRole";
 
@@ -43,25 +35,6 @@ export default function AdminDashboard() {
   const activeAgents = agents.filter(
     (agent) => agent.status === "active"
   ).length;
-
-  // Announcements for the carousel
-  const announcements = [
-    {
-      title: "Welcome to Air Voucher Admin",
-      description:
-        "Manage your retailers, vouchers, and see real-time sales data all in one place.",
-    },
-    {
-      title: "New Voucher Upload",
-      description:
-        "Now supporting Capitec and Nedbank vouchers. Visit the vouchers page to upload your inventory.",
-    },
-    {
-      title: "Commission Structure Update",
-      description:
-        "Premium commission rates have been adjusted. Check the commissions page for details.",
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -104,30 +77,6 @@ export default function AdminDashboard() {
           intent="warning"
           subtitle={`${agents.length} total agents`}
         />
-      </div>
-
-      {/* Hero Carousel */}
-      <div className="relative rounded-lg bg-primary/5 p-6">
-        <h2 className="mb-4 text-lg font-medium">Announcements</h2>
-        <Carousel>
-          <CarouselContent>
-            {announcements.map((announcement, index) => (
-              <CarouselItem key={index} width="100%">
-                <div className="flex h-40 flex-col justify-center rounded-lg bg-card p-6 text-center">
-                  <h3 className="text-xl font-bold">{announcement.title}</h3>
-                  <p className="mt-2 text-muted-foreground">
-                    {announcement.description}
-                  </p>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
-          <div className="mt-4">
-            <CarouselDots />
-          </div>
-        </Carousel>
       </div>
 
       {/* Charts Section */}

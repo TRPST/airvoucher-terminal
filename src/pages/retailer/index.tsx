@@ -43,6 +43,16 @@ export default function RetailerPOS() {
   // Protect this route - only allow retailer role
   const { isLoading } = useRequireRole("retailer");
 
+  // Define all hooks before any conditional returns
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(
+    null
+  );
+  const [selectedValue, setSelectedValue] = React.useState<number | null>(null);
+  const [showConfetti, setShowConfetti] = React.useState(false);
+  const [showToast, setShowToast] = React.useState(false);
+  const [saleComplete, setSaleComplete] = React.useState(false);
+
   // Show loading state while checking authentication
   if (isLoading) {
     return (
@@ -52,17 +62,9 @@ export default function RetailerPOS() {
       </div>
     );
   }
+
   // Get the first active retailer for demo purposes
   const retailer = retailers.find((r) => r.status === "active") || retailers[0];
-
-  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
-  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(
-    null
-  );
-  const [selectedValue, setSelectedValue] = React.useState<number | null>(null);
-  const [showConfetti, setShowConfetti] = React.useState(false);
-  const [showToast, setShowToast] = React.useState(false);
-  const [saleComplete, setSaleComplete] = React.useState(false);
 
   // Voucher categories with their display properties
   const voucherCategories = [
