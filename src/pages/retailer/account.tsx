@@ -8,16 +8,107 @@ import {
   User,
   Mail,
   Phone,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "@supabase/auth-helpers-react";
 
 import { StatsTile } from "@/components/ui/stats-tile";
-import { retailers } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import { fetchMyRetailer, type RetailerProfile } from "@/actions";
+import useRequireRole from "@/hooks/useRequireRole";
 
 export default function RetailerAccount() {
-  // Get the first active retailer for demo purposes
-  const retailer = retailers.find((r) => r.status === "active") || retailers[0];
+  // Protect this route - only allow retailer role
+  const { isLoading } = useRequireRole("retailer");
+
+  // Get the current user from Supabase Auth
+  const session = useSession();
+  const userId = session?.user?.id;
+
+  // State for retailer data and loading/error states
+  const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [dataError, setDataError] = React.useState<string | null>(null);
+
+  // Fetch retailer data on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      if (!userId) return;
+
+      setIsDataLoading(true);
+      setDataError(null);
+
+      try {
+        // Fetch retailer profile
+        const { data: retailerData, error: retailerError } =
+          await fetchMyRetailer(userId);
+
+        if (retailerError) {
+          setDataError(
+            `Failed to load retailer profile: ${retailerError.message}`
+          );
+          return;
+        }
+
+        if (!retailerData) {
+          setDataError("No retailer profile found for this user");
+          return;
+        }
+
+        setRetailer(retailerData);
+      } catch (err) {
+        setDataError(
+          `Unexpected error: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, [userId]);
+
+  // Show loading state while checking authentication or loading data
+  if (isLoading || isDataLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show error state if any
+  if (dataError) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
+        <p className="max-w-md text-muted-foreground">{dataError}</p>
+      </div>
+    );
+  }
+
+  // If retailer data hasn't loaded, show appropriate message
+  if (!retailer) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-amber-500/10 p-3 text-amber-500">
+          <Building className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Account Not Found</h2>
+        <p className="max-w-md text-muted-foreground">
+          We couldn't find your retailer account. Please contact support for
+          assistance.
+        </p>
+      </div>
+    );
+  }
 
   // Bank details (mock data)
   const bankDetails = {
@@ -81,14 +172,14 @@ export default function RetailerAccount() {
         />
         <StatsTile
           label="Credit Used"
-          value={`R ${retailer.credit.toFixed(2)}`}
+          value={`R ${retailer.credit_used.toFixed(2)}`}
           icon={CreditCard}
           intent="warning"
           subtitle="Active credit amount"
         />
         <StatsTile
           label="Pending Commission"
-          value={`R ${retailer.commission.toFixed(2)}`}
+          value={`R ${retailer.commission_balance.toFixed(2)}`}
           icon={Percent}
           intent="info"
           subtitle="Ready for withdrawal"
@@ -115,7 +206,9 @@ export default function RetailerAccount() {
               <User className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Contact Person</p>
-                <p className="font-medium">{retailer.contact}</p>
+                <p className="font-medium">
+                  {retailer.profile?.full_name || "Not available"}
+                </p>
               </div>
             </div>
 
@@ -131,7 +224,9 @@ export default function RetailerAccount() {
               <Mail className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{retailer.email}</p>
+                <p className="font-medium">
+                  {retailer.profile?.email || "Not available"}
+                </p>
               </div>
             </div>
 
@@ -210,10 +305,10 @@ export default function RetailerAccount() {
               <div>
                 <h3 className="font-medium">Available for Withdrawal</h3>
                 <p className="text-xl font-bold text-primary">
-                  R {retailer.commission.toFixed(2)}
+                  R {retailer.commission_balance.toFixed(2)}
                 </p>
               </div>
-              {retailer.commission >= 100 ? (
+              {retailer.commission_balance >= 100 ? (
                 <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
                   Request Withdrawal
                 </button>
@@ -226,7 +321,7 @@ export default function RetailerAccount() {
                 </button>
               )}
             </div>
-            {retailer.commission < 100 && (
+            {retailer.commission_balance < 100 && (
               <p className="mt-2 text-xs text-muted-foreground">
                 You need a minimum of R100.00 to request a withdrawal.
               </p>

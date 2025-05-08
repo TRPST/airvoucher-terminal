@@ -1,11 +1,18 @@
 import * as React from "react";
 import { Wallet, CreditCard, Percent, Tags } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "@supabase/auth-helpers-react";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import TerminalSelector from "@/components/TerminalSelector";
-import { retailers, vouchers } from "@/lib/MockData";
+import {
+  fetchMyRetailer,
+  fetchAvailableVoucherTypes,
+  sellVoucher,
+  type RetailerProfile,
+  type VoucherType,
+} from "@/actions";
 import { cn } from "@/utils/cn";
 import useRequireRole from "@/hooks/useRequireRole";
 
@@ -44,7 +51,20 @@ export default function RetailerPOS() {
   // Protect this route - only allow retailer role
   const { isLoading } = useRequireRole("retailer");
 
-  // Define all hooks before any conditional returns
+  // Get the current user from Supabase Auth
+  const session = useSession();
+  const userId = session?.user?.id;
+
+  // State for retailer data and loading/error states
+  const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);
+  const [voucherTypes, setVoucherTypes] = React.useState<VoucherType[]>([]);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [dataError, setDataError] = React.useState<string | null>(null);
+  const [activeTerminalId, setActiveTerminalId] = React.useState<string | null>(
+    null
+  );
+
+  // Sale UI state
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(
     null
@@ -54,8 +74,72 @@ export default function RetailerPOS() {
   const [showToast, setShowToast] = React.useState(false);
   const [saleComplete, setSaleComplete] = React.useState(false);
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Sale process state
+  const [isSelling, setIsSelling] = React.useState(false);
+  const [saleError, setSaleError] = React.useState<string | null>(null);
+  const [saleInfo, setSaleInfo] = React.useState<{
+    pin: string;
+    serial_number?: string;
+  } | null>(null);
+
+  // Fetch retailer data and voucher types on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      if (!userId) return;
+
+      setIsDataLoading(true);
+      setDataError(null);
+
+      try {
+        // Fetch retailer profile
+        const { data: retailerData, error: retailerError } =
+          await fetchMyRetailer(userId);
+
+        if (retailerError) {
+          setDataError(
+            `Failed to load retailer profile: ${retailerError.message}`
+          );
+          return;
+        }
+
+        if (!retailerData) {
+          setDataError("No retailer profile found for this user");
+          return;
+        }
+
+        setRetailer(retailerData);
+
+        // Fetch available voucher types
+        const { data: voucherData, error: voucherError } =
+          await fetchAvailableVoucherTypes();
+
+        if (voucherError) {
+          setDataError(`Failed to load voucher types: ${voucherError.message}`);
+          return;
+        }
+
+        setVoucherTypes(voucherData || []);
+      } catch (err) {
+        setDataError(
+          `Unexpected error: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, [userId]);
+
+  // Terminal selection handler
+  const handleTerminalSelect = (terminalId: string) => {
+    setActiveTerminalId(terminalId);
+  };
+
+  // Show loading state while checking authentication or loading data
+  if (isLoading || isDataLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -64,42 +148,89 @@ export default function RetailerPOS() {
     );
   }
 
-  // Get the first active retailer for demo purposes
-  const retailer = retailers.find((r) => r.status === "active") || retailers[0];
+  // Show error state if any
+  if (dataError) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
+          <CreditCard className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
+        <p className="max-w-md text-muted-foreground">{dataError}</p>
+      </div>
+    );
+  }
 
-  // Voucher categories with their display properties
-  const voucherCategories = [
-    {
-      name: "Mobile",
-      icon: <CreditCard className="h-6 w-6" />,
-      color: "bg-blue-500/5 hover:bg-blue-500/10",
-    },
-    {
-      name: "OTT",
-      icon: <Tags className="h-6 w-6" />,
-      color: "bg-purple-500/5 hover:bg-purple-500/10",
-    },
-    {
-      name: "Hollywoodbets",
-      icon: <Wallet className="h-6 w-6" />,
-      color: "bg-green-500/5 hover:bg-green-500/10",
-    },
-    {
-      name: "Ringa",
-      icon: <CreditCard className="h-6 w-6" />,
-      color: "bg-amber-500/5 hover:bg-amber-500/10",
-    },
-    {
-      name: "EasyLoad",
-      icon: <Wallet className="h-6 w-6" />,
-      color: "bg-pink-500/5 hover:bg-pink-500/10",
-    },
-  ];
+  // If retailer data hasn't loaded or there's no active terminal, show appropriate message
+  if (!retailer) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-amber-500/10 p-3 text-amber-500">
+          <Wallet className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Account Not Found</h2>
+        <p className="max-w-md text-muted-foreground">
+          We couldn't find your retailer account. Please contact support for
+          assistance.
+        </p>
+      </div>
+    );
+  }
+
+  // Group voucher types by category
+  const voucherCategories = React.useMemo(() => {
+    // Get unique category names from start of voucher type name
+    const categoryNames = [
+      ...new Set(voucherTypes.map((vt) => vt.name.split(" ")[0])),
+    ];
+
+    // Create category objects with appropriate icons
+    return categoryNames.map((name, index) => {
+      let icon = <CreditCard className="h-6 w-6" />;
+      let color = "bg-blue-500/5 hover:bg-blue-500/10";
+
+      // Assign different icons and colors based on name or index
+      switch (name.toLowerCase()) {
+        case "mobile":
+        case "vodacom":
+        case "mtn":
+        case "telkom":
+          icon = <CreditCard className="h-6 w-6" />;
+          color = "bg-blue-500/5 hover:bg-blue-500/10";
+          break;
+        case "ott":
+        case "netflix":
+        case "showmax":
+          icon = <Tags className="h-6 w-6" />;
+          color = "bg-purple-500/5 hover:bg-purple-500/10";
+          break;
+        case "betting":
+        case "hollywoodbets":
+        case "betway":
+          icon = <Wallet className="h-6 w-6" />;
+          color = "bg-green-500/5 hover:bg-green-500/10";
+          break;
+        default:
+          // Use index for others to get a nice variety
+          const colors = [
+            "bg-amber-500/5 hover:bg-amber-500/10",
+            "bg-pink-500/5 hover:bg-pink-500/10",
+            "bg-teal-500/5 hover:bg-teal-500/10",
+            "bg-indigo-500/5 hover:bg-indigo-500/10",
+            "bg-red-500/5 hover:bg-red-500/10",
+          ];
+          color = colors[index % colors.length];
+          break;
+      }
+
+      return { name, icon, color };
+    });
+  }, [voucherTypes]);
 
   // Get vouchers for a specific category
   const getVouchersForCategory = (category: string) => {
-    return vouchers.filter(
-      (voucher) => voucher.type === category && voucher.stock > 0
+    return voucherTypes.filter(
+      (voucher) => voucher.name.startsWith(category) && voucher.count > 0
     );
   };
 
@@ -116,24 +247,75 @@ export default function RetailerPOS() {
   };
 
   // Handle sale confirmation
-  const handleConfirmSale = () => {
-    // In a real app, we would process the sale here
-    setShowConfirmDialog(false);
+  const handleConfirmSale = async () => {
+    if (!activeTerminalId || !selectedValue || !selectedCategory) {
+      setSaleError("Missing required information for sale");
+      return;
+    }
 
-    // Show confetti and toast for visual feedback
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 3000);
+    // Get the voucher type ID for the selected category and value
+    const selectedVoucher = voucherTypes.find(
+      (vt) =>
+        vt.name.startsWith(selectedCategory) && vt.amount === selectedValue
+    );
 
-    setSaleComplete(true);
-    setShowToast(true);
+    if (!selectedVoucher) {
+      setSaleError("Selected voucher not found");
+      return;
+    }
 
-    // Reset after a delay
-    setTimeout(() => {
-      setSelectedCategory(null);
-      setSelectedValue(null);
-      setSaleComplete(false);
-      setShowToast(false);
-    }, 4000);
+    setIsSelling(true);
+    setSaleError(null);
+
+    try {
+      const { data, error } = await sellVoucher({
+        terminalId: activeTerminalId,
+        voucherTypeId: selectedVoucher.id,
+      });
+
+      if (error) {
+        setSaleError(`Sale failed: ${error.message}`);
+        setShowConfirmDialog(false);
+        return;
+      }
+
+      setShowConfirmDialog(false);
+
+      // Store voucher info for display
+      if (data) {
+        setSaleInfo(data.voucher);
+      }
+
+      // Show confetti and toast for visual feedback
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+
+      setSaleComplete(true);
+      setShowToast(true);
+
+      // Refresh retailer data to show updated balance
+      if (userId) {
+        const { data: refreshedRetailer } = await fetchMyRetailer(userId);
+        if (refreshedRetailer) {
+          setRetailer(refreshedRetailer);
+        }
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setSelectedCategory(null);
+        setSelectedValue(null);
+        setSaleComplete(false);
+        setShowToast(false);
+        setSaleInfo(null);
+      }, 4000);
+    } catch (err) {
+      setSaleError(
+        `Unexpected error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setIsSelling(false);
+    }
   };
 
   return (
@@ -152,7 +334,10 @@ export default function RetailerPOS() {
           </p>
         </div>
         <div className="absolute top-0 right-0">
-          <TerminalSelector />
+          <TerminalSelector
+            retailerId={retailer.id}
+            onSelect={handleTerminalSelect}
+          />
         </div>
       </div>
 
@@ -167,14 +352,14 @@ export default function RetailerPOS() {
         />
         <StatsTile
           label="Credit Used"
-          value={`R ${retailer.credit.toFixed(2)}`}
+          value={`R ${retailer.credit_used.toFixed(2)}`}
           icon={CreditCard}
           intent="warning"
           subtitle="Active credit amount"
         />
         <StatsTile
           label="Commission Earned"
-          value={`R ${retailer.commission.toFixed(2)}`}
+          value={`R ${retailer.commission_balance.toFixed(2)}`}
           icon={Percent}
           intent="info"
           subtitle="Total earned to date"
@@ -218,14 +403,14 @@ export default function RetailerPOS() {
                 key={voucher.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleValueSelect(voucher.value)}
+                onClick={() => handleValueSelect(voucher.amount)}
                 className="flex flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
               >
                 <div className="mb-2 text-sm text-muted-foreground">
-                  {voucher.provider}
+                  {voucher.name}
                 </div>
                 <div className="text-2xl font-bold">
-                  R {voucher.value.toFixed(2)}
+                  R {voucher.amount.toFixed(2)}
                 </div>
               </motion.button>
             ))}
@@ -261,16 +446,19 @@ export default function RetailerPOS() {
                     R {selectedValue?.toFixed(2)}
                   </span>
                 </div>
-                {selectedCategory === "Mobile" && (
-                  <div className="flex justify-between border-t border-border py-2">
-                    <span className="text-sm text-muted-foreground">
-                      Provider:
-                    </span>
-                    <span className="font-medium">
-                      {getVouchersForCategory(selectedCategory)[0]?.provider}
-                    </span>
-                  </div>
-                )}
+                {/* Show voucher name if available */}
+                {selectedCategory &&
+                  getVouchersForCategory(selectedCategory).length > 0 && (
+                    <div className="flex justify-between border-t border-border py-2">
+                      <span className="text-sm text-muted-foreground">
+                        Voucher:
+                      </span>
+                      <span className="font-medium">
+                        {selectedCategory &&
+                          getVouchersForCategory(selectedCategory)[0]?.name}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between border-t border-border py-2">
                   <span className="text-sm text-muted-foreground">
                     Commission:

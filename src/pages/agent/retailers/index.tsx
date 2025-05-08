@@ -1,86 +1,107 @@
 import * as React from "react";
-import { Search, Users, ArrowUpDown, Filter } from "lucide-react";
+import { Search, Users, ArrowUpDown, Filter, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import {
-  agents,
-  retailers,
-  sales,
-  getAgentCommissionSummary,
-  type Sale,
-} from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchMyRetailers,
+  type AgentRetailer,
+  fetchAgentSummary,
+} from "@/actions";
 
 export default function AgentRetailers() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [sortBy, setSortBy] = React.useState<string>("name");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [retailers, setRetailers] = React.useState<AgentRetailer[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [summary, setSummary] = React.useState({
+    retailer_count: 0,
+    active_count: 0,
+    mtd_sales: 0,
+  });
 
-  // Get the first active agent for demo purposes
-  const agent = agents.find((a) => a.status === "active") || agents[0];
+  // Fetch retailer data
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        // In a real app, you would get the agent ID from context/auth
+        // For now, we'll use a placeholder - the backend will resolve the current user
+        const agentId = "current";
 
-  // Get this agent's retailers
-  const agentRetailers = retailers.filter((r) => r.agentId === agent.id);
+        const { data: retailersData, error: retailersError } =
+          await fetchMyRetailers(agentId);
+
+        if (retailersError) {
+          throw new Error(
+            `Failed to load retailers: ${retailersError.message}`
+          );
+        }
+
+        setRetailers(retailersData || []);
+
+        // Get summary data
+        const { data: summaryData, error: summaryError } =
+          await fetchAgentSummary(agentId);
+
+        if (summaryError) {
+          console.error("Error loading summary:", summaryError);
+          // Continue without summary data
+        } else if (summaryData) {
+          setSummary({
+            retailer_count: summaryData.retailer_count,
+            active_count: retailers.filter((r) => r.status === "active").length,
+            mtd_sales: summaryData.mtd_sales,
+          });
+        }
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load retailers"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   // Apply filters and sorting
-  const filteredRetailers = agentRetailers
-    .filter((retailer) => {
-      const matchesSearch =
-        retailer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        retailer.contact.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredRetailers = React.useMemo(() => {
+    return retailers
+      .filter((retailer) => {
+        const matchesSearch =
+          retailer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (retailer.location || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
 
-      const matchesStatus =
-        statusFilter === "all" || retailer.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "all" || retailer.status === statusFilter;
 
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        let comparison = 0;
 
-      if (sortBy === "name") {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === "balance") {
-        comparison = a.balance - b.balance;
-      } else if (sortBy === "commission") {
-        comparison = a.commission - b.commission;
-      } else if (sortBy === "status") {
-        comparison = a.status.localeCompare(b.status);
-      }
+        if (sortBy === "name") {
+          comparison = a.name.localeCompare(b.name);
+        } else if (sortBy === "balance") {
+          comparison = (a.balance || 0) - (b.balance || 0);
+        } else if (sortBy === "commission") {
+          comparison =
+            (a.commission_balance || 0) - (b.commission_balance || 0);
+        } else if (sortBy === "status") {
+          comparison = a.status.localeCompare(b.status);
+        }
 
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-  // Calculate MTD sales for each retailer
-  const retailerMtdSales = React.useMemo(() => {
-    // Get current month and year
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Create a map of retailer ID -> MTD sales value
-    const salesMap = new Map<string, number>();
-
-    // Process all sales
-    sales.forEach((sale: Sale) => {
-      const saleDate = new Date(sale.date);
-      // Check if sale is in current month
-      if (
-        saleDate.getMonth() === currentMonth &&
-        saleDate.getFullYear() === currentYear
-      ) {
-        const retailerId = sale.retailerId;
-        // Add sale value to the retailer's total
-        salesMap.set(
-          retailerId,
-          (salesMap.get(retailerId) || 0) + sale.voucherValue
-        );
-      }
-    });
-
-    return salesMap;
-  }, []);
+        return sortOrder === "asc" ? comparison : -comparison;
+      });
+  }, [retailers, searchTerm, statusFilter, sortBy, sortOrder]);
 
   // Format data for table
   const tableData = filteredRetailers.map((retailer) => ({
@@ -92,13 +113,13 @@ export default function AgentRetailers() {
         <div>
           <div className="font-medium">{retailer.name}</div>
           <div className="text-xs text-muted-foreground">
-            {retailer.contact}
+            {retailer.location || "No location"}
           </div>
         </div>
       </div>
     ),
-    "Sales (MTD)": `R ${(retailerMtdSales.get(retailer.id) || 0).toFixed(2)}`,
-    Commission: `R ${retailer.commission.toFixed(2)}`,
+    "Sales (MTD)": `R ${retailer.sales_count || 0}`,
+    Commission: `R ${(retailer.commission_balance || 0).toFixed(2)}`,
     Status: (
       <div className="flex items-center">
         <div
@@ -132,6 +153,38 @@ export default function AgentRetailers() {
       setSortOrder("asc");
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Loading retailers...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <div className="mb-4 text-xl font-semibold text-destructive">
+            Error
+          </div>
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -191,23 +244,18 @@ export default function AgentRetailers() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="text-muted-foreground">Total Retailers</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {agentRetailers.length}
-          </div>
+          <div className="mt-1 text-2xl font-semibold">{retailers.length}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="text-muted-foreground">Active Retailers</div>
           <div className="mt-1 text-2xl font-semibold text-green-600">
-            {agentRetailers.filter((r) => r.status === "active").length}
+            {retailers.filter((r) => r.status === "active").length}
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div className="text-muted-foreground">Total Commission</div>
-          <div className="mt-1 text-2xl font-semibold text-primary">
-            R{" "}
-            {agentRetailers
-              .reduce((sum, r) => sum + r.commission, 0)
-              .toFixed(2)}
+          <div className="text-muted-foreground">MTD Sales</div>
+          <div className="mt-1 text-2xl font-semibold">
+            R {retailers.reduce((sum, r) => sum + (r.sales_count || 0), 0)}
           </div>
         </div>
       </div>
@@ -216,9 +264,7 @@ export default function AgentRetailers() {
       <TablePlaceholder
         columns={["Retailer", "Sales (MTD)", "Commission", "Status", "Actions"]}
         data={tableData}
-        emptyMessage="No retailers found. Try adjusting your filters or search terms."
-        className="animate-fade-in"
-        size="lg"
+        emptyMessage="No retailers found. Try adjusting your filters."
       />
     </div>
   );

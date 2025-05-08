@@ -5,103 +5,135 @@ import {
   TrendingUp,
   DollarSign,
   Filter,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { agents, sales, type Sale } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchAgentStatements,
+  fetchAgentSummary,
+  type AgentStatement,
+} from "@/actions";
 
 export default function AgentCommissions() {
   const [filter, setFilter] = React.useState<"pending" | "paid">("pending");
   const [dateRange, setDateRange] = React.useState<
     "all" | "mtd" | "past30" | "past90"
   >("mtd");
+  const [statements, setStatements] = React.useState<AgentStatement[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [summary, setSummary] = React.useState({
+    total: 0,
+    pending: 0,
+    paid: 0,
+    count: 0,
+  });
 
-  // Get the first active agent for demo purposes
-  const agent = agents.find((a) => a.status === "active") || agents[0];
+  // Fetch agent statements
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
 
-  // Filter sales based on retailer association with this agent
-  const agentSales = React.useMemo(() => {
-    // In a real app, would use an API endpoint to get this data
-    return sales.filter((sale) => {
-      const retailer = sale.retailerId;
-      // Return only sales for this agent's retailers
-      return (
-        retailer.startsWith("r") &&
-        (retailer === "r1" || retailer === "r3" || retailer === "r6")
-      );
-    });
-  }, []);
+        // In a real app, you would get the agent ID from context/auth
+        // For now, we'll use a placeholder - the backend will resolve the current user
+        const agentId = "current";
 
-  // Apply date range filter
-  const filteredSales = React.useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        // Get date range for filtering
+        const startDate = getDateRangeStart(dateRange);
 
-    return agentSales.filter((sale) => {
-      const saleDate = new Date(sale.date);
+        // Fetch statements
+        const { data: statementsData, error: statementsError } =
+          await fetchAgentStatements(agentId, {
+            startDate: startDate ? startDate.toISOString() : undefined,
+          });
 
-      if (dateRange === "mtd") {
-        // Month to date
-        return (
-          saleDate.getMonth() === now.getMonth() &&
-          saleDate.getFullYear() === now.getFullYear()
+        if (statementsError) {
+          throw new Error(
+            `Failed to load statements: ${statementsError.message}`
+          );
+        }
+
+        setStatements(statementsData || []);
+
+        // Get summary data
+        const { data: summaryData, error: summaryError } =
+          await fetchAgentSummary(agentId);
+
+        if (summaryError) {
+          console.error("Error loading summary:", summaryError);
+          // Continue without summary data
+        } else if (summaryData) {
+          // For demo purposes, split the commission between pending and paid
+          // In a real app, this would come from the backend
+          const pending = summaryData.mtd_commission * 0.4;
+          const paid = summaryData.mtd_commission - pending;
+
+          setSummary({
+            total: summaryData.mtd_commission,
+            pending,
+            paid,
+            count: statementsData?.length || 0,
+          });
+        }
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load commission data"
         );
-      } else if (dateRange === "past30") {
-        // Past 30 days
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        return saleDate >= thirtyDaysAgo;
-      } else if (dateRange === "past90") {
-        // Past 90 days
-        const ninetyDaysAgo = new Date(today);
-        ninetyDaysAgo.setDate(today.getDate() - 90);
-        return saleDate >= ninetyDaysAgo;
+      } finally {
+        setIsLoading(false);
       }
+    }
 
-      // All time
-      return true;
-    });
-  }, [agentSales, dateRange]);
+    loadData();
+  }, [dateRange]);
 
-  // Calculate summary statistics
-  const summaryStats = React.useMemo(() => {
-    const total = filteredSales.reduce(
-      (sum, sale) => sum + sale.agentCommission,
-      0
-    );
-    const pendingAmount = total * 0.4; // For demo, 40% still pending
-    const paidAmount = total - pendingAmount;
-    const transactionCount = filteredSales.length;
+  // Helper function to get start date based on filter
+  function getDateRangeStart(
+    range: "all" | "mtd" | "past30" | "past90"
+  ): Date | null {
+    const now = new Date();
 
-    return {
-      total,
-      pending: pendingAmount,
-      paid: paidAmount,
-      count: transactionCount,
-    };
-  }, [filteredSales]);
+    switch (range) {
+      case "mtd":
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+      case "past30":
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        return thirtyDaysAgo;
+      case "past90":
+        const ninetyDaysAgo = new Date(now);
+        ninetyDaysAgo.setDate(now.getDate() - 90);
+        return ninetyDaysAgo;
+      case "all":
+      default:
+        return null; // No date filtering
+    }
+  }
+
+  // Apply filters
+  const filteredStatements = React.useMemo(() => {
+    // In a real app, we'd have a proper "pending" vs "paid" flag
+    // For demo purposes, we'll consider 40% of transactions as pending
+    const pendingCount = Math.floor(statements.length * 0.4);
+    const pendingStatements = statements.slice(0, pendingCount);
+    const paidStatements = statements.slice(pendingCount);
+
+    return filter === "pending" ? pendingStatements : paidStatements;
+  }, [statements, filter]);
 
   // Prepare table data
   const tableData = React.useMemo(() => {
-    // Separate into paid/pending for demo purposes
-    const pendingSales = filteredSales.slice(
-      0,
-      Math.floor(filteredSales.length * 0.4)
-    );
-    const paidSales = filteredSales.slice(
-      Math.floor(filteredSales.length * 0.4)
-    );
-
-    // Show either pending or paid based on filter
-    const displaySales = filter === "pending" ? pendingSales : paidSales;
-
-    return displaySales.map((sale) => {
+    return filteredStatements.map((statement) => {
       // Format date
-      const saleDate = new Date(sale.date);
-      const formattedDate = saleDate.toLocaleDateString("en-ZA", {
+      const statementDate = new Date(statement.created_at);
+      const formattedDate = statementDate.toLocaleDateString("en-ZA", {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -109,17 +141,10 @@ export default function AgentCommissions() {
 
       return {
         Date: formattedDate,
-        Retailer:
-          sale.retailerId === "r1"
-            ? "Soweto Corner Shop"
-            : sale.retailerId === "r3"
-            ? "Sandton Convenience"
-            : sale.retailerId === "r6"
-            ? "Pretoria Central Kiosk"
-            : "Unknown Retailer",
-        Type: sale.voucherType,
-        Value: `R ${sale.voucherValue.toFixed(2)}`,
-        Commission: `R ${sale.agentCommission.toFixed(2)}`,
+        Retailer: statement.retailer_name || "Unknown Retailer",
+        Type: statement.type || "Transaction",
+        Value: `R ${statement.amount.toFixed(2)}`,
+        Notes: statement.notes || "-",
         Status:
           filter === "pending" ? (
             <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500">
@@ -132,7 +157,38 @@ export default function AgentCommissions() {
           ),
       };
     });
-  }, [filteredSales, filter]);
+  }, [filteredStatements, filter]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Loading commission data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Error</h2>
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -149,21 +205,21 @@ export default function AgentCommissions() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsTile
           label="Total Commission"
-          value={`R ${summaryStats.total.toFixed(2)}`}
+          value={`R ${summary.total.toFixed(2)}`}
           icon={TrendingUp}
           intent="info"
-          subtitle={`${summaryStats.count} transactions`}
+          subtitle={`${summary.count} transactions`}
         />
         <StatsTile
           label="Paid Commission"
-          value={`R ${summaryStats.paid.toFixed(2)}`}
+          value={`R ${summary.paid.toFixed(2)}`}
           icon={DollarSign}
           intent="success"
           subtitle="Already paid out"
         />
         <StatsTile
           label="Pending Commission"
-          value={`R ${summaryStats.pending.toFixed(2)}`}
+          value={`R ${summary.pending.toFixed(2)}`}
           icon={Calendar}
           intent="warning"
           subtitle="Will be paid on next cycle"
@@ -200,70 +256,39 @@ export default function AgentCommissions() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as any)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="mtd">This Month</option>
-              <option value="past30">Past 30 Days</option>
-              <option value="past90">Past 90 Days</option>
-              <option value="all">All Time</option>
-            </select>
-          </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <select
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            value={dateRange}
+            onChange={(e) =>
+              setDateRange(
+                e.target.value as "all" | "mtd" | "past30" | "past90"
+              )
+            }
+          >
+            <option value="mtd">Month to Date</option>
+            <option value="past30">Past 30 Days</option>
+            <option value="past90">Past 90 Days</option>
+            <option value="all">All Time</option>
+          </select>
 
-          <button className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90">
+          <button className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted">
             <Download className="mr-2 h-4 w-4" />
             Export
           </button>
         </div>
       </motion.div>
 
-      {/* Commission Table */}
-      <TablePlaceholder
-        columns={["Date", "Retailer", "Type", "Value", "Commission", "Status"]}
-        data={tableData}
-        emptyMessage={`No ${filter} commissions found.`}
-        size="lg"
-        className="animate-fade-in"
-      />
-
-      <div className="mt-8 rounded-lg border border-border bg-card p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">
-          Commission Payout Schedule
-        </h2>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="text-sm font-medium">Next Payout Date</div>
-            <div className="text-2xl font-semibold text-primary">
-              15 May 2025
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Pending commission will be processed and paid on this date.
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4 flex flex-col gap-1.5">
-            <div className="text-sm font-medium">Payment Method</div>
-            <div className="text-base">Direct Bank Transfer</div>
-            <div className="text-sm text-muted-foreground">
-              Funds will be transferred to your registered bank account.
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4 flex flex-col gap-1.5">
-            <div className="text-sm font-medium">Payment Information</div>
-            <div className="text-base">First National Bank ●●●● 4567</div>
-            <div className="text-sm text-muted-foreground">
-              <button className="text-primary hover:underline">
-                Update payment details
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Table of transactions */}
+      <div>
+        <TablePlaceholder
+          columns={["Date", "Retailer", "Type", "Value", "Notes", "Status"]}
+          data={tableData}
+          emptyMessage={`No ${
+            filter === "pending" ? "pending" : "paid"
+          } commissions found for the selected date range.`}
+        />
       </div>
     </div>
   );

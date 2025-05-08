@@ -1,33 +1,83 @@
 import * as React from "react";
-import { Plus, Pencil, Percent, XCircle, Check } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Percent,
+  XCircle,
+  Check,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
-import { commissionGroups } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchCommissionGroups,
+  upsertCommissionRate,
+  type CommissionGroup,
+  type CommissionRate,
+} from "@/actions";
 
 export default function AdminCommissions() {
   const [editGroup, setEditGroup] = React.useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = React.useState(false);
+  const [commissionGroups, setCommissionGroups] = React.useState<
+    CommissionGroup[]
+  >([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // Local state to track edited values
   const [editedValues, setEditedValues] = React.useState<
     Record<string, Record<string, number>>
   >({});
 
+  // Fetch commission groups
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+
+        const { data, error: fetchError } = await fetchCommissionGroups();
+
+        if (fetchError) {
+          throw new Error(
+            `Failed to load commission groups: ${fetchError.message}`
+          );
+        }
+
+        setCommissionGroups(data || []);
+      } catch (err) {
+        console.error("Error loading commission data:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load commission groups"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
   // Initialize edit values when starting to edit
   const startEditing = (groupId: string) => {
     const group = commissionGroups.find((g) => g.id === groupId);
     if (!group) return;
 
+    // Convert the rates to a more convenient format for editing
+    const editValues: Record<string, number> = {};
+
+    group.rates.forEach((rate) => {
+      editValues[rate.voucher_type_name || ""] = rate.retailer_pct * 100;
+    });
+
     setEditedValues((prev) => ({
       ...prev,
-      [groupId]: {
-        Mobile: group.mobileRate * 100,
-        OTT: group.ottRate * 100,
-        Hollywoodbets: group.hollywoodbetsRate * 100,
-        Ringa: group.ringaRate * 100,
-        EasyLoad: group.easyloadRate * 100,
-      },
+      [groupId]: editValues,
     }));
 
     setEditGroup(groupId);
@@ -52,9 +102,61 @@ export default function AdminCommissions() {
   };
 
   // Save changes for a group
-  const saveChanges = (groupId: string) => {
-    // In a real app, we would save to the database here
-    setEditGroup(null);
+  const saveChanges = async (groupId: string) => {
+    try {
+      setIsSaving(true);
+
+      const group = commissionGroups.find((g) => g.id === groupId);
+      if (!group) return;
+
+      const edits = editedValues[groupId];
+
+      // Save each rate
+      for (const rate of group.rates) {
+        const voucherTypeName = rate.voucher_type_name || "";
+
+        if (edits[voucherTypeName] !== undefined) {
+          const newRetailerPct = edits[voucherTypeName] / 100; // Convert back to decimal
+
+          // Only update if the value has changed
+          if (newRetailerPct !== rate.retailer_pct) {
+            const { error } = await upsertCommissionRate(
+              groupId,
+              rate.voucher_type_id,
+              newRetailerPct,
+              rate.agent_pct // Keep agent percent the same
+            );
+
+            if (error) {
+              console.error(
+                `Error updating rate for ${voucherTypeName}:`,
+                error
+              );
+              // Continue with other updates
+            }
+          }
+        }
+      }
+
+      // Refresh commission groups
+      const { data: refreshedData } = await fetchCommissionGroups();
+      if (refreshedData) {
+        setCommissionGroups(refreshedData);
+      }
+
+      // Reset edit state
+      setEditGroup(null);
+      setEditedValues((prev) => {
+        const newValues = { ...prev };
+        delete newValues[groupId];
+        return newValues;
+      });
+    } catch (err) {
+      console.error("Error saving commission rates:", err);
+      // Show an error message to the user here
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Cancel editing
@@ -73,6 +175,37 @@ export default function AdminCommissions() {
   const formatPercentage = (value: number) => {
     return `${value.toFixed(2)}%`;
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Loading commission groups...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Error</h2>
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -118,13 +251,19 @@ export default function AdminCommissions() {
                 <div className="flex space-x-1">
                   <button
                     onClick={() => saveChanges(group.id)}
-                    className="rounded-full p-1.5 text-green-500 hover:bg-green-500/10"
+                    disabled={isSaving}
+                    className="rounded-full p-1.5 text-green-500 hover:bg-green-500/10 disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" />
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     onClick={() => cancelEditing(group.id)}
-                    className="rounded-full p-1.5 text-destructive hover:bg-destructive/10"
+                    disabled={isSaving}
+                    className="rounded-full p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                   >
                     <XCircle className="h-4 w-4" />
                   </button>
@@ -145,22 +284,16 @@ export default function AdminCommissions() {
                 <span className="w-24 text-right">Commission Rate</span>
               </div>
               <div className="space-y-3">
-                {[
-                  { type: "Mobile", rate: group.mobileRate * 100 },
-                  { type: "OTT", rate: group.ottRate * 100 },
-                  {
-                    type: "Hollywoodbets",
-                    rate: group.hollywoodbetsRate * 100,
-                  },
-                  { type: "Ringa", rate: group.ringaRate * 100 },
-                  { type: "EasyLoad", rate: group.easyloadRate * 100 },
-                ].map(({ type, rate }) => (
-                  <div key={type} className="flex items-center justify-between">
+                {group.rates.map((rate) => (
+                  <div
+                    key={rate.id}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Percent className="h-3.5 w-3.5" />
                       </div>
-                      <span className="text-sm">{type}</span>
+                      <span className="text-sm">{rate.voucher_type_name}</span>
                     </div>
 
                     {/* Edit mode */}
@@ -171,9 +304,17 @@ export default function AdminCommissions() {
                           min="0"
                           max="100"
                           step="0.01"
-                          value={editedValues[group.id]?.[type] || 0}
+                          value={
+                            editedValues[group.id]?.[
+                              rate.voucher_type_name || ""
+                            ] || 0
+                          }
                           onChange={(e) =>
-                            handleRateChange(group.id, type, e.target.value)
+                            handleRateChange(
+                              group.id,
+                              rate.voucher_type_name || "",
+                              e.target.value
+                            )
                           }
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         />
@@ -185,18 +326,35 @@ export default function AdminCommissions() {
                       <div
                         className={cn(
                           "rounded-md px-2 py-1 text-right text-sm",
-                          rate > 2 ? "text-green-500" : "text-amber-500"
+                          rate.retailer_pct > 0.02
+                            ? "text-green-500"
+                            : "text-amber-500"
                         )}
                       >
-                        {formatPercentage(rate)}
+                        {formatPercentage(rate.retailer_pct * 100)}
                       </div>
                     )}
                   </div>
                 ))}
+
+                {group.rates.length === 0 && (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    No commission rates defined for this group
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
         ))}
+
+        {commissionGroups.length === 0 && (
+          <div className="col-span-full rounded-lg border border-border bg-card p-8 text-center">
+            <p className="text-muted-foreground">
+              No commission groups found. Create your first group to get
+              started.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Add Commission Group Dialog */}

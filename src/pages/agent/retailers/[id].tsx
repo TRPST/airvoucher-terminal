@@ -9,70 +9,120 @@ import {
   Calendar,
   ChevronLeft,
   Award,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import {
-  retailers,
-  agents,
-  sales,
-  getRetailerById,
-  getSalesByRetailerId,
-  getRetailerSalesSummary,
-  type Sale,
-} from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchMyRetailers,
+  fetchAgentStatements,
+  type AgentRetailer,
+  type AgentStatement,
+} from "@/actions";
 
 export default function RetailerDetail() {
   const router = useRouter();
   const { id } = router.query;
 
-  // Get retailer data
-  const retailer = React.useMemo(() => {
-    // In a real app, we'd use the actual ID from the URL
-    // For demo purposes, either use the ID or fallback to the first retailer
-    const retailerId = typeof id === "string" ? id : "r1";
-    return getRetailerById(retailerId) || retailers[0];
+  const [retailer, setRetailer] = React.useState<AgentRetailer | null>(null);
+  const [sales, setSales] = React.useState<AgentStatement[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [mtdSummary, setMtdSummary] = React.useState({
+    mtdSales: 0,
+    mtdCommission: 0,
+    ytdSales: 0,
+  });
+
+  // Fetch retailer data
+  React.useEffect(() => {
+    async function loadRetailerData() {
+      if (typeof id !== "string") return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // In a real app, you would get the agent ID from context/auth
+        // For now, we'll use a placeholder - the backend will resolve the current user
+        const agentId = "current";
+
+        // Fetch retailer info
+        const { data: retailersData, error: retailersError } =
+          await fetchMyRetailers(agentId);
+
+        if (retailersError) {
+          throw new Error(`Failed to load retailer: ${retailersError.message}`);
+        }
+
+        const foundRetailer = retailersData?.find((r) => r.id === id) || null;
+
+        if (!foundRetailer) {
+          throw new Error("Retailer not found");
+        }
+
+        setRetailer(foundRetailer);
+
+        // Fetch sales/transactions for this retailer
+        const { data: salesData, error: salesError } =
+          await fetchAgentStatements(agentId, {});
+
+        if (salesError) {
+          console.error("Error loading sales:", salesError);
+          // Continue with partial data
+        } else {
+          // Filter sales for this retailer
+          const retailerSales =
+            salesData?.filter(
+              (sale) => sale.retailer_name === foundRetailer.name
+            ) || [];
+          setSales(retailerSales);
+
+          // Calculate MTD/YTD figures
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+
+          const mtdSales = retailerSales.filter((sale) => {
+            const saleDate = new Date(sale.created_at);
+            return (
+              saleDate.getMonth() === currentMonth &&
+              saleDate.getFullYear() === currentYear
+            );
+          });
+
+          const ytdSales = retailerSales.filter((sale) => {
+            const saleDate = new Date(sale.created_at);
+            return saleDate.getFullYear() === currentYear;
+          });
+
+          setMtdSummary({
+            mtdSales: mtdSales.length,
+            mtdCommission: mtdSales.reduce((sum, sale) => sum + sale.amount, 0),
+            ytdSales: ytdSales.length,
+          });
+        }
+      } catch (err) {
+        console.error("Error in retailer details:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load retailer data"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadRetailerData();
   }, [id]);
 
-  // Get the agent for this retailer
-  const agent = React.useMemo(() => {
-    return agents.find((a) => a.id === retailer.agentId);
-  }, [retailer]);
-
-  // Get sales for this retailer
-  const retailerSales = React.useMemo(() => {
-    return getSalesByRetailerId(retailer.id).slice(0, 10); // Get latest 10 sales
-  }, [retailer.id]);
-
-  // Get sales summary
-  const salesSummary = React.useMemo(() => {
-    return getRetailerSalesSummary(retailer.id);
-  }, [retailer.id]);
-
-  // Calculate MTD commission
-  const mtdCommission = React.useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    return retailerSales
-      .filter((sale) => {
-        const saleDate = new Date(sale.date);
-        return (
-          saleDate.getMonth() === currentMonth &&
-          saleDate.getFullYear() === currentYear
-        );
-      })
-      .reduce((sum, sale) => sum + sale.agentCommission, 0);
-  }, [retailerSales]);
-
   // Format sales data for the table
-  const recentActivityData = retailerSales.map((sale) => {
-    const saleDate = new Date(sale.date);
+  const recentActivityData = sales.slice(0, 10).map((sale) => {
+    const saleDate = new Date(sale.created_at);
 
     return {
       Date: saleDate.toLocaleDateString("en-ZA", {
@@ -84,9 +134,9 @@ export default function RetailerDetail() {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      Type: sale.voucherType,
-      Value: `R ${sale.voucherValue.toFixed(2)}`,
-      Commission: `R ${sale.agentCommission.toFixed(2)}`,
+      Type: sale.type || "Transaction",
+      Value: `R ${sale.amount.toFixed(2)}`,
+      Notes: sale.notes || "-",
     };
   });
 
@@ -105,6 +155,58 @@ export default function RetailerDetail() {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 },
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Loading retailer details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Error</h2>
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <button
+            onClick={() => router.push("/agent/retailers")}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Back to Retailers
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
+  if (!retailer) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <Users className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+          <h2 className="mb-2 text-xl font-semibold">Retailer Not Found</h2>
+          <p className="mb-4 text-muted-foreground">
+            The retailer you are looking for doesn't exist or has been removed.
+          </p>
+          <button
+            onClick={() => router.push("/agent/retailers")}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Back to Retailers
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -163,33 +265,25 @@ export default function RetailerDetail() {
           <div className="space-y-3">
             <div className="flex items-start gap-2 text-sm">
               <Mail className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <span>{retailer.email}</span>
+              <span>{retailer.location || "No contact info"}</span>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Phone className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <span>{retailer.contact}</span>
+              <span>{retailer.location || "No phone"}</span>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Calendar className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <span>
-                Joined{" "}
-                {new Date(retailer.createdAt).toLocaleDateString("en-ZA", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
+              <span>Balance: R {retailer.balance.toFixed(2)}</span>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Users className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <span>Managed by {agent?.name || "Unassigned"}</span>
+              <span>
+                Commission Balance: R {retailer.commission_balance.toFixed(2)}
+              </span>
             </div>
             <div className="flex items-start gap-2 text-sm">
               <Award className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <span>
-                {retailer.terminals.length} Active Terminal
-                {retailer.terminals.length !== 1 ? "s" : ""}
-              </span>
+              <span>{retailer.sales_count || 0} Sales this month</span>
             </div>
           </div>
         </motion.div>
@@ -198,100 +292,57 @@ export default function RetailerDetail() {
         <motion.div variants={itemVariants} className="space-y-4 lg:col-span-2">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatsTile
-              label="Available Balance"
-              value={`R ${retailer.balance.toFixed(2)}`}
-              intent="info"
-              subtitle="Current retailer balance"
-            />
-            <StatsTile
-              label="Sales (MTD)"
-              value={`R ${salesSummary.todayValue.toFixed(2)}`}
+              icon={Activity}
+              label="MTD Sales"
+              value={mtdSummary.mtdSales.toString()}
+              subtitle="This month"
               intent="success"
-              subtitle={`${salesSummary.todayCount} transactions today`}
             />
             <StatsTile
-              label="My Commission"
-              value={`R ${mtdCommission.toFixed(2)}`}
-              intent="warning"
-              subtitle="Agent earnings from this retailer"
+              icon={TrendingUp}
+              label="MTD Commission"
+              value={`R ${mtdSummary.mtdCommission.toFixed(2)}`}
+              subtitle="This month"
+              intent="primary"
+            />
+            <StatsTile
+              icon={Users}
+              label="YTD Sales"
+              value={mtdSummary.ytdSales.toString()}
+              subtitle="This year"
+              intent="info"
             />
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <ChartPlaceholder
-              title="Sales Trend"
-              description="Monthly sales performance for this retailer"
-              height="sm"
-            />
-          </motion.div>
+          {/* Sales Chart */}
+          <div className="overflow-hidden rounded-lg border border-border bg-card p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-medium">Sales Performance</h3>
+            <div className="h-[240px]">
+              <ChartPlaceholder
+                title="Sales Performance"
+                description="Monthly sales data visualization"
+              />
+            </div>
+          </div>
         </motion.div>
       </motion.div>
 
       {/* Recent Activity */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        variants={itemVariants}
+        className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
       >
-        <h2 className="mb-4 text-xl font-semibold">Recent Activity</h2>
-
-        <TablePlaceholder
-          columns={["Date", "Time", "Type", "Value", "Commission"]}
-          data={recentActivityData}
-          emptyMessage="No recent activity found for this retailer."
-          size="md"
-        />
-      </motion.div>
-
-      {/* Terminals Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="rounded-lg border border-border bg-card p-6 shadow-sm"
-      >
-        <h2 className="mb-4 text-xl font-semibold">
-          Terminals ({retailer.terminals.length})
-        </h2>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {retailer.terminals.map((terminal) => (
-            <div
-              key={terminal.id}
-              className="rounded-lg border border-border bg-muted/40 p-4"
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-medium">{terminal.name}</h3>
-                <div
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs",
-                    terminal.status === "active"
-                      ? "bg-green-500/10 text-green-500"
-                      : "bg-amber-500/10 text-amber-500"
-                  )}
-                >
-                  {terminal.status}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Last active:{" "}
-                {new Date(terminal.lastActive).toLocaleString("en-ZA")}
-              </p>
-            </div>
-          ))}
+        <div className="p-6">
+          <h3 className="text-lg font-medium">Recent Activity</h3>
+          <p className="text-sm text-muted-foreground">
+            Latest transactions and events for this retailer.
+          </p>
         </div>
-
-        {retailer.terminals.length === 0 && (
-          <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
-            <p className="text-muted-foreground">
-              No terminals found for this retailer.
-            </p>
-          </div>
-        )}
+        <TablePlaceholder
+          columns={["Date", "Time", "Type", "Value", "Notes"]}
+          data={recentActivityData}
+          emptyMessage="No activity found for this retailer"
+        />
       </motion.div>
     </div>
   );

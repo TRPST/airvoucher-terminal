@@ -1,40 +1,135 @@
-import * as React from "react";
-import { Activity, DollarSign, Store, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity, DollarSign, Store, Users, AlertCircle } from "lucide-react";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
-import { getTodaySales, retailers, agents } from "@/lib/MockData";
 import useRequireRole from "@/hooks/useRequireRole";
+import {
+  fetchRetailers,
+  fetchSalesReport,
+  fetchEarningsSummary,
+  type Retailer,
+} from "@/actions/adminActions";
 
 export default function AdminDashboard() {
+  // State for dashboard data
+  const [retailers, setRetailers] = useState<Retailer[]>([]);
+  const [todaySales, setTodaySales] = useState<any[]>([]);
+  const [platformCommission, setPlatformCommission] = useState(0);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Protect this route - only allow admin role
-  const { isLoading } = useRequireRole("admin");
+  const { isLoading: isAuthLoading } = useRequireRole("admin");
+
+  // Fetch dashboard data
+  useEffect(() => {
+    async function loadDashboardData() {
+      setIsDataLoading(true);
+      try {
+        console.log("Loading admin dashboard data...");
+
+        // Get retailers
+        const { data: retailersData, error: retailersError } =
+          await fetchRetailers();
+        if (retailersError) {
+          throw new Error(
+            `Error fetching retailers: ${retailersError.message}`
+          );
+        }
+
+        // Get today's sales
+        const today = new Date().toISOString().split("T")[0];
+        const { data: salesData, error: salesError } = await fetchSalesReport({
+          startDate: today,
+          endDate: new Date().toISOString(),
+        });
+        if (salesError) {
+          throw new Error(`Error fetching sales: ${salesError.message}`);
+        }
+
+        // Get earnings summary
+        const { data: earningsData, error: earningsError } =
+          await fetchEarningsSummary({
+            startDate: today,
+            endDate: new Date().toISOString(),
+          });
+        if (earningsError) {
+          throw new Error(`Error fetching earnings: ${earningsError.message}`);
+        }
+
+        // Update state with fetched data
+        setRetailers(retailersData || []);
+        setTodaySales(salesData || []);
+
+        // Calculate platform commission
+        const commission =
+          earningsData?.reduce(
+            (sum, item) => sum + item.platform_commission,
+            0
+          ) || 0;
+        setPlatformCommission(commission);
+
+        console.log("Dashboard data loaded successfully");
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
+      } finally {
+        setIsDataLoading(false);
+      }
+    }
+
+    if (!isAuthLoading) {
+      loadDashboardData();
+    }
+  }, [isAuthLoading]);
 
   // Show loading state while checking authentication
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="ml-2">Loading...</span>
+        <span className="ml-2">Loading authentication...</span>
       </div>
     );
   }
+
+  // Show loading state while fetching data
+  if (isDataLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading dashboard data...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-red-500">
+        <AlertCircle className="h-12 w-12 mb-4" />
+        <h2 className="text-xl font-bold">Error Loading Dashboard</h2>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
   // Calculate dashboard metrics
-  const todaySales = getTodaySales();
   const todaySalesTotal = todaySales.reduce(
-    (sum, sale) => sum + sale.voucherValue,
-    0
-  );
-  const platformCommission = todaySales.reduce(
-    (sum, sale) => sum + sale.platformCommission,
+    (sum, sale) => sum + sale.amount,
     0
   );
   const activeRetailers = retailers.filter(
     (retailer) => retailer.status === "active"
   ).length;
-  const activeAgents = agents.filter(
-    (agent) => agent.status === "active"
-  ).length;
+
+  // We don't have agents data yet, let's estimate based on the retailers
+  const agentsCount = new Set(
+    retailers.map((r) => r.agent_profile_id).filter(Boolean)
+  ).size;
 
   return (
     <div className="space-y-6">
@@ -71,11 +166,11 @@ export default function AdminDashboard() {
           subtitle={`${retailers.length} total retailers`}
         />
         <StatsTile
-          label="Active Agents"
-          value={activeAgents}
+          label="Agents"
+          value={agentsCount}
           icon={Users}
           intent="warning"
-          subtitle={`${agents.length} total agents`}
+          subtitle="Total agents assigned"
         />
       </div>
 

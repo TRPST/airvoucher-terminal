@@ -1,21 +1,196 @@
 import * as React from "react";
-import { Plus, Store, Pencil, MoreHorizontal } from "lucide-react";
+import {
+  Plus,
+  Store,
+  Pencil,
+  MoreHorizontal,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import Link from "next/link";
+import { useSession } from "@supabase/auth-helpers-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { retailers, agents, commissionGroups } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchRetailers,
+  fetchCommissionGroups,
+  createRetailer,
+  type AdminRetailer,
+  type CommissionGroup,
+  type ProfileData,
+  type RetailerData,
+} from "@/actions";
+import useRequireRole from "@/hooks/useRequireRole";
 
 export default function AdminRetailers() {
+  // Protect this route - only allow admin role
+  const { isLoading: isRoleLoading } = useRequireRole("admin");
+
+  // States for data
+  const [retailers, setRetailers] = React.useState<AdminRetailer[]>([]);
+  const [commissionGroups, setCommissionGroups] = React.useState<
+    CommissionGroup[]
+  >([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Form state for adding a new retailer
   const [showAddDialog, setShowAddDialog] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [formData, setFormData] = React.useState<{
+    businessName: string;
+    contactName: string;
+    email: string;
+    agentId: string;
+    commissionGroupId: string;
+    creditLimit: string;
+  }>({
+    businessName: "",
+    contactName: "",
+    email: "",
+    agentId: "",
+    commissionGroupId: "",
+    creditLimit: "0",
+  });
+
+  // Load retailers and commission groups data
+  React.useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch retailers
+        const { data: retailersData, error: retailersError } =
+          await fetchRetailers();
+
+        if (retailersError) {
+          setError(`Failed to load retailers: ${retailersError.message}`);
+          return;
+        }
+
+        setRetailers(retailersData || []);
+
+        // Fetch commission groups
+        const { data: groupsData, error: groupsError } =
+          await fetchCommissionGroups();
+
+        if (groupsError) {
+          setError(`Failed to load commission groups: ${groupsError.message}`);
+          return;
+        }
+
+        setCommissionGroups(groupsData || []);
+      } catch (err) {
+        setError(
+          `Unexpected error: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Handler for input changes in the form
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handler for form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Create profile data
+      const profileData: ProfileData = {
+        full_name: formData.contactName,
+        email: formData.email,
+        role: "retailer",
+      };
+
+      // Create retailer data
+      const retailerData: RetailerData = {
+        name: formData.businessName,
+        contact_name: formData.contactName,
+        contact_email: formData.email,
+        agent_profile_id: formData.agentId || undefined,
+        commission_group_id: formData.commissionGroupId || undefined,
+        credit_limit: parseFloat(formData.creditLimit) || 0,
+        status: "active",
+      };
+
+      // Call the createRetailer action
+      const { data, error } = await createRetailer(profileData, retailerData);
+
+      if (error) {
+        setError(`Failed to create retailer: ${error.message}`);
+        return;
+      }
+
+      // Add the new retailer to the list and close the dialog
+      if (data) {
+        // Refresh the retailer list instead of trying to add incomplete data
+        const { data: refreshedData } = await fetchRetailers();
+        if (refreshedData) {
+          setRetailers(refreshedData);
+        }
+        setShowAddDialog(false);
+
+        // Reset form data
+        setFormData({
+          businessName: "",
+          contactName: "",
+          email: "",
+          agentId: "",
+          commissionGroupId: "",
+          creditLimit: "0",
+        });
+      }
+    } catch (err) {
+      setError(
+        `Error creating retailer: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Show loading state
+  if (isRoleLoading || isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading retailers...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center">
+        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
+        <p className="max-w-md text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
 
   // Format data for the table
   const tableData = retailers.map((retailer) => {
-    const agent = agents.find((a) => a.id === retailer.agentId);
-    const commissionGroup = commissionGroups.find(
-      (cg) => cg.id === retailer.commissionGroupId
-    );
-
     return {
       Name: (
         <div className="flex items-center gap-2">
@@ -30,8 +205,8 @@ export default function AdminRetailers() {
           </div>
         </div>
       ),
-      Agent: agent?.name || "None",
-      "Commission Group": commissionGroup?.name || "None",
+      Agent: retailer.agent_name || "None",
+      "Commission Group": retailer.commission_group_name || "None",
       Balance: `R ${retailer.balance.toFixed(2)}`,
       Status: (
         <div
@@ -126,80 +301,124 @@ export default function AdminRetailers() {
               </button>
             </div>
             <div className="mt-4 space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Retailer Name</label>
-                <input
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Enter retailer name"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Contact Person</label>
-                <input
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Contact person name"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Email</label>
-                <input
-                  type="email"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Contact email"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit}>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">Agent</label>
-                  <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">Select Agent</option>
-                    {agents.map((agent) => (
-                      <option key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-sm font-medium">Retailer Name</label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Enter retailer name"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Contact Person</label>
+                  <input
+                    type="text"
+                    name="contactName"
+                    value={formData.contactName}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Contact person name"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Contact email"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Agent</label>
+                    <select
+                      name="agentId"
+                      value={formData.agentId}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Select Agent</option>
+                      {retailers
+                        .filter((r) => r.agent_profile_id) // Only get unique agent IDs
+                        .map((retailer) => (
+                          <option
+                            key={retailer.agent_profile_id}
+                            value={retailer.agent_profile_id}
+                          >
+                            {retailer.agent_name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">
+                      Commission Group
+                    </label>
+                    <select
+                      name="commissionGroupId"
+                      value={formData.commissionGroupId}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Select Group</option>
+                      {commissionGroups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">
-                    Commission Group
+                    Initial Credit Limit
                   </label>
-                  <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">Select Group</option>
-                    {commissionGroups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="number"
+                    name="creditLimit"
+                    value={formData.creditLimit}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
                 </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">
-                  Initial Credit Limit
-                </label>
-                <input
-                  type="number"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="pt-4 flex justify-end space-x-2">
-                <button
-                  onClick={() => setShowAddDialog(false)}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowAddDialog(false)}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-                >
-                  Add Retailer
-                </button>
-              </div>
+                <div className="pt-4 flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDialog(false)}
+                    className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Add Retailer"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </>

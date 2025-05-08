@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   Store,
@@ -10,34 +10,133 @@ import {
   MoreHorizontal,
   ChevronDown,
   Plus,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { getRetailerById, getSalesByRetailerId } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchRetailers,
+  fetchAdminTerminals,
+  fetchSalesReport,
+  type AdminRetailer,
+  type AdminTerminal,
+  type SalesReport,
+} from "@/actions";
 
 export default function RetailerDetails() {
   const router = useRouter();
   const { id } = router.query;
-  const [expandedSection, setExpandedSection] = React.useState<string | null>(
+  const [expandedSection, setExpandedSection] = useState<string | null>(
     "terminals"
   );
 
-  // Get retailer data based on ID from URL
-  const retailer = React.useMemo(() => {
-    if (typeof id !== "string") return null;
-    return getRetailerById(id);
+  // State for data and loading
+  const [retailer, setRetailer] = useState<AdminRetailer | null>(null);
+  const [terminals, setTerminals] = useState<AdminTerminal[]>([]);
+  const [sales, setSales] = useState<SalesReport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load retailer data
+  useEffect(() => {
+    async function loadRetailerData() {
+      if (typeof id !== "string") return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch retailer info
+        const { data: retailersData, error: retailerError } =
+          await fetchRetailers();
+
+        if (retailerError) {
+          throw new Error(`Failed to load retailer: ${retailerError.message}`);
+        }
+
+        const foundRetailer = retailersData?.find((r) => r.id === id) || null;
+        if (!foundRetailer) {
+          throw new Error("Retailer not found");
+        }
+
+        setRetailer(foundRetailer);
+
+        // Fetch terminals
+        const { data: terminalsData, error: terminalsError } =
+          await fetchAdminTerminals(id);
+
+        if (terminalsError) {
+          console.error("Error loading terminals:", terminalsError);
+          // Continue with other data loading
+        } else {
+          setTerminals(terminalsData || []);
+        }
+
+        // Fetch sales
+        const { data: salesData, error: salesError } = await fetchSalesReport(
+          {}
+        );
+
+        if (salesError) {
+          console.error("Error loading sales:", salesError);
+          // Continue without sales data
+        } else {
+          // Filter sales for this retailer
+          const retailerSales =
+            salesData?.filter(
+              (sale) => sale.retailer_name === foundRetailer.name
+            ) || [];
+          setSales(retailerSales);
+        }
+      } catch (err) {
+        console.error("Error in retailer details:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load retailer data"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadRetailerData();
   }, [id]);
 
-  // Get sales for this retailer
-  const retailerSales = React.useMemo(() => {
-    if (typeof id !== "string") return [];
-    return getSalesByRetailerId(id);
-  }, [id]);
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Loading retailer details...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // If retailer not found or still loading
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Error</h2>
+          <p className="mb-4 text-muted-foreground">{error}</p>
+          <button
+            onClick={() => router.push("/admin/retailers")}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Back to Retailers
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
   if (!retailer) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -59,7 +158,7 @@ export default function RetailerDetails() {
   }
 
   // Format terminal data for table
-  const terminalData = retailer.terminals.map((terminal) => ({
+  const terminalData = terminals.map((terminal) => ({
     Name: terminal.name,
     Status: (
       <div
@@ -73,13 +172,15 @@ export default function RetailerDetails() {
         {terminal.status.charAt(0).toUpperCase() + terminal.status.slice(1)}
       </div>
     ),
-    "Last Active": new Date(terminal.lastActive).toLocaleString("en-ZA", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    "Last Active": terminal.last_active
+      ? new Date(terminal.last_active).toLocaleString("en-ZA", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Never",
     Actions: (
       <div className="flex items-center gap-2">
         <button className="rounded-md p-2 hover:bg-muted">
@@ -90,18 +191,18 @@ export default function RetailerDetails() {
   }));
 
   // Format sales data for table
-  const salesData = retailerSales.slice(0, 5).map((sale) => ({
-    Date: new Date(sale.date).toLocaleString("en-ZA", {
+  const salesData = sales.slice(0, 5).map((sale) => ({
+    Date: new Date(sale.created_at).toLocaleString("en-ZA", {
       day: "numeric",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     }),
-    Type: sale.voucherType,
-    Value: `R ${sale.voucherValue.toFixed(2)}`,
-    Commission: `R ${sale.retailerCommission.toFixed(2)}`,
-    "PIN/Serial": sale.pin ? `${sale.pin.slice(0, 3)}****` : "-",
+    Type: sale.voucher_type || "Unknown",
+    Value: `R ${sale.amount.toFixed(2)}`,
+    Commission: `R ${sale.retailer_commission.toFixed(2)}`,
+    "PIN/Serial": "••••••••", // We don't expose PINs in the UI for security
   }));
 
   // Section toggle handler
@@ -139,7 +240,7 @@ export default function RetailerDetails() {
             <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-2 text-sm md:grid-cols-2">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Contact Person:</span>
-                <span className="font-medium">{retailer.contact}</span>
+                <span className="font-medium">{retailer.full_name}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Email:</span>
@@ -162,9 +263,9 @@ export default function RetailerDetails() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Created:</span>
+                <span className="text-muted-foreground">Commission Group:</span>
                 <span className="font-medium">
-                  {new Date(retailer.createdAt).toLocaleDateString("en-ZA")}
+                  {retailer.commission_group_name || "None"}
                 </span>
               </div>
             </div>
@@ -183,14 +284,14 @@ export default function RetailerDetails() {
         />
         <StatsTile
           label="Credit Used"
-          value={`R ${retailer.credit.toFixed(2)}`}
+          value={`R ${retailer.credit_used.toFixed(2)}`}
           icon={CreditCard}
           intent="warning"
           subtitle="Active credit amount"
         />
         <StatsTile
           label="Commission Earned"
-          value={`R ${retailer.commission.toFixed(2)}`}
+          value={`R ${retailer.commission_balance.toFixed(2)}`}
           icon={Percent}
           intent="info"
           subtitle="Total earned to date"
@@ -209,7 +310,7 @@ export default function RetailerDetails() {
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-lg font-medium">Terminals</h3>
               <div className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                {retailer.terminals.length}
+                {terminals.length}
               </div>
             </div>
             <ChevronDown
@@ -255,7 +356,7 @@ export default function RetailerDetails() {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-lg font-medium">Sales History</h3>
               <div className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                {retailerSales.length}
+                {sales.length}
               </div>
             </div>
             <ChevronDown
@@ -276,7 +377,7 @@ export default function RetailerDetails() {
                 <div className="border-t border-border p-4">
                   <div className="flex justify-between items-center mb-2">
                     <div className="text-sm text-muted-foreground">
-                      Showing recent 5 of {retailerSales.length} transactions
+                      Showing recent 5 of {sales.length} transactions
                     </div>
                     <button className="text-sm text-primary hover:underline">
                       View All

@@ -1,44 +1,185 @@
 import * as React from "react";
-import { Calendar, Search, Filter } from "lucide-react";
+import { Calendar, Search, Filter, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "@supabase/auth-helpers-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
-import { retailers, sales } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
+import {
+  fetchMyRetailer,
+  fetchSalesHistory,
+  fetchRetailerTerminals,
+  type RetailerProfile,
+  type RetailerSale,
+  type RetailerTerminal,
+} from "@/actions";
+import useRequireRole from "@/hooks/useRequireRole";
 
 // Define tab types for date filtering
 type DateFilter = "today" | "week" | "month" | "all";
 
 export default function RetailerHistory() {
-  // Get the first active retailer for demo purposes
-  const retailer = retailers.find((r) => r.status === "active") || retailers[0];
+  // Protect this route - only allow retailer role
+  const { isLoading } = useRequireRole("retailer");
 
+  // Get the current user from Supabase Auth
+  const session = useSession();
+  const userId = session?.user?.id;
+
+  // State for retailer data and loading/error states
+  const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);
+  const [sales, setSales] = React.useState<RetailerSale[]>([]);
+  const [terminals, setTerminals] = React.useState<RetailerTerminal[]>([]);
+  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [dataError, setDataError] = React.useState<string | null>(null);
+
+  // UI state
   const [activeTab, setActiveTab] = React.useState<DateFilter>("week");
   const [searchTerm, setSearchTerm] = React.useState("");
 
-  // Get filtered sales
+  // Fetch retailer data and sales history
+  React.useEffect(() => {
+    const loadData = async () => {
+      if (!userId) return;
+
+      setIsDataLoading(true);
+      setDataError(null);
+
+      try {
+        // Fetch retailer profile
+        const { data: retailerData, error: retailerError } =
+          await fetchMyRetailer(userId);
+
+        if (retailerError) {
+          setDataError(
+            `Failed to load retailer profile: ${retailerError.message}`
+          );
+          return;
+        }
+
+        if (!retailerData) {
+          setDataError("No retailer profile found for this user");
+          return;
+        }
+
+        setRetailer(retailerData);
+
+        // Determine date range based on active tab
+        const now = new Date();
+        let startDate: Date | undefined;
+
+        if (activeTab === "today") {
+          startDate = new Date(now);
+          startDate.setHours(0, 0, 0, 0);
+        } else if (activeTab === "week") {
+          startDate = new Date(now);
+          startDate.setDate(startDate.getDate() - 7);
+        } else if (activeTab === "month") {
+          startDate = new Date(now);
+          startDate.setMonth(startDate.getMonth() - 1);
+        }
+
+        // Fetch terminals for this retailer
+        const { data: terminalsData, error: terminalsError } =
+          await fetchRetailerTerminals(retailerData.id);
+
+        if (terminalsError) {
+          setDataError(`Failed to load terminals: ${terminalsError.message}`);
+          return;
+        }
+
+        setTerminals(terminalsData || []);
+
+        // Get terminal IDs for this retailer
+        const terminalIds = terminalsData?.map((terminal) => terminal.id) || [];
+
+        // We can't directly query by retailer ID in fetchSalesHistory
+        // We'll fetch all sales for all terminals of this retailer
+        const { data: salesData, error: salesError } = await fetchSalesHistory({
+          startDate: startDate?.toISOString(),
+        });
+
+        if (salesError) {
+          setDataError(`Failed to load sales history: ${salesError.message}`);
+          return;
+        }
+
+        setSales(salesData || []);
+      } catch (err) {
+        setDataError(
+          `Unexpected error: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadData();
+  }, [userId, activeTab]);
+
+  // Show loading state while checking authentication or loading data
+  if (isLoading || isDataLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show error state if any
+  if (dataError) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
+          <AlertCircle className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
+        <p className="max-w-md text-muted-foreground">{dataError}</p>
+      </div>
+    );
+  }
+
+  // If retailer data hasn't loaded, show appropriate message
+  if (!retailer) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-amber-500/10 p-3 text-amber-500">
+          <Calendar className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Account Not Found</h2>
+        <p className="max-w-md text-muted-foreground">
+          We couldn't find your retailer account. Please contact support for
+          assistance.
+        </p>
+      </div>
+    );
+  }
+
+  // Get filtered sales - filter by search term only since date filtering is already done on the server
   const filteredSales = React.useMemo(() => {
-    // Get sales for this retailer
-    let retailerSales = sales.filter((sale) => sale.retailerId === retailer.id);
+    let retailerSales = [...sales];
 
     // Apply date filter
     const now = new Date();
     if (activeTab === "today") {
       const today = now.toISOString().split("T")[0];
       retailerSales = retailerSales.filter((sale) =>
-        sale.date.startsWith(today)
+        sale.created_at.startsWith(today)
       );
     } else if (activeTab === "week") {
       const oneWeekAgo = new Date(now);
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       retailerSales = retailerSales.filter(
-        (sale) => new Date(sale.date) >= oneWeekAgo
+        (sale) => new Date(sale.created_at) >= oneWeekAgo
       );
     } else if (activeTab === "month") {
       const oneMonthAgo = new Date(now);
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
       retailerSales = retailerSales.filter(
-        (sale) => new Date(sale.date) >= oneMonthAgo
+        (sale) => new Date(sale.created_at) >= oneMonthAgo
       );
     }
 
@@ -47,9 +188,9 @@ export default function RetailerHistory() {
       const term = searchTerm.toLowerCase();
       retailerSales = retailerSales.filter(
         (sale) =>
-          sale.voucherType.toLowerCase().includes(term) ||
+          sale.voucher_type.toLowerCase().includes(term) ||
           (sale.pin && sale.pin.includes(term)) ||
-          (sale.serialNumber && sale.serialNumber.includes(term))
+          (sale.serial_number && sale.serial_number.includes(term))
       );
     }
 
@@ -58,7 +199,7 @@ export default function RetailerHistory() {
 
   // Format table data
   const tableData = filteredSales.map((sale) => ({
-    Date: new Date(sale.date).toLocaleString("en-ZA", {
+    Date: new Date(sale.created_at).toLocaleString("en-ZA", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -70,26 +211,26 @@ export default function RetailerHistory() {
         <div
           className={cn(
             "h-2 w-2 rounded-full",
-            sale.voucherType === "Mobile"
+            sale.voucher_type === "Mobile"
               ? "bg-blue-500"
-              : sale.voucherType === "OTT"
+              : sale.voucher_type === "OTT"
               ? "bg-purple-500"
-              : sale.voucherType === "Hollywoodbets"
+              : sale.voucher_type === "Hollywoodbets"
               ? "bg-green-500"
-              : sale.voucherType === "Ringa"
+              : sale.voucher_type === "Ringa"
               ? "bg-amber-500"
               : "bg-pink-500"
           )}
         />
-        <span>{sale.voucherType}</span>
+        <span>{sale.voucher_type}</span>
       </div>
     ),
-    Value: `R ${sale.voucherValue.toFixed(2)}`,
-    Commission: `R ${sale.retailerCommission.toFixed(2)}`,
+    Value: `R ${sale.voucher_amount.toFixed(2)}`,
+    Commission: `R ${sale.retailer_commission.toFixed(2)}`,
     "PIN/Serial": sale.pin
       ? `${sale.pin.slice(0, 3)}****`
-      : sale.serialNumber
-      ? `${sale.serialNumber.slice(0, 3)}****`
+      : sale.serial_number
+      ? `${sale.serial_number.slice(0, 3)}****`
       : "-",
   }));
 
@@ -198,7 +339,7 @@ export default function RetailerHistory() {
               <p className="text-2xl font-semibold">
                 R{" "}
                 {filteredSales
-                  .reduce((sum, sale) => sum + sale.voucherValue, 0)
+                  .reduce((sum, sale) => sum + sale.voucher_amount, 0)
                   .toFixed(2)}
               </p>
             </div>
@@ -234,7 +375,7 @@ export default function RetailerHistory() {
               <p className="text-2xl font-semibold">
                 R{" "}
                 {filteredSales
-                  .reduce((sum, sale) => sum + sale.retailerCommission, 0)
+                  .reduce((sum, sale) => sum + sale.retailer_commission, 0)
                   .toFixed(2)}
               </p>
             </div>
