@@ -554,6 +554,18 @@ export const getCommissionGroupById = (
   return commissionGroups.find((group) => group.id === id);
 };
 
+// Get terminals for a retailer (added for TerminalSelector component)
+export const getMockTerminals = (retailerId?: string): Terminal[] => {
+  if (retailerId) {
+    const retailer = getRetailerById(retailerId);
+    return retailer ? retailer.terminals : [];
+  }
+
+  // If no retailerId is provided, get the first active retailer's terminals
+  const activeRetailer = retailers.find((r) => r.status === "active");
+  return activeRetailer ? activeRetailer.terminals : [];
+};
+
 export const getRetailerSalesSummary = (retailerId: string) => {
   const retailerSales = getSalesByRetailerId(retailerId);
 

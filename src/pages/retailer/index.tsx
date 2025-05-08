@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
+import TerminalSelector from "@/components/TerminalSelector";
 import { retailers, vouchers } from "@/lib/MockData";
 import { cn } from "@/utils/cn";
 import useRequireRole from "@/hooks/useRequireRole";
@@ -141,13 +142,18 @@ export default function RetailerPOS() {
       {showConfetti && <ConfettiOverlay />}
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Sell Vouchers
-        </h1>
-        <p className="text-muted-foreground">
-          Select a voucher category and value to make a sale.
-        </p>
+      <div className="relative">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Sell Vouchers
+          </h1>
+          <p className="text-muted-foreground">
+            Select a voucher category and value to make a sale.
+          </p>
+        </div>
+        <div className="absolute top-0 right-0">
+          <TerminalSelector />
+        </div>
       </div>
 
       {/* Balance Stats */}
