@@ -5,7 +5,9 @@ import {
   MoreHorizontal,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { useSession } from "@supabase/auth-helpers-react";
 
@@ -341,35 +343,19 @@ export default function AdminRetailers() {
         rowsClickable={true}
       />
 
-      {/* Add Retailer Dialog (Mock) */}
-      {showAddDialog && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowAddDialog(false)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md max-h-[90vh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
+      {/* Add Retailer Dialog */}
+      <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Add New Retailer</h2>
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="rounded-full p-2 hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+              <Dialog.Title className="text-lg font-semibold">
+                Add New Retailer
+              </Dialog.Title>
+              <Dialog.Close className="rounded-full p-2 hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Dialog.Close>
             </div>
             <div className="mt-4 space-y-6">
               {formError && (
@@ -552,13 +538,14 @@ export default function AdminRetailers() {
                   />
                 </div>
                 <div className="pt-2 flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddDialog(false)}
-                    className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                  </Dialog.Close>
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -576,9 +563,9 @@ export default function AdminRetailers() {
                 </div>
               </form>
             </div>
-          </div>
-        </>
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

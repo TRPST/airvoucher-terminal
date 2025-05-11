@@ -12,8 +12,10 @@ import {
   Plus,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
@@ -22,6 +24,7 @@ import {
   fetchRetailers,
   fetchAdminTerminals,
   fetchSalesReport,
+  createTerminal,
   type AdminRetailer,
   type AdminTerminal,
   type SalesReport,
@@ -40,6 +43,16 @@ export default function RetailerDetails() {
   const [sales, setSales] = useState<SalesReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Add Terminal modal state
+  const [showAddTerminalModal, setShowAddTerminalModal] = useState(false);
+  const [terminalFormData, setTerminalFormData] = useState({
+    name: "",
+  });
+  const [isSubmittingTerminal, setIsSubmittingTerminal] = useState(false);
+  const [terminalFormError, setTerminalFormError] = useState<string | null>(
+    null
+  );
 
   // Load retailer data
   useEffect(() => {
@@ -210,6 +223,60 @@ export default function RetailerDetails() {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
+  // Terminal form handlers
+  const handleTerminalInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setTerminalFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleTerminalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!terminalFormData.name.trim()) {
+      setTerminalFormError("Terminal name is required");
+      return;
+    }
+
+    if (typeof id !== "string") {
+      setTerminalFormError("Invalid retailer ID");
+      return;
+    }
+
+    setIsSubmittingTerminal(true);
+    setTerminalFormError(null);
+
+    try {
+      // Create the terminal
+      const { data, error } = await createTerminal(id, terminalFormData.name);
+
+      if (error) {
+        setTerminalFormError(`Failed to create terminal: ${error.message}`);
+        return;
+      }
+
+      // Refresh the terminals list
+      const { data: terminalsData } = await fetchAdminTerminals(id);
+      if (terminalsData) {
+        setTerminals(terminalsData);
+      }
+
+      // Close the modal and reset form
+      setShowAddTerminalModal(false);
+      setTerminalFormData({ name: "" });
+    } catch (err) {
+      setTerminalFormError(
+        `Error creating terminal: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    } finally {
+      setIsSubmittingTerminal(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -240,11 +307,15 @@ export default function RetailerDetails() {
             <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-2 text-sm md:grid-cols-2">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Contact Person:</span>
-                <span className="font-medium">{retailer.full_name}</span>
+                <span className="font-medium">
+                  {retailer.contact_name || retailer.full_name}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-medium">{retailer.email}</span>
+                <span className="text-muted-foreground">Contact Email:</span>
+                <span className="font-medium">
+                  {retailer.contact_email || retailer.email}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Status:</span>
@@ -330,7 +401,10 @@ export default function RetailerDetails() {
               >
                 <div className="border-t border-border p-4">
                   <div className="flex justify-end mb-2">
-                    <button className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90">
+                    <button
+                      onClick={() => setShowAddTerminalModal(true)}
+                      className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                    >
                       <Plus className="mr-1 h-3.5 w-3.5" />
                       Add Terminal
                     </button>
@@ -400,6 +474,78 @@ export default function RetailerDetails() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Add Terminal Modal using Radix UI */}
+      <Dialog.Root
+        open={showAddTerminalModal}
+        onOpenChange={setShowAddTerminalModal}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+            <div className="flex items-center justify-between">
+              <Dialog.Title className="text-lg font-semibold">
+                Add New Terminal
+              </Dialog.Title>
+              <Dialog.Close className="rounded-full p-2 hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Close</span>
+              </Dialog.Close>
+            </div>
+
+            <div className="mt-2 space-y-4">
+              {terminalFormError && (
+                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {terminalFormError}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleTerminalSubmit}>
+                <div className="space-y-2 mb-4">
+                  <label className="text-sm font-medium">Terminal Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={terminalFormData.name}
+                    onChange={handleTerminalInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Enter terminal name"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 mt-6">
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingTerminal}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingTerminal ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Add Terminal"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
