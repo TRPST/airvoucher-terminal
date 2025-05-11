@@ -395,7 +395,7 @@ export default function AdminVouchers() {
                   className="border-b border-border transition-colors hover:bg-muted/50"
                 >
                   {Object.entries(row).map(([key, value]) => (
-                    <td key={key} className="p-4">
+                    <td key={key} className="p-4 whitespace-nowrap">
                       {value}
                     </td>
                   ))}
@@ -405,7 +405,7 @@ export default function AdminVouchers() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="p-8 text-center text-muted-foreground"
+                    className="p-8 text-center text-muted-foreground whitespace-nowrap"
                   >
                     No vouchers found. Try adjusting your search or upload new
                     vouchers.

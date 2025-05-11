@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   Plus,
   Store,
-  Pencil,
   MoreHorizontal,
   Loader2,
   AlertCircle,
@@ -34,6 +33,7 @@ export default function AdminRetailers() {
   >([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   // Form state for adding a new retailer
   const [showAddDialog, setShowAddDialog] = React.useState(false);
@@ -42,16 +42,24 @@ export default function AdminRetailers() {
     businessName: string;
     contactName: string;
     email: string;
+    location: string;
     agentId: string;
     commissionGroupId: string;
+    initialBalance: string;
     creditLimit: string;
+    password: string;
+    autoGeneratePassword: boolean;
   }>({
     businessName: "",
     contactName: "",
     email: "",
+    location: "",
     agentId: "",
     commissionGroupId: "",
+    initialBalance: "0",
     creditLimit: "0",
+    password: "",
+    autoGeneratePassword: false,
   });
 
   // Load retailers and commission groups data
@@ -100,14 +108,71 @@ export default function AdminRetailers() {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+
+      // If auto-generate is checked, generate a random password
+      if (name === "autoGeneratePassword" && checked) {
+        const generatedPassword = generateRandomPassword();
+        setFormData((prev) => ({ ...prev, password: generatedPassword }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Generate a random password with letters, numbers, and special characters
+  const generateRandomPassword = () => {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  // Handler for re-generating password
+  const handleRegeneratePassword = () => {
+    const newPassword = generateRandomPassword();
+    setFormData((prev) => ({ ...prev, password: newPassword }));
+  };
+
+  // Validate form before submission
+  const validateForm = (): { isValid: boolean; error?: string } => {
+    // Check email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return { isValid: false, error: "Please enter a valid email address" };
+    }
+
+    // Check password length - Supabase requires at least 6 characters
+    if (formData.password.length < 6) {
+      return {
+        isValid: false,
+        error: "Password must be at least 6 characters long",
+      };
+    }
+
+    return { isValid: true };
   };
 
   // Handler for form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate the form first
+    const validation = validateForm();
+    if (!validation.isValid) {
+      setFormError(validation.error || "Invalid form submission");
+      return;
+    }
+
     setIsSubmitting(true);
+    setFormError(null); // Clear any previous form errors
+    setError(null); // Clear any previous page errors
 
     try {
       // Create profile data
@@ -122,17 +187,24 @@ export default function AdminRetailers() {
         name: formData.businessName,
         contact_name: formData.contactName,
         contact_email: formData.email,
+        location: formData.location,
         agent_profile_id: formData.agentId || undefined,
         commission_group_id: formData.commissionGroupId || undefined,
+        initial_balance: parseFloat(formData.initialBalance) || 0,
         credit_limit: parseFloat(formData.creditLimit) || 0,
         status: "active",
       };
 
-      // Call the createRetailer action
-      const { data, error } = await createRetailer(profileData, retailerData);
+      // Call the createRetailer action with the new parameter format
+      const { data, error } = await createRetailer({
+        profileData,
+        retailerData,
+        password: formData.password,
+      });
 
       if (error) {
-        setError(`Failed to create retailer: ${error.message}`);
+        setFormError(`Failed to create retailer: ${error.message}`);
+        setIsSubmitting(false);
         return;
       }
 
@@ -150,9 +222,13 @@ export default function AdminRetailers() {
           businessName: "",
           contactName: "",
           email: "",
+          location: "",
           agentId: "",
           commissionGroupId: "",
+          initialBalance: "0",
           creditLimit: "0",
+          password: "",
+          autoGeneratePassword: false,
         });
       }
     } catch (err) {
@@ -191,7 +267,7 @@ export default function AdminRetailers() {
 
   // Format data for the table
   const tableData = retailers.map((retailer) => {
-    return {
+    const row = {
       Name: (
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -222,20 +298,21 @@ export default function AdminRetailers() {
           {retailer.status.charAt(0).toUpperCase() + retailer.status.slice(1)}
         </div>
       ),
-      Actions: (
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/admin/retailers/${retailer.id}`}
-            className="rounded-md p-2 hover:bg-muted"
-          >
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </Link>
-          <button className="rounded-md p-2 hover:bg-muted">
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </div>
-      ),
     };
+
+    // Wrap each row in a Link component
+    return Object.entries(row).reduce((acc, [key, value]) => {
+      acc[key] = (
+        <Link
+          href={`/admin/retailers/${retailer.id}`}
+          className="cursor-pointer"
+          style={{ display: "block" }}
+        >
+          {value}
+        </Link>
+      );
+      return acc;
+    }, {} as Record<string, React.ReactNode>);
   });
 
   return (
@@ -259,15 +336,9 @@ export default function AdminRetailers() {
       </div>
 
       <TablePlaceholder
-        columns={[
-          "Name",
-          "Agent",
-          "Commission Group",
-          "Balance",
-          "Status",
-          "Actions",
-        ]}
+        columns={["Name", "Agent", "Commission Group", "Balance", "Status"]}
         data={tableData}
+        rowsClickable={true}
       />
 
       {/* Add Retailer Dialog (Mock) */}
@@ -277,7 +348,7 @@ export default function AdminRetailers() {
             className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
             onClick={() => setShowAddDialog(false)}
           />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md max-h-[90vh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Add New Retailer</h2>
               <button
@@ -300,9 +371,17 @@ export default function AdminRetailers() {
                 </svg>
               </button>
             </div>
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-6">
+              {formError && (
+                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {formError}
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit}>
-                <div className="space-y-1">
+                <div className="space-y-2 mb-4">
                   <label className="text-sm font-medium">Retailer Name</label>
                   <input
                     type="text"
@@ -314,7 +393,7 @@ export default function AdminRetailers() {
                     required
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2 mb-4">
                   <label className="text-sm font-medium">Contact Person</label>
                   <input
                     type="text"
@@ -326,7 +405,7 @@ export default function AdminRetailers() {
                     required
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2 mb-4">
                   <label className="text-sm font-medium">Email</label>
                   <input
                     type="email"
@@ -338,8 +417,71 @@ export default function AdminRetailers() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                <div className="space-y-2 mb-4">
+                  <label className="text-sm font-medium">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Business location"
+                  />
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Password</label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="autoGeneratePassword"
+                        name="autoGeneratePassword"
+                        checked={formData.autoGeneratePassword}
+                        onChange={handleInputChange}
+                        className="mr-2 h-4 w-4 rounded border-gray-300"
+                      />
+                      <label
+                        htmlFor="autoGeneratePassword"
+                        className="text-sm text-muted-foreground"
+                      >
+                        Auto-generate password
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      disabled={formData.autoGeneratePassword}
+                      className="w-full rounded-md rounded-r-none border border-input bg-background px-3 py-2 text-sm"
+                      placeholder={
+                        formData.autoGeneratePassword
+                          ? "Auto-generated password"
+                          : "Set password"
+                      }
+                      required
+                    />
+                    {formData.autoGeneratePassword && (
+                      <button
+                        type="button"
+                        onClick={handleRegeneratePassword}
+                        className="flex items-center justify-center rounded-md rounded-l-none border border-l-0 border-input bg-muted px-3 py-2 text-sm font-medium hover:bg-muted/90"
+                      >
+                        Regenerate
+                      </button>
+                    )}
+                  </div>
+                  {formData.autoGeneratePassword && (
+                    <p className="text-xs text-muted-foreground">
+                      This password will be used for the retailer's login
+                      account.
+                    </p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Agent</label>
                     <select
                       name="agentId"
@@ -360,7 +502,7 @@ export default function AdminRetailers() {
                         ))}
                     </select>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">
                       Commission Group
                     </label>
@@ -379,10 +521,24 @@ export default function AdminRetailers() {
                     </select>
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2 mb-4">
                   <label className="text-sm font-medium">
-                    Initial Credit Limit
+                    Initial Available Balance
                   </label>
+                  <input
+                    type="number"
+                    name="initialBalance"
+                    value={formData.initialBalance}
+                    onChange={handleInputChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="space-y-2 mb-6">
+                  <label className="text-sm font-medium">Credit Limit</label>
                   <input
                     type="number"
                     name="creditLimit"
@@ -395,7 +551,7 @@ export default function AdminRetailers() {
                     required
                   />
                 </div>
-                <div className="pt-4 flex justify-end space-x-2">
+                <div className="pt-2 flex justify-end space-x-2">
                   <button
                     type="button"
                     onClick={() => setShowAddDialog(false)}

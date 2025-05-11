@@ -29,6 +29,7 @@ export interface TablePlaceholderProps
   loading?: boolean;
   emptyMessage?: string;
   data?: Array<Record<string, React.ReactNode>>;
+  rowsClickable?: boolean;
 }
 
 export function TablePlaceholder({
@@ -39,6 +40,7 @@ export function TablePlaceholder({
   loading = false,
   emptyMessage = "No data available",
   data,
+  rowsClickable = false,
   ...props
 }: TablePlaceholderProps) {
   const renderRows = () => {
@@ -53,7 +55,7 @@ export function TablePlaceholder({
             {columns.map((col, colIndex) => (
               <td
                 key={`loading-cell-${index}-${colIndex}`}
-                className="px-4 py-3"
+                className="px-4 py-3 whitespace-nowrap"
               >
                 <div className="h-4 rounded-md bg-muted-foreground/20"></div>
               </td>
@@ -66,10 +68,16 @@ export function TablePlaceholder({
       return data.map((row, index) => (
         <tr
           key={`row-${index}`}
-          className="border-b border-border hover:bg-muted/30 transition-colors"
+          className={cn(
+            "border-b border-border hover:bg-muted/30 transition-colors",
+            rowsClickable && "cursor-pointer"
+          )}
         >
           {columns.map((col, colIndex) => (
-            <td key={`cell-${index}-${colIndex}`} className="px-4 py-3 text-sm">
+            <td
+              key={`cell-${index}-${colIndex}`}
+              className="px-4 py-3 text-sm whitespace-nowrap"
+            >
               {row[col] || "-"}
             </td>
           ))}
@@ -81,7 +89,7 @@ export function TablePlaceholder({
       <tr>
         <td
           colSpan={columns.length}
-          className="px-4 py-6 text-center text-muted-foreground"
+          className="px-4 py-6 text-center text-muted-foreground whitespace-nowrap"
         >
           {emptyMessage}
         </td>

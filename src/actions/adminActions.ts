@@ -91,6 +91,7 @@ export type RetailerData = {
   location?: string;
   agent_profile_id?: string;
   commission_group_id?: string;
+  initial_balance?: number;
   credit_limit?: number;
   status?: "active" | "suspended" | "inactive";
 };
@@ -184,50 +185,97 @@ export async function fetchRetailers(): Promise<{
 /**
  * Create a new retailer with a profile
  */
-export async function createRetailer(
-  profileData: ProfileData,
-  retailerData: RetailerData
-): Promise<{
+export type CreateRetailerParams = {
+  profileData: ProfileData;
+  retailerData: RetailerData;
+  password: string;
+};
+
+export async function createRetailer({
+  profileData,
+  retailerData,
+  password,
+}: CreateRetailerParams): Promise<{
   data: { id: string } | null;
   error: PostgrestError | Error | null;
 }> {
-  // Start a Supabase transaction
-  const { data: profiles, error: profileError } = await supabase
-    .from("profiles")
-    .insert({
-      full_name: profileData.full_name,
+  try {
+    // First, create the Supabase auth user using signUp instead of admin API
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: profileData.email,
-      phone: profileData.phone,
-      role: "retailer",
-    })
-    .select("id")
-    .single();
+      password: password,
+      options: {
+        data: {
+          role: "retailer",
+        },
+      },
+    });
 
-  if (profileError) {
-    return { data: null, error: profileError };
+    if (authError) {
+      console.error("Error creating auth user:", authError);
+      return { data: null, error: authError };
+    }
+
+    if (!authData.user) {
+      return {
+        data: null,
+        error: new Error("Failed to create user in authentication system"),
+      };
+    }
+
+    // Next, create the profile linked to the new user ID
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .insert({
+        id: authData.user.id, // Use the UUID from Supabase auth
+        full_name: profileData.full_name,
+        email: profileData.email,
+        phone: profileData.phone,
+        role: "retailer",
+      })
+      .select("id")
+      .single();
+
+    if (profileError) {
+      console.error("Error creating profile:", profileError);
+      // We can't delete the auth user here as we don't have admin privileges
+      // The user will remain in Auth but without a profile
+      return { data: null, error: profileError };
+    }
+
+    // Finally, create the retailer
+    const { data: retailer, error: retailerError } = await supabase
+      .from("retailers")
+      .insert({
+        user_profile_id: profiles.id, // This should be the same as authData.user.id
+        name: retailerData.name,
+        contact_name: retailerData.contact_name,
+        contact_email: retailerData.contact_email,
+        location: retailerData.location,
+        agent_profile_id: retailerData.agent_profile_id,
+        commission_group_id: retailerData.commission_group_id,
+        balance: retailerData.initial_balance || 0,
+        credit_limit: retailerData.credit_limit || 0,
+        status: retailerData.status || "active",
+      })
+      .select("id")
+      .single();
+
+    if (retailerError) {
+      console.error("Error creating retailer:", retailerError);
+      // We can't delete the auth user here without admin privileges
+      // Just return the error to the client
+      return { data: null, error: retailerError };
+    }
+
+    return { data: retailer, error: null };
+  } catch (error) {
+    console.error("Unexpected error in createRetailer:", error);
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
   }
-
-  const { data: retailer, error: retailerError } = await supabase
-    .from("retailers")
-    .insert({
-      user_profile_id: profiles.id,
-      name: retailerData.name,
-      contact_name: retailerData.contact_name,
-      contact_email: retailerData.contact_email,
-      location: retailerData.location,
-      agent_profile_id: retailerData.agent_profile_id,
-      commission_group_id: retailerData.commission_group_id,
-      credit_limit: retailerData.credit_limit || 0,
-      status: retailerData.status || "active",
-    })
-    .select("id")
-    .single();
-
-  if (retailerError) {
-    return { data: null, error: retailerError };
-  }
-
-  return { data: retailer, error: null };
 }
 
 /**
