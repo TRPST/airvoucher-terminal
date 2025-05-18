@@ -1,6 +1,11 @@
 import supabase from "@/lib/supabaseClient";
 import { CommissionGroup, ResponseType } from "../types/adminTypes";
 
+export type VoucherType = {
+  id: string;
+  name: string;
+};
+
 /**
  * Fetch all commission groups with their rates
  */
@@ -27,7 +32,7 @@ export async function fetchCommissionGroups(): Promise<
         voucher_type_id,
         retailer_pct,
         agent_pct,
-        voucher_types!inner (name)
+        voucher_types:voucher_type_id (name)
       `
       )
       .eq("commission_group_id", group.id);
@@ -37,13 +42,25 @@ export async function fetchCommissionGroups(): Promise<
     }
 
     // Transform the rates data
-    const transformedRates = rates.map((rate) => ({
-      id: rate.id,
-      voucher_type_id: rate.voucher_type_id,
-      retailer_pct: rate.retailer_pct,
-      agent_pct: rate.agent_pct,
-      voucher_type_name: rate.voucher_types?.[0]?.name,
-    }));
+    const transformedRates = rates.map((rate: any) => {
+      // Extract the voucher type name using a type-safe approach
+      let voucherTypeName = "";
+      
+      // Use type assertions and optional chaining to safely extract the name
+      const voucherTypesData = rate.voucher_types as any;
+      
+      if (voucherTypesData) {
+        voucherTypeName = voucherTypesData.name || "";
+      }
+      
+      return {
+        id: rate.id,
+        voucher_type_id: rate.voucher_type_id,
+        retailer_pct: rate.retailer_pct,
+        agent_pct: rate.agent_pct,
+        voucher_type_name: voucherTypeName,
+      };
+    });
 
     result.push({
       id: group.id,
@@ -56,8 +73,53 @@ export async function fetchCommissionGroups(): Promise<
 }
 
 /**
- * Upsert a commission rate for a group and voucher type
+ * Fetch all voucher types from the database
  */
+export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+  const { data, error } = await supabase
+    .from("voucher_types")
+    .select("id, name")
+    .order("name");
+
+  return { data, error };
+}
+
+/**
+ * Create a new commission group
+ */
+export async function createCommissionGroup(
+  name: string
+): Promise<ResponseType<{ id: string }>> {
+  const { data, error } = await supabase
+    .from("commission_groups")
+    .insert({ name })
+    .select("id")
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Create multiple commission rates for a group at once
+ */
+export async function createCommissionRates(
+  rates: {
+    commission_group_id: string;
+    voucher_type_id: string;
+    retailer_pct: number;
+    agent_pct: number;
+  }[]
+): Promise<ResponseType<{ count: number }>> {
+  const { data, error } = await supabase
+    .from("commission_group_rates")
+    .insert(rates);
+
+  return { 
+    data: { count: rates.length }, 
+    error 
+  };
+}
+
 export async function upsertCommissionRate(
   groupId: string,
   typeId: string,

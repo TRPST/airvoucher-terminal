@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import supabase, { supabaseAdmin } from "@/lib/supabaseClient";
 import {
   Retailer,
   RetailerData,
@@ -105,14 +105,13 @@ export async function createRetailer({
   password,
 }: CreateRetailerParams): Promise<ResponseType<{ id: string }>> {
   try {
-    // First, create the Supabase auth user using signUp instead of admin API
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Use the admin API to create a user without affecting the current session
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: profileData.email,
       password: password,
-      options: {
-        data: {
-          role: "retailer",
-        },
+      email_confirm: true,
+      user_metadata: {
+        role: "retailer",
       },
     });
 
