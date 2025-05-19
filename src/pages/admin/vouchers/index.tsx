@@ -44,6 +44,7 @@ export default function AdminVouchers() {
         }
 
         setVouchers(data || []);
+        console.log('vouchers', data);
       } catch (err) {
         console.error("Error loading voucher data:", err);
         setError(
@@ -65,6 +66,7 @@ export default function AdminVouchers() {
       string,
       {
         type: string;
+        voucherTypeName: string;
         count: number;
         available: number;
         sold: number;
@@ -76,7 +78,8 @@ export default function AdminVouchers() {
     vouchers.forEach((voucher) => {
       const key = voucher.voucher_type_name;
       const current = groups.get(key) || {
-        type: key,
+        type: key, // Use the actual voucher type name directly
+        voucherTypeName: key,
         count: 0,
         available: 0,
         sold: 0,
@@ -178,6 +181,7 @@ export default function AdminVouchers() {
           </div>
           <div>
             <div className="font-medium">{voucher.type}</div>
+            <div className="text-xs text-muted-foreground">R {voucher.amount.toFixed(2)}</div>
           </div>
         </div>
       ),

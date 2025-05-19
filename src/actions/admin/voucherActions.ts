@@ -7,21 +7,31 @@ import { VoucherInventory, ResponseType } from "../types/adminTypes";
 export async function fetchVoucherInventory(): Promise<
   ResponseType<VoucherInventory[]>
 > {
-  const { data, error } = await supabase.from("voucher_inventory").select(`
-      id,
-      amount,
-      pin,
-      serial_number,
-      expiry_date,
-      status,
-      voucher_types!inner (name)
-    `);
+  // First, get all voucher types to use as a lookup table
+  const { data: voucherTypes, error: typesError } = await supabase
+    .from("voucher_types")
+    .select("id, name");
+
+  if (typesError) {
+    return { data: null, error: typesError };
+  }
+
+  // Create a lookup map for voucher type names by ID
+  const typeNameMap = new Map<string, string>();
+  voucherTypes.forEach((type) => {
+    typeNameMap.set(type.id, type.name);
+  });
+
+  // Now get all voucher inventory
+  const { data, error } = await supabase
+    .from("voucher_inventory")
+    .select("*");
 
   if (error) {
     return { data: null, error };
   }
 
-  // Transform the data to match the VoucherInventory type
+  // Transform the data to match the VoucherInventory type, using the lookup table
   const inventory = data.map((voucher) => ({
     id: voucher.id,
     amount: voucher.amount,
@@ -29,7 +39,7 @@ export async function fetchVoucherInventory(): Promise<
     serial_number: voucher.serial_number,
     expiry_date: voucher.expiry_date,
     status: voucher.status as "available" | "sold" | "disabled",
-    voucher_type_name: voucher.voucher_types?.[0]?.name || "",
+    voucher_type_name: typeNameMap.get(voucher.voucher_type_id) || "",
   }));
 
   return { data: inventory, error: null };

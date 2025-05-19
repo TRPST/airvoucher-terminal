@@ -60,7 +60,7 @@ function parseRingaFormat(
   result: ParseResult
 ): ParseResult {
   // Find Ringa voucher type ID
-  const ringaType = voucherTypes.find(type => type.name === "Ringa");
+  const ringaType = voucherTypes.find(type => type.name.toLowerCase() === "ringa");
   if (!ringaType) {
     result.errors.push("Ringa voucher type not found in database");
     return result;
@@ -120,7 +120,7 @@ function parseHollywoodbetsFormat(
   result: ParseResult
 ): ParseResult {
   // Find Hollywoodbets voucher type ID
-  const hwbType = voucherTypes.find(type => type.name === "Hollywoodbets");
+  const hwbType = voucherTypes.find(type => type.name.toLowerCase() === "hollywoodbets");
   if (!hwbType) {
     result.errors.push("Hollywoodbets voucher type not found in database");
     return result;
@@ -179,8 +179,8 @@ function parseEasyloadFormat(
   voucherTypes: VoucherType[],
   result: ParseResult
 ): ParseResult {
-  // Find Easyload voucher type ID (note: lowercase 'l' in Easyload)
-  const easyloadType = voucherTypes.find(type => type.name === "Easyload");
+  // Find Easyload voucher type ID
+  const easyloadType = voucherTypes.find(type => type.name.toLowerCase() === "easyload");
   if (!easyloadType) {
     result.errors.push("Easyload voucher type not found in database");
     return result;
