@@ -45,6 +45,9 @@ export default function AdminVouchers() {
 
         setVouchers(data || []);
         console.log('vouchers', data);
+        // Log high-value vouchers to check if they're in the data
+        const highValueVouchers = data?.filter(v => v.amount >= 100) || [];
+        console.log('High value vouchers:', highValueVouchers);
       } catch (err) {
         console.error("Error loading voucher data:", err);
         setError(
@@ -62,6 +65,18 @@ export default function AdminVouchers() {
 
   // Group vouchers by type for better inventory overview
   const groupedVouchers = React.useMemo(() => {
+    // Log unique amounts for debugging
+    const uniqueAmounts = [...new Set(vouchers.map(v => v.amount))].sort((a, b) => a - b);
+    console.log("Unique voucher amounts in inventory:", uniqueAmounts);
+    
+    // Log vouchers by type and amount for debugging
+    const vouchersByTypeAndAmount: Record<string, number> = {};
+    vouchers.forEach(v => {
+      const key = `${v.voucher_type_name}_${v.amount}`;
+      vouchersByTypeAndAmount[key] = (vouchersByTypeAndAmount[key] || 0) + 1;
+    });
+    console.log("Vouchers by type and amount:", vouchersByTypeAndAmount);
+    
     const groups = new Map<
       string,
       {
@@ -76,10 +91,11 @@ export default function AdminVouchers() {
     >();
 
     vouchers.forEach((voucher) => {
-      const key = voucher.voucher_type_name;
+      // Create a composite key of voucher type name and amount
+      const key = `${voucher.voucher_type_name}_${voucher.amount}`;
       const current = groups.get(key) || {
-        type: key, // Use the actual voucher type name directly
-        voucherTypeName: key,
+        type: `${voucher.voucher_type_name} (R${voucher.amount.toFixed(2)})`, // Combined display name with parentheses
+        voucherTypeName: voucher.voucher_type_name,
         count: 0,
         available: 0,
         sold: 0,
@@ -181,7 +197,6 @@ export default function AdminVouchers() {
           </div>
           <div>
             <div className="font-medium">{voucher.type}</div>
-            <div className="text-xs text-muted-foreground">R {voucher.amount.toFixed(2)}</div>
           </div>
         </div>
       ),
