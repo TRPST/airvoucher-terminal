@@ -1,247 +1,137 @@
 import * as React from "react";
+import Link from "next/link";
 import {
   Upload,
-  Plus,
   CreditCard,
-  Search,
-  Filter,
-  ArrowDown,
-  ArrowUp,
+  Phone,
+  Film,
+  Zap,
   Loader2,
   AlertCircle,
+  Plus,
 } from "lucide-react";
-
-import { TablePlaceholder } from "@/components/ui/table-placeholder";
+import { motion } from "framer-motion";
+import useRequireRole from "@/hooks/useRequireRole";
 import { cn } from "@/utils/cn";
-import { fetchVoucherInventory, type VoucherInventory } from "@/actions";
+import { fetchVoucherTypeSummaries, type VoucherTypeSummary } from "@/actions/adminActions";
 import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
 
-export default function AdminVouchers() {
+// SafeComponent wrapper to catch rendering errors
+function SafeComponent({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = React.useState(false);
+  const [errorDetails, setErrorDetails] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    console.log("SafeComponent mounted");
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Rendering Error</h2>
+          <p className="mb-4 text-muted-foreground">
+            {errorDetails || "An unexpected error occurred while rendering this page."}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    return <>{children}</>;
+  } catch (error) {
+    console.error("Caught render error:", error);
+    setErrorDetails(error instanceof Error ? error.message : "Unknown error");
+    setHasError(true);
+    return null;
+  }
+}
+
+// Main component separated to handle errors properly
+function VouchersPageContent() {
+  console.log("VouchersPageContent render start");
+  
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [sortBy, setSortBy] = React.useState<{
-    field: string;
-    direction: "asc" | "desc";
-  }>({
-    field: "voucher_type_name",
-    direction: "asc",
-  });
-  const [vouchers, setVouchers] = React.useState<VoucherInventory[]>([]);
+  const [voucherTypes, setVoucherTypes] = React.useState<VoucherTypeSummary[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  
+  console.log("VouchersPageContent initial state:", { isLoading, error });
 
-  // Fetch voucher inventory
+  // Fetch voucher type summaries
   React.useEffect(() => {
+    console.log("VouchersPageContent useEffect running");
+    
+    let isMounted = true;
+    
     async function loadData() {
       try {
+        console.log("Starting to fetch voucher data...");
         setIsLoading(true);
-        const { data, error: fetchError } = await fetchVoucherInventory();
+        
+        const { data, error: fetchError } = await fetchVoucherTypeSummaries();
+        console.log("Voucher data fetch completed:", { data, error: fetchError });
+
+        if (!isMounted) {
+          console.log("Component unmounted, not updating state");
+          return;
+        }
 
         if (fetchError) {
           throw new Error(
-            `Failed to load voucher inventory: ${fetchError.message}`
+            `Failed to load voucher types: ${fetchError.message}`
           );
         }
 
-        setVouchers(data || []);
-        console.log('vouchers', data);
-        // Log high-value vouchers to check if they're in the data
-        const highValueVouchers = data?.filter(v => v.amount >= 100) || [];
-        console.log('High value vouchers:', highValueVouchers);
+        setVoucherTypes(data || []);
+        console.log('Voucher types set:', data);
       } catch (err) {
-        console.error("Error loading voucher data:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load voucher inventory"
-        );
+        console.error("Error in loadData:", err);
+        if (isMounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load voucher types"
+          );
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          console.log("Setting isLoading to false");
+          setIsLoading(false);
+        }
       }
     }
 
     loadData();
+    
+    return () => {
+      console.log("VouchersPageContent useEffect cleanup");
+      isMounted = false;
+    };
   }, []);
 
-  // Group vouchers by type for better inventory overview
-  const groupedVouchers = React.useMemo(() => {
-    // Log unique amounts for debugging
-    const uniqueAmounts = [...new Set(vouchers.map(v => v.amount))].sort((a, b) => a - b);
-    console.log("Unique voucher amounts in inventory:", uniqueAmounts);
-    
-    // Log vouchers by type and amount for debugging
-    const vouchersByTypeAndAmount: Record<string, number> = {};
-    vouchers.forEach(v => {
-      const key = `${v.voucher_type_name}_${v.amount}`;
-      vouchersByTypeAndAmount[key] = (vouchersByTypeAndAmount[key] || 0) + 1;
-    });
-    console.log("Vouchers by type and amount:", vouchersByTypeAndAmount);
-    
-    const groups = new Map<
-      string,
-      {
-        type: string;
-        voucherTypeName: string;
-        count: number;
-        available: number;
-        sold: number;
-        disabled: number;
-        amount: number;
-      }
-    >();
-
-    vouchers.forEach((voucher) => {
-      // Create a composite key of voucher type name and amount
-      const key = `${voucher.voucher_type_name}_${voucher.amount}`;
-      const current = groups.get(key) || {
-        type: `${voucher.voucher_type_name} (R${voucher.amount.toFixed(2)})`, // Combined display name with parentheses
-        voucherTypeName: voucher.voucher_type_name,
-        count: 0,
-        available: 0,
-        sold: 0,
-        disabled: 0,
-        amount: voucher.amount,
-      };
-
-      current.count++;
-
-      if (voucher.status === "available") {
-        current.available++;
-      } else if (voucher.status === "sold") {
-        current.sold++;
-      } else if (voucher.status === "disabled") {
-        current.disabled++;
-      }
-
-      groups.set(key, current);
-    });
-
-    return Array.from(groups.values());
-  }, [vouchers]);
-
-  // Filter and sort vouchers
-  const filteredVouchers = React.useMemo(() => {
-    let filtered = [...groupedVouchers];
-
-    // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((voucher) =>
-        voucher.type.toLowerCase().includes(term)
-      );
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const field = sortBy.field as keyof typeof a;
-
-      // For inventory value, calculate dynamically
-      if (sortBy.field === "inventoryValue") {
-        const aValue = a.available * a.amount;
-        const bValue = b.available * b.amount;
-        return sortBy.direction === "asc" ? aValue - bValue : bValue - aValue;
-      }
-
-      // Handle string comparison
-      if (typeof a[field] === "string" && typeof b[field] === "string") {
-        return sortBy.direction === "asc"
-          ? (a[field] as string).localeCompare(b[field] as string)
-          : (b[field] as string).localeCompare(a[field] as string);
-      }
-
-      // Handle number comparison
-      if (typeof a[field] === "number" && typeof b[field] === "number") {
-        return sortBy.direction === "asc"
-          ? (a[field] as number) - (b[field] as number)
-          : (b[field] as number) - (a[field] as number);
-      }
-
-      return 0;
-    });
-
-    return filtered;
-  }, [groupedVouchers, searchTerm, sortBy]);
-
-  // Toggle sort direction for a column
-  const toggleSort = (field: string) => {
-    if (sortBy.field === field) {
-      setSortBy({
-        field,
-        direction: sortBy.direction === "asc" ? "desc" : "asc",
-      });
-    } else {
-      setSortBy({ field, direction: "asc" });
-    }
-  };
-
-  // Calculate total inventory value
-  const totalInventoryValue = filteredVouchers.reduce(
-    (sum, voucher) => sum + voucher.amount * voucher.available,
-    0
-  );
-
-  // Format data for table
-  const tableData = filteredVouchers.map((voucher) => {
-    const stockStatus =
-      voucher.available < 10
-        ? "Low"
-        : voucher.available < 50
-        ? "Medium"
-        : "High";
-
-    return {
-      Type: (
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <CreditCard className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="font-medium">{voucher.type}</div>
-          </div>
-        </div>
-      ),
-      Value: `R ${voucher.amount.toFixed(2)}`,
-      Available: (
-        <div className="flex items-center gap-2">
-          <span>{voucher.available.toLocaleString()}</span>
-          <div
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-              stockStatus === "Low"
-                ? "bg-destructive/10 text-destructive"
-                : stockStatus === "Medium"
-                ? "bg-amber-500/10 text-amber-500"
-                : "bg-green-500/10 text-green-500"
-            )}
-          >
-            {stockStatus}
-          </div>
-        </div>
-      ),
-      Sold: voucher.sold.toLocaleString(),
-      Disabled: voucher.disabled.toLocaleString(),
-      "Inventory Value": `R ${(voucher.amount * voucher.available).toFixed(2)}`,
-    };
+  console.log("VouchersPageContent render state:", { 
+    isLoading, 
+    hasError: !!error, 
+    voucherTypesCount: voucherTypes.length 
   });
-
-  const SortIndicator = ({ field }: { field: string }) => {
-    if (sortBy.field !== field) {
-      return null;
-    }
-    return sortBy.direction === "asc" ? (
-      <ArrowUp className="ml-1 h-3 w-3" />
-    ) : (
-      <ArrowDown className="ml-1 h-3 w-3" />
-    );
-  };
 
   // Loading state
   if (isLoading) {
+    console.log("Rendering loading state");
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p>Loading voucher inventory...</p>
+          <p>Loading vouchers...</p>
         </div>
       </div>
     );
@@ -249,6 +139,7 @@ export default function AdminVouchers() {
 
   // Error state
   if (error) {
+    console.log("Rendering error state:", error);
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
@@ -266,58 +157,22 @@ export default function AdminVouchers() {
     );
   }
 
-  // Custom column headers with sorting
-  const columnHeaders = (
-    <tr className="border-b border-border">
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("type")}
-      >
-        <div className="flex items-center">
-          Type <SortIndicator field="type" />
-        </div>
-      </th>
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("amount")}
-      >
-        <div className="flex items-center">
-          Value <SortIndicator field="amount" />
-        </div>
-      </th>
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("available")}
-      >
-        <div className="flex items-center">
-          Available <SortIndicator field="available" />
-        </div>
-      </th>
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("sold")}
-      >
-        <div className="flex items-center">
-          Sold <SortIndicator field="sold" />
-        </div>
-      </th>
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("disabled")}
-      >
-        <div className="flex items-center">
-          Disabled <SortIndicator field="disabled" />
-        </div>
-      </th>
-      <th
-        className="whitespace-nowrap px-4 py-3 cursor-pointer"
-        onClick={() => toggleSort("inventoryValue")}
-      >
-        <div className="flex items-center">
-          Inventory Value <SortIndicator field="inventoryValue" />
-        </div>
-      </th>
-    </tr>
+  console.log("Rendering voucher content");
+  // Calculate overall stats
+  const totalAvailableVouchers = voucherTypes.reduce(
+    (sum, type) => sum + type.availableVouchers, 0
+  );
+  
+  const totalVoucherValue = voucherTypes.reduce(
+    (sum, type) => sum + type.totalValue, 0
+  );
+  
+  const totalSoldVouchers = voucherTypes.reduce(
+    (sum, type) => sum + type.soldVouchers, 0
+  );
+  
+  const totalDisabledVouchers = voucherTypes.reduce(
+    (sum, type) => sum + type.disabledVouchers, 0
   );
 
   return (
@@ -347,16 +202,13 @@ export default function AdminVouchers() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500" />
               <h2 className="text-xl font-semibold">
-                {vouchers
-                  .filter((v) => v.status === "available")
-                  .length.toLocaleString()}{" "}
-                Available
+                {totalAvailableVouchers.toLocaleString()} Available
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
               Total inventory value:{" "}
               <span className="font-semibold">
-                R {totalInventoryValue.toFixed(2)}
+                R {totalVoucherValue.toFixed(2)}
               </span>
             </p>
           </div>
@@ -366,10 +218,7 @@ export default function AdminVouchers() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-blue-500" />
                 <span className="font-medium">
-                  {vouchers
-                    .filter((v) => v.status === "sold")
-                    .length.toLocaleString()}{" "}
-                  Sold
+                  {totalSoldVouchers.toLocaleString()} Sold
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">Used vouchers</p>
@@ -378,63 +227,30 @@ export default function AdminVouchers() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-500" />
                 <span className="font-medium">
-                  {vouchers
-                    .filter((v) => v.status === "disabled")
-                    .length.toLocaleString()}{" "}
-                  Disabled
+                  {totalDisabledVouchers.toLocaleString()} Disabled
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">Inactive vouchers</p>
             </div>
           </div>
-
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search vouchers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Voucher Table */}
-      <div className="rounded-lg border border-border">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>{columnHeaders}</thead>
-            <tbody>
-              {tableData.map((row, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-border transition-colors hover:bg-muted/50"
-                >
-                  {Object.entries(row).map(([key, value]) => (
-                    <td key={key} className="p-4 whitespace-nowrap">
-                      {value}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {tableData.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="p-8 text-center text-muted-foreground whitespace-nowrap"
-                  >
-                    No vouchers found. Try adjusting your search or upload new
-                    vouchers.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Voucher Type Cards */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {voucherTypes.map((voucherType) => (
+          <VoucherTypeCard key={voucherType.id} summary={voucherType} />
+        ))}
+        
+        {voucherTypes.length === 0 && (
+          <div className="col-span-3 rounded-lg border border-border bg-card p-10 text-center">
+            <CreditCard className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-medium">No Voucher Types Found</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              There are no voucher types in the system. Contact an administrator to add voucher types.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Voucher Upload Dialog */}
@@ -445,12 +261,12 @@ export default function AdminVouchers() {
           // Reload data after successful upload
           setShowUploadDialog(false);
           setIsLoading(true);
-          fetchVoucherInventory()
+          fetchVoucherTypeSummaries()
             .then(({ data, error: fetchError }) => {
               if (fetchError) {
                 throw new Error(`Failed to reload voucher inventory: ${fetchError.message}`);
               }
-              setVouchers(data || []);
+              setVoucherTypes(data || []);
             })
             .catch((err) => {
               console.error("Error reloading voucher data:", err);
@@ -462,4 +278,170 @@ export default function AdminVouchers() {
       />
     </div>
   );
+}
+
+// VoucherTypeCard component
+const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
+  // Get the appropriate icon based on the icon property
+  const Icon = () => {
+    switch (summary.icon) {
+      case "phone":
+        return <Phone className="h-6 w-6" />;
+      case "film":
+        return <Film className="h-6 w-6" />;
+      case "zap":
+        return <Zap className="h-6 w-6" />;
+      default:
+        return <CreditCard className="h-6 w-6" />;
+    }
+  };
+
+  // Determine the color based on the voucher type name
+  const getColor = () => {
+    const name = summary.name.toLowerCase();
+    if (name.includes("ringa")) return "blue";
+    if (name.includes("hollywood")) return "amber";
+    if (name.includes("easyload")) return "green";
+    return "purple"; // Default
+  };
+
+  const color = getColor();
+  
+  // Define color variants for the icon container
+  const colorVariants: Record<string, string> = {
+    blue: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    green: "bg-green-500/10 text-green-500 border-green-500/20",
+    amber: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    purple: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+    pink: "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  };
+
+  return (
+    <Link href={`/admin/vouchers/${summary.id}`}>
+      <motion.div
+        whileHover={{
+          scale: 1.03,
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        }}
+        transition={{
+          duration: 0.2,
+          ease: "easeInOut",
+        }}
+        className={cn(
+          "flex flex-col h-full rounded-lg border border-border bg-card p-6 shadow-sm",
+          "cursor-pointer hover:border-primary/20"
+        )}
+      >
+        <div
+          className={cn(
+            "mb-4 flex h-12 w-12 items-center justify-center rounded-full",
+            colorVariants[color]
+          )}
+        >
+          <Icon />
+        </div>
+        <h3 className="mb-2 text-xl font-medium">{summary.name}</h3>
+        
+        <div className="mb-3 space-y-1">
+          {/* Available vouchers */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Available:</span>
+            <span className="font-medium">{summary.availableVouchers.toLocaleString()}</span>
+          </div>
+          
+          {/* Denominations */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Denominations:</span>
+            <span className="font-medium">
+              {summary.uniqueAmounts.length > 0
+                ? summary.uniqueAmounts.map((a: number) => `R${a}`).join(", ")
+                : "None"}
+            </span>
+          </div>
+          
+          {/* Value */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Total Value:</span>
+            <span className="font-medium">R {summary.totalValue.toFixed(2)}</span>
+          </div>
+        </div>
+        
+        <div className="mt-auto flex items-center text-sm text-primary">
+          <span>View Vouchers</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="ml-1 h-4 w-4"
+          >
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </div>
+      </motion.div>
+    </Link>
+  );
+};
+
+// Main exported component that adds auth protection
+export default function AdminVouchers() {
+  console.log("AdminVouchers component mounting");
+  
+  // Check if user is authorized as admin
+  const { isLoading: isAuthLoading } = useRequireRole("admin");
+  
+  console.log("AdminVouchers auth state:", { isAuthLoading });
+
+  React.useEffect(() => {
+    console.log("AdminVouchers component mounted");
+    return () => {
+      console.log("AdminVouchers component unmounted");
+    };
+  }, []);
+
+  if (isAuthLoading) {
+    console.log("Rendering auth loading state");
+    return (
+      <div className="flex h-full items-center justify-center pt-10">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p>Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  try {
+    console.log("Rendering SafeComponent with VouchersPageContent");
+    return (
+      <SafeComponent>
+        <VouchersPageContent />
+      </SafeComponent>
+    );
+  } catch (err) {
+    console.error("Caught error in AdminVouchers:", err);
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h2 className="mb-2 text-xl font-semibold">Critical Error</h2>
+          <p className="mb-4 text-muted-foreground">
+            {err instanceof Error ? err.message : "A critical error occurred while rendering this page."}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 }

@@ -21,7 +21,9 @@ export {
   fetchVoucherInventory,
   uploadVouchers,
   disableVoucher,
+  fetchVoucherTypeSummaries,
 } from "./admin/voucherActions";
+export type { VoucherTypeSummary } from "./admin/voucherActions";
 
 // Re-export voucher file upload actions
 export { processVoucherFile } from "./admin/voucherFileActions";
