@@ -1,16 +1,5 @@
 import * as React from "react";
-import {
-  Plus,
-  Pencil,
-  Percent,
-  XCircle,
-  Check,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
-import { motion } from "framer-motion";
 
-import { cn } from "@/utils/cn";
 import {
   fetchCommissionGroups,
   upsertCommissionRate,
@@ -18,14 +7,13 @@ import {
   createCommissionGroup,
   createCommissionRates,
   type CommissionGroup,
-  type CommissionRate,
 } from "@/actions";
 
-// Categorized voucher types
-type VoucherTypeCategory = {
-  category: string;
-  types: { id: string; name: string }[];
-};
+import { PageHeader } from "@/components/admin/commissions/PageHeader";
+import { CommissionGroupsGrid } from "@/components/admin/commissions/CommissionGroupsGrid";
+import { AddCommissionDialog } from "@/components/admin/commissions/AddCommissionDialog";
+import { LoadingState, ErrorState } from "@/components/admin/commissions/LoadingAndErrorStates";
+import { categorizeVoucherTypes, type VoucherTypeCategory } from "@/components/admin/commissions/utils";
 
 export default function AdminCommissions() {
   const [editGroup, setEditGroup] = React.useState<string | null>(null);
@@ -321,400 +309,43 @@ export default function AdminCommissions() {
     }
   };
 
-  // Categorize voucher types into groups
-  const categorizeVoucherTypes = (types: { id: string; name: string }[]): VoucherTypeCategory[] => {
-    // Mobile network providers
-    const mobileNetworks = types.filter(type => 
-      ['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
-        network => type.name.includes(network)
-      )
-    );
-    
-    // Other types (those not in mobile networks)
-    const otherTypes = types.filter(type => 
-      !['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
-        network => type.name.includes(network)
-      )
-    );
-    
-    const categories: VoucherTypeCategory[] = [];
-    
-    // Add mobile networks category if there are any
-    if (mobileNetworks.length > 0) {
-      categories.push({
-        category: 'Mobile Networks',
-        types: mobileNetworks
-      });
-    }
-    
-    // Add others as a category
-    if (otherTypes.length > 0) {
-      categories.push({
-        category: 'Other Services',
-        types: otherTypes
-      });
-    }
-    
-    return categories;
-  };
 
-  // Format percentage for display
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
-  };
-
-  // Loading state
+  // Loading and error states
   if (isLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="flex flex-col items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p>Loading commission groups...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
-  // Error state
   if (error) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-destructive" />
-          <h2 className="mb-2 text-xl font-semibold">Error</h2>
-          <p className="mb-4 text-muted-foreground">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
+    return <ErrorState error={error} onRetry={() => window.location.reload()} />;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Commission Groups
-          </h1>
-          <p className="text-muted-foreground">
-            Manage commission rates for different retailer groups.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddDialog(true)}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New Group
-        </button>
-      </div>
+      <PageHeader onAddClick={() => setShowAddDialog(true)} />
+      
+      <CommissionGroupsGrid
+        commissionGroups={commissionGroups}
+        editGroup={editGroup}
+        isSaving={isSaving}
+        editedValues={editedValues}
+        startEditing={startEditing}
+        handleRateChange={handleRateChange}
+        saveChanges={saveChanges}
+        cancelEditing={cancelEditing}
+      />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {commissionGroups.map((group) => (
-          <motion.div
-            key={group.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-lg border border-border bg-card p-6 shadow-sm"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-medium">{group.name}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {group.name === "Premium"
-                    ? "Higher commission rates for top performers"
-                    : group.name === "Standard"
-                    ? "Default commission rates for most retailers"
-                    : "Basic commission rates for new retailers"}
-                </p>
-              </div>
-              {editGroup === group.id ? (
-                <div className="flex space-x-1">
-                  <button
-                    onClick={() => saveChanges(group.id)}
-                    disabled={isSaving}
-                    className="rounded-full p-1.5 text-green-500 hover:bg-green-500/10 disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => cancelEditing(group.id)}
-                    disabled={isSaving}
-                    className="rounded-full p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => startEditing(group.id)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center border-b border-border pb-2 text-sm font-medium">
-                <span className="flex-1">Voucher Type</span>
-                <span className="w-24 text-right">Commission Rate</span>
-              </div>
-              <div className="space-y-4">
-                {(() => {
-                  // Categorize rates for this group
-                  const mobileRates = group.rates.filter(rate => 
-                    ['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
-                      network => (rate.voucher_type_name || '').includes(network)
-                    )
-                  );
-                  
-                  const otherRates = group.rates.filter(rate => 
-                    !['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
-                      network => (rate.voucher_type_name || '').includes(network)
-                    )
-                  );
-                  
-                  const categories = [];
-                  if (mobileRates.length > 0) {
-                    categories.push({ name: 'Mobile Networks', rates: mobileRates });
-                  }
-                  if (otherRates.length > 0) {
-                    categories.push({ name: 'Other Services', rates: otherRates });
-                  }
-                  
-                  return categories.map(category => (
-                    <div key={category.name} className="space-y-2">
-                      <h3 className="text-xs font-medium uppercase text-muted-foreground border-b pb-1">
-                        {category.name}
-                      </h3>
-                      <div className="space-y-3">
-                        {category.rates.map((rate) => (
-                          <div
-                            key={rate.id}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <Percent className="h-3.5 w-3.5" />
-                              </div>
-                              <span className="text-sm">
-                                {rate.voucher_type_name || `Type: ${rate.voucher_type_id.substring(0, 6)}`}
-                              </span>
-                            </div>
-
-                            {/* Edit mode */}
-                            {editGroup === group.id ? (
-                              <div className="relative w-20">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.01"
-                                  value={
-                                    editedValues[group.id]?.[
-                                      rate.voucher_type_id
-                                    ] || 0
-                                  }
-                                  onChange={(e) =>
-                                    handleRateChange(
-                                      group.id,
-                                      rate.voucher_type_id,
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                />
-                                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
-                                  %
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                className={cn(
-                                  "rounded-md px-2 py-1 text-right text-sm",
-                                  rate.retailer_pct > 0.02
-                                    ? "text-green-500"
-                                    : "text-amber-500"
-                                )}
-                              >
-                                {formatPercentage(rate.retailer_pct * 100)}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ));
-                })()}
-
-                {group.rates.length === 0 && (
-                  <div className="py-4 text-center text-sm text-muted-foreground">
-                    No commission rates defined for this group
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        ))}
-
-        {commissionGroups.length === 0 && (
-          <div className="col-span-full rounded-lg border border-border bg-card p-8 text-center">
-            <p className="text-muted-foreground">
-              No commission groups found. Create your first group to get
-              started.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Add Commission Group Dialog */}
-      {showAddDialog && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowAddDialog(false)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Add Commission Group</h2>
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="rounded-full p-2 hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-4 space-y-4">
-              {formError && (
-                <div className="mb-4 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    {formError}
-                  </div>
-                </div>
-              )}
-            
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Group Name</label>
-                <input
-                  type="text"
-                  name="groupName"
-                  value={formData.groupName}
-                  onChange={handleFormInputChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="e.g., Premium, Standard, etc."
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Description</label>
-                <input
-                  type="text"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleFormInputChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Brief description of this group"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-sm font-medium">Commission Rates</label>
-                
-                {categorizedVoucherTypes.length > 0 ? (
-                  categorizedVoucherTypes.map((category) => (
-                    <div key={category.category} className="space-y-2">
-                      <h3 className="text-xs font-medium uppercase text-muted-foreground border-b pb-1">
-                        {category.category}
-                      </h3>
-                      <div className="space-y-3">
-                        {category.types.map((type) => (
-                          <div
-                            key={type.id}
-                            className="flex items-center justify-between"
-                          >
-                            <span className="text-sm">{type.name}</span>
-                            <div className="relative w-24">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                value={formData.rates[type.id] || 5}
-                                onChange={(e) => handleRateInputChange(type.id, e.target.value)}
-                                className="w-full rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                              />
-                              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
-                                %
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-2 text-sm text-muted-foreground">
-                    Loading voucher types...
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 flex justify-end space-x-2">
-                <button
-                  onClick={() => {
-                    setShowAddDialog(false);
-                    resetFormData();
-                  }}
-                  type="button"
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateGroup}
-                  type="button"
-                  disabled={isCreating}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Group"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <AddCommissionDialog
+        showAddDialog={showAddDialog}
+        setShowAddDialog={setShowAddDialog}
+        formError={formError}
+        formData={formData}
+        handleFormInputChange={handleFormInputChange}
+        handleRateInputChange={handleRateInputChange}
+        handleCreateGroup={handleCreateGroup}
+        resetFormData={resetFormData}
+        isCreating={isCreating}
+        categorizedVoucherTypes={categorizedVoucherTypes}
+      />
     </div>
   );
 }

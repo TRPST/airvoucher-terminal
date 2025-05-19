@@ -23,6 +23,9 @@ export {
   disableVoucher,
 } from "./admin/voucherActions";
 
+// Re-export voucher file upload actions
+export { processVoucherFile } from "./admin/voucherFileActions";
+
 // Re-export commission actions
 export {
   fetchCommissionGroups,

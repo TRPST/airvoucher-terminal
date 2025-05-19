@@ -14,6 +14,7 @@ import {
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import { fetchVoucherInventory, type VoucherInventory } from "@/actions";
+import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
 
 export default function AdminVouchers() {
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
@@ -417,124 +418,29 @@ export default function AdminVouchers() {
         </div>
       </div>
 
-      {/* Upload Vouchers Dialog */}
-      {showUploadDialog && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowUploadDialog(false)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Upload Vouchers</h2>
-              <button
-                onClick={() => setShowUploadDialog(false)}
-                className="rounded-full p-2 hover:bg-muted"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-4 space-y-4">
-              <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Upload className="h-6 w-6 text-primary" />
-                </div>
-                <p className="mt-2 text-sm font-medium">
-                  Drag and drop CSV file here
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Or click to browse files (Max file size: 10MB)
-                </p>
-                <button className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-                  Browse Files
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Voucher Type</h3>
-                <div className="flex flex-wrap gap-2">
-                  {["Mobile", "OTT", "Hollywoodbets", "Ringa", "EasyLoad"].map(
-                    (type) => (
-                      <label
-                        key={type}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-3.5 w-3.5"
-                          defaultChecked
-                        />
-                        <span>{type}</span>
-                      </label>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Providers</h3>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Vodacom",
-                    "MTN",
-                    "Telkom",
-                    "Cell C",
-                    "Netflix",
-                    "Showmax",
-                    "DSTV",
-                  ].map((provider) => (
-                    <label
-                      key={provider}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs"
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5"
-                        defaultChecked
-                      />
-                      <span>{provider}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end space-x-2">
-                <button
-                  onClick={() => setShowUploadDialog(false)}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowUploadDialog(false)}
-                  className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow"
-                >
-                  Upload &amp; Replace All
-                </button>
-                <button
-                  onClick={() => setShowUploadDialog(false)}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-                >
-                  Upload &amp; Merge
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Voucher Upload Dialog */}
+      <VoucherUploadDialog
+        isOpen={showUploadDialog}
+        onClose={() => setShowUploadDialog(false)}
+        onSuccess={() => {
+          // Reload data after successful upload
+          setShowUploadDialog(false);
+          setIsLoading(true);
+          fetchVoucherInventory()
+            .then(({ data, error: fetchError }) => {
+              if (fetchError) {
+                throw new Error(`Failed to reload voucher inventory: ${fetchError.message}`);
+              }
+              setVouchers(data || []);
+            })
+            .catch((err) => {
+              console.error("Error reloading voucher data:", err);
+            })
+            .finally(() => {
+              setIsLoading(false);
+            });
+        }}
+      />
     </div>
   );
 }
