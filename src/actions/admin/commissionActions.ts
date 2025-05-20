@@ -4,6 +4,7 @@ import { CommissionGroup, ResponseType } from "../types/adminTypes";
 export type VoucherType = {
   id: string;
   name: string;
+  supplier_commission_pct?: number;
 };
 
 /**
@@ -78,7 +79,7 @@ export async function fetchCommissionGroups(): Promise<
 export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
   const { data, error } = await supabase
     .from("voucher_types")
-    .select("id, name")
+    .select("id, name, supplier_commission_pct")
     .order("name");
 
   return { data, error };

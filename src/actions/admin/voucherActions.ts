@@ -1,6 +1,38 @@
 import supabase from "@/lib/supabaseClient";
 import { VoucherInventory, ResponseType } from "../types/adminTypes";
 
+/**
+ * Fetch a single voucher type by ID
+ */
+export async function fetchVoucherType(
+  id: string
+): Promise<ResponseType<{ id: string; name: string; supplier_commission_pct: number }>> {
+  const { data, error } = await supabase
+    .from("voucher_types")
+    .select("id, name, supplier_commission_pct")
+    .eq("id", id)
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Update the supplier commission percentage for a voucher type
+ */
+export async function updateSupplierCommission(
+  id: string,
+  supplierCommissionPct: number
+): Promise<ResponseType<{ id: string }>> {
+  const { data, error } = await supabase
+    .from("voucher_types")
+    .update({ supplier_commission_pct: supplierCommissionPct })
+    .eq("id", id)
+    .select("id")
+    .single();
+
+  return { data, error };
+}
+
 export type VoucherTypeSummary = {
   id: string;
   name: string;

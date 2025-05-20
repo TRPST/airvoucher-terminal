@@ -11,11 +11,17 @@ import {
   Loader2,
   AlertCircle,
   Upload,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
-import { fetchVoucherInventory, fetchVoucherTypes } from "@/actions";
+import { 
+  fetchVoucherInventory, 
+  fetchVoucherTypes
+} from "@/actions";
 import type { VoucherInventory } from "@/actions/types/adminTypes";
 import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
 
@@ -36,8 +42,13 @@ export default function VoucherTypeDetail() {
   const [typeName, setTypeName] = React.useState<string>("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [supplierCommission, setSupplierCommission] = React.useState<number>(0);
+  const [editingCommission, setEditingCommission] = React.useState(false);
+  const [newCommission, setNewCommission] = React.useState<string>("");
+  const [savingCommission, setSavingCommission] = React.useState(false);
+  const [commissionError, setCommissionError] = React.useState<string | null>(null);
 
-  // Fetch voucher inventory for this type
+  // Fetch voucher type details including supplier commission
   React.useEffect(() => {
     async function loadData() {
       try {
@@ -45,7 +56,7 @@ export default function VoucherTypeDetail() {
         
         setIsLoading(true);
         
-        // First, get the voucher type name
+        // First, get the voucher type details
         const { data: voucherTypes, error: typesError } = await fetchVoucherTypes();
         
         if (typesError) {
@@ -58,6 +69,14 @@ export default function VoucherTypeDetail() {
         }
         
         setTypeName(selectedType.name);
+        
+        // Find the supplier commission percentage from the selected type
+        const selectedTypeObj = voucherTypes?.find(t => t.id === typeId);
+        if (selectedTypeObj && 'supplier_commission_pct' in selectedTypeObj) {
+          const commissionPct = (selectedTypeObj as any).supplier_commission_pct || 0;
+          setSupplierCommission(commissionPct);
+          setNewCommission(commissionPct.toFixed(2));
+        }
         
         // Then fetch vouchers for this type
         const { data, error: fetchError } = await fetchVoucherInventory(typeId);
@@ -286,7 +305,7 @@ export default function VoucherTypeDetail() {
   if (vouchers.length === 0) {
     return (
       <div className="space-y-6">
-        <Link href="/admin/vouchers">
+        <Link href="/admin/vouchers" passHref>
           <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
             <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
             Back to vouchers
@@ -300,6 +319,115 @@ export default function VoucherTypeDetail() {
           <p className="text-muted-foreground">
             View and manage {typeName} vouchers by denomination
           </p>
+        </div>
+        
+        {/* Supplier Commission Card - Empty State */}
+        <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Supplier Commission</h3>
+              <p className="text-sm text-muted-foreground">
+                Commission percentage paid to the supplier for each voucher sold
+              </p>
+            </div>
+            
+            {!editingCommission ? (
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-primary/10 px-3 py-1 text-primary">
+                  {supplierCommission.toFixed(2)}%
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingCommission(true);
+                    setNewCommission(supplierCommission.toFixed(2));
+                    setCommissionError(null);
+                  }}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={newCommission}
+                    onChange={(e) => setNewCommission(e.target.value)}
+                    className="w-24 rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
+                    %
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    // Validate input
+                    const value = parseFloat(newCommission);
+                    if (isNaN(value) || value < 0 || value > 100) {
+                      setCommissionError("Please enter a valid percentage between 0 and 100");
+                      return;
+                    }
+                    
+                    setSavingCommission(true);
+                    setCommissionError(null);
+                    
+                    try {
+                      // Import the action function
+                      const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
+                      
+                      // Use the action function
+                      const { error } = await updateSupplierCommission(typeId as string, value);
+                      
+                      if (error) {
+                        throw new Error(error.message || 'Failed to update supplier commission');
+                      }
+                      
+                      // Update the local state with the new value
+                      setSupplierCommission(value);
+                      setEditingCommission(false);
+                    } catch (err) {
+                      console.error('Error updating supplier commission:', err);
+                      setCommissionError(
+                        err instanceof Error
+                          ? err.message
+                          : 'Failed to update supplier commission'
+                      );
+                    } finally {
+                      setSavingCommission(false);
+                    }
+                  }}
+                  disabled={savingCommission}
+                  className="rounded-full p-1.5 text-green-500 hover:bg-green-500/10 disabled:opacity-50"
+                >
+                  {savingCommission ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingCommission(false);
+                    setCommissionError(null);
+                  }}
+                  disabled={savingCommission}
+                  className="rounded-full p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {commissionError && (
+            <div className="mt-2 rounded-md bg-destructive/10 p-2 text-destructive text-sm">
+              {commissionError}
+            </div>
+          )}
         </div>
         
         <div className="flex h-[40vh] items-center justify-center">
@@ -377,7 +505,7 @@ export default function VoucherTypeDetail() {
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/vouchers">
+      <Link href="/admin/vouchers" passHref>
         <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
           <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
           Back to vouchers
@@ -399,6 +527,115 @@ export default function VoucherTypeDetail() {
           <Upload className="mr-2 h-4 w-4" />
           Upload {typeName} Vouchers
         </button>
+      </div>
+
+      {/* Supplier Commission Card */}
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium">Supplier Commission</h3>
+            <p className="text-sm text-muted-foreground">
+              Commission percentage paid to the supplier for each voucher sold
+            </p>
+          </div>
+          
+          {!editingCommission ? (
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 px-3 py-1 text-primary">
+                {supplierCommission.toFixed(2)}%
+              </div>
+              <button
+                onClick={() => {
+                  setEditingCommission(true);
+                  setNewCommission(supplierCommission.toFixed(2));
+                  setCommissionError(null);
+                }}
+                className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={newCommission}
+                  onChange={(e) => setNewCommission(e.target.value)}
+                  className="w-24 rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
+                  %
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  // Validate input
+                  const value = parseFloat(newCommission);
+                  if (isNaN(value) || value < 0 || value > 100) {
+                    setCommissionError("Please enter a valid percentage between 0 and 100");
+                    return;
+                  }
+                  
+                  setSavingCommission(true);
+                  setCommissionError(null);
+                  
+                  try {
+                    // Import the action function
+                    const { updateSupplierCommission } = await import('@/actions/admin/voucherActions');
+                    
+                    // Use the action function
+                    const { error } = await updateSupplierCommission(typeId as string, value);
+                    
+                    if (error) {
+                      throw new Error(error.message || 'Failed to update supplier commission');
+                    }
+                    
+                    // Update the local state with the new value
+                    setSupplierCommission(value);
+                    setEditingCommission(false);
+                  } catch (err) {
+                    console.error('Error updating supplier commission:', err);
+                    setCommissionError(
+                      err instanceof Error
+                        ? err.message
+                        : 'Failed to update supplier commission'
+                    );
+                  } finally {
+                    setSavingCommission(false);
+                  }
+                }}
+                disabled={savingCommission}
+                className="rounded-full p-1.5 text-green-500 hover:bg-green-500/10 disabled:opacity-50"
+              >
+                {savingCommission ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingCommission(false);
+                  setCommissionError(null);
+                }}
+                disabled={savingCommission}
+                className="rounded-full p-1.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {commissionError && (
+          <div className="mt-2 rounded-md bg-destructive/10 p-2 text-destructive text-sm">
+            {commissionError}
+          </div>
+        )}
       </div>
 
       {/* Inventory Summary */}

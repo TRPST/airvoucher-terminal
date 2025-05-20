@@ -1,5 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import {
   CreditCard,
   Phone,
@@ -248,6 +249,7 @@ function VouchersPageContent() {
 
 // VoucherTypeCard component
 const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
+  const router = useRouter();
   // Get the appropriate icon based on the icon property
   const Icon = () => {
     switch (summary.icon) {
@@ -283,21 +285,24 @@ const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
   };
 
   return (
-    <Link href={`/admin/vouchers/${summary.id}`}>
-      <motion.div
-        whileHover={{
-          scale: 1.03,
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-        }}
-        transition={{
-          duration: 0.2,
-          ease: "easeInOut",
-        }}
-        className={cn(
-          "flex flex-col h-full rounded-lg border border-border bg-card p-6 shadow-sm",
-          "cursor-pointer hover:border-primary/20"
-        )}
-      >
+    <motion.div
+      whileHover={{
+        scale: 1.03,
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      }}
+      transition={{
+        duration: 0.2,
+        ease: "easeInOut",
+      }}
+      className={cn(
+        "flex flex-col h-full rounded-lg border border-border bg-card p-6 shadow-sm",
+        "cursor-pointer hover:border-primary/20"
+      )}
+      onClick={() => {
+        // Use Next.js router for client-side navigation
+        router.push(`/admin/vouchers/${summary.id}`);
+      }}
+    >
         <div
           className={cn(
             "mb-4 flex h-12 w-12 items-center justify-center rounded-full",
@@ -351,7 +356,6 @@ const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
           </svg>
         </div>
       </motion.div>
-    </Link>
   );
 };
 

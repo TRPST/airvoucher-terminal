@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import {
   Store,
   Smartphone,
@@ -13,6 +14,7 @@ import {
   Loader2,
   AlertCircle,
   X,
+  ChevronLeft,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -279,21 +281,19 @@ export default function RetailerDetails() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Retailer Details
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage retailer information.
-          </p>
-        </div>
-        <button
-          onClick={() => router.push("/admin/retailers")}
-          className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-muted"
-        >
-          Back to List
+      <Link href="/admin/retailers">
+        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
+          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+          Back to retailers
         </button>
+      </Link>
+      <div style={{ marginTop: 10 }}>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          Retailer Details
+        </h1>
+        <p className="text-muted-foreground">
+          View and manage retailer information.
+        </p>
       </div>
 
       {/* Profile Card */}
