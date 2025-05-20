@@ -37,12 +37,12 @@ export default function AdminCommissions() {
   const [formData, setFormData] = React.useState({
     groupName: "",
     description: "",
-    rates: {} as Record<string, number>,
+    rates: {} as Record<string, {retailerPct: number, agentPct: number}>,
   });
 
   // Local state to track edited values
   const [editedValues, setEditedValues] = React.useState<
-    Record<string, Record<string, number>>
+    Record<string, Record<string, {retailerPct: number, agentPct: number}>>
   >({});
 
   // Fetch commission groups and voucher types
@@ -103,11 +103,14 @@ export default function AdminCommissions() {
     if (!group) return;
 
     // Convert the rates to a more convenient format for editing
-    const editValues: Record<string, number> = {};
+    const editValues: Record<string, {retailerPct: number, agentPct: number}> = {};
 
     group.rates.forEach((rate) => {
       // Use voucher_type_id as the key instead of name for more reliable editing
-      editValues[rate.voucher_type_id] = rate.retailer_pct * 100;
+      editValues[rate.voucher_type_id] = {
+        retailerPct: rate.retailer_pct * 100,
+        agentPct: rate.agent_pct * 100
+      };
     });
 
     setEditedValues((prev) => ({
@@ -122,18 +125,28 @@ export default function AdminCommissions() {
   const handleRateChange = (
     groupId: string,
     voucherType: string,
-    value: string
+    value: string,
+    rateType: 'retailer' | 'agent'
   ) => {
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
+    
+    const clampedValue = Math.min(100, Math.max(0, numValue)); // Clamp between 0-100
 
-    setEditedValues((prev) => ({
-      ...prev,
-      [groupId]: {
-        ...prev[groupId],
-        [voucherType]: Math.min(100, Math.max(0, numValue)), // Clamp between 0-100
-      },
-    }));
+    setEditedValues((prev) => {
+      const currentValues = prev[groupId]?.[voucherType] || { retailerPct: 0, agentPct: 0 };
+      
+      return {
+        ...prev,
+        [groupId]: {
+          ...prev[groupId],
+          [voucherType]: {
+            ...currentValues,
+            [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: clampedValue
+          }
+        }
+      };
+    });
   };
 
   // Save changes for a group
@@ -152,15 +165,16 @@ export default function AdminCommissions() {
         const voucherTypeName = rate.voucher_type_name || "";
 
         if (edits[voucherTypeId] !== undefined) {
-          const newRetailerPct = edits[voucherTypeId] / 100; // Convert back to decimal
+          const newRetailerPct = edits[voucherTypeId].retailerPct / 100; // Convert back to decimal
+          const newAgentPct = edits[voucherTypeId].agentPct / 100; // Convert back to decimal
 
-          // Only update if the value has changed
-          if (newRetailerPct !== rate.retailer_pct) {
+          // Only update if either value has changed
+          if (newRetailerPct !== rate.retailer_pct || newAgentPct !== rate.agent_pct) {
             const { error } = await upsertCommissionRate(
               groupId,
               voucherTypeId,
               newRetailerPct,
-              rate.agent_pct // Keep agent percent the same
+              newAgentPct
             );
 
             if (error) {
@@ -216,20 +230,28 @@ export default function AdminCommissions() {
   };
   
   // Handle rate input changes in the form
-  const handleRateInputChange = (voucherTypeId: string, value: string) => {
+  const handleRateInputChange = (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent') => {
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
     
     // Clamp between 0-100
     const clampedValue = Math.min(100, Math.max(0, numValue));
     
-    setFormData((prev) => ({
-      ...prev,
-      rates: {
-        ...prev.rates,
-        [voucherTypeId]: clampedValue,
-      },
-    }));
+    setFormData((prev) => {
+      // Get existing rates for this voucher type or initialize defaults
+      const existingRates = prev.rates[voucherTypeId] || { retailerPct: 5, agentPct: 0 };
+      
+      return {
+        ...prev,
+        rates: {
+          ...prev.rates,
+          [voucherTypeId]: {
+            ...existingRates,
+            [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: clampedValue
+          },
+        },
+      };
+    });
   };
   
   // Reset form data
@@ -270,14 +292,18 @@ export default function AdminCommissions() {
       
       // Step 2: Create commission rates for all voucher types
       const rates = voucherTypes.map(type => {
-        // Use the rate from form data or default to 5%
-        const retailerPct = (formData.rates[type.id] || 5) / 100; // Convert to decimal
+        // Get rates from form data or use defaults
+        const rateData = formData.rates[type.id] || { retailerPct: 5, agentPct: 0 };
+        
+        // Convert to decimal
+        const retailerPct = rateData.retailerPct / 100;
+        const agentPct = rateData.agentPct / 100;
         
         return {
           commission_group_id: groupId,
           voucher_type_id: type.id,
           retailer_pct: retailerPct,
-          agent_pct: 0, // Default agent percentage to 0
+          agent_pct: agentPct,
         };
       });
       
@@ -332,6 +358,7 @@ export default function AdminCommissions() {
         handleRateChange={handleRateChange}
         saveChanges={saveChanges}
         cancelEditing={cancelEditing}
+        voucherTypes={voucherTypes}
       />
 
       <AddCommissionDialog

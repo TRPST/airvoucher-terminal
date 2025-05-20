@@ -335,6 +335,12 @@ const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
             <span className="text-muted-foreground">Total Value:</span>
             <span className="font-medium">R {summary.totalValue.toFixed(2)}</span>
           </div>
+          
+          {/* Supplier Commission */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Supplier Commission:</span>
+            <span className="font-medium">{summary.supplierCommissionPct?.toFixed(2) || '0.00'}%</span>
+          </div>
         </div>
         
         <div className="mt-auto flex items-center text-sm text-primary">

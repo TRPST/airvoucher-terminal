@@ -13,15 +13,15 @@ export function PageHeader({ onAddClick }: PageHeaderProps) {
           Commission Groups
         </h1>
         <p className="text-muted-foreground">
-          Manage commission rates for different retailer groups.
+          Manage commission rates for retailers and sales agents across different voucher types.
         </p>
       </div>
       <button
         onClick={onAddClick}
-        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
       >
         <Plus className="mr-2 h-4 w-4" />
-        New Group
+        Add Group
       </button>
     </div>
   );

@@ -43,6 +43,7 @@ export type VoucherTypeSummary = {
   uniqueAmounts: number[];
   totalValue: number;
   icon?: string;
+  supplierCommissionPct?: number;
 };
 
 /**
@@ -210,10 +211,10 @@ export async function fetchVoucherTypeSummaries(): Promise<
   try {
     console.log("Starting fetchVoucherTypeSummaries");
     
-    // Get all voucher types
+    // Get all voucher types with supplier commission percentage
     const { data: voucherTypes, error: typesError } = await supabase
       .from("voucher_types")
-      .select("id, name");
+      .select("id, name, supplier_commission_pct");
 
     if (typesError) {
       console.error("Error fetching voucher types:", typesError);
@@ -248,7 +249,8 @@ export async function fetchVoucherTypeSummaries(): Promise<
         disabledVouchers: 0,
         uniqueAmounts: [],
         totalValue: 0,
-        icon
+        icon,
+        supplierCommissionPct: type.supplier_commission_pct
       };
     });
 

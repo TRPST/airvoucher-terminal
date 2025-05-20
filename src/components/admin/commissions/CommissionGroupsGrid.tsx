@@ -1,16 +1,18 @@
 import * as React from "react";
 import { type CommissionGroup } from "@/actions";
 import { CommissionGroupCard } from "./CommissionGroupCard";
+import { type VoucherType } from "@/actions/admin/commissionActions";
 
 interface CommissionGroupsGridProps {
   commissionGroups: CommissionGroup[];
   editGroup: string | null;
   isSaving: boolean;
-  editedValues: Record<string, Record<string, number>>;
+  editedValues: Record<string, Record<string, {retailerPct: number, agentPct: number}>>;
   startEditing: (groupId: string) => void;
-  handleRateChange: (groupId: string, voucherType: string, value: string) => void;
+  handleRateChange: (groupId: string, voucherType: string, value: string, rateType: 'retailer' | 'agent') => void;
   saveChanges: (groupId: string) => void;
   cancelEditing: (groupId: string) => void;
+  voucherTypes: VoucherType[];
 }
 
 export function CommissionGroupsGrid({
@@ -22,9 +24,10 @@ export function CommissionGroupsGrid({
   handleRateChange,
   saveChanges,
   cancelEditing,
+  voucherTypes,
 }: CommissionGroupsGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-1 lg:grid-cols-2">
       {commissionGroups.map((group) => (
         <CommissionGroupCard
           key={group.id}
@@ -36,6 +39,7 @@ export function CommissionGroupsGrid({
           handleRateChange={handleRateChange}
           saveChanges={saveChanges}
           cancelEditing={cancelEditing}
+          voucherTypes={voucherTypes}
         />
       ))}
 

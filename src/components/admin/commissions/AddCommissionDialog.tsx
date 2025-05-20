@@ -8,10 +8,10 @@ interface AddCommissionDialogProps {
   formData: {
     groupName: string;
     description: string;
-    rates: Record<string, number>;
+    rates: Record<string, {retailerPct: number, agentPct: number}>;
   };
   handleFormInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRateInputChange: (voucherTypeId: string, value: string) => void;
+  handleRateInputChange: (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent') => void;
   handleCreateGroup: () => void;
   resetFormData: () => void;
   isCreating: boolean;
@@ -111,21 +111,46 @@ export function AddCommissionDialog({
                     {category.types.map((type) => (
                       <div
                         key={type.id}
-                        className="flex items-center justify-between"
+                        className="flex items-center space-x-2"
                       >
-                        <span className="text-sm">{type.name}</span>
-                        <div className="relative w-24">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={formData.rates[type.id] || 5}
-                            onChange={(e) => handleRateInputChange(type.id, e.target.value)}
-                            className="w-full rounded-md border border-input bg-background px-3 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          />
-                          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
-                            %
+                        <span className="text-sm flex-grow">{type.name}</span>
+                        <div className="flex items-center space-x-2">
+                          {/* Retailer Commission */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground mb-1">Retailer</span>
+                            <div className="relative w-20">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={(formData.rates[type.id]?.retailerPct) || 5}
+                                onChange={(e) => handleRateInputChange(type.id, e.target.value, 'retailer')}
+                                className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                              />
+                              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
+                                %
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Agent Commission */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground mb-1">Agent</span>
+                            <div className="relative w-20">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={(formData.rates[type.id]?.agentPct) || 0}
+                                onChange={(e) => handleRateInputChange(type.id, e.target.value, 'agent')}
+                                className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
+                              />
+                              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-green-500 dark:text-green-400">
+                                %
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
