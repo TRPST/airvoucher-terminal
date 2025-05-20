@@ -10,17 +10,20 @@ import {
   ArrowUp,
   Loader2,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import { fetchVoucherInventory, fetchVoucherTypes } from "@/actions";
 import type { VoucherInventory } from "@/actions/types/adminTypes";
+import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
 
 export default function VoucherTypeDetail() {
   const router = useRouter();
   const { type: typeId } = router.query;
   
+  const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [sortBy, setSortBy] = React.useState<{
     field: string;
@@ -60,13 +63,18 @@ export default function VoucherTypeDetail() {
         const { data, error: fetchError } = await fetchVoucherInventory(typeId);
 
         if (fetchError) {
-          throw new Error(
-            `Failed to load voucher inventory: ${fetchError.message}`
-          );
+          // Don't throw an error for no inventory, just set empty vouchers
+          if (fetchError.message === "No voucher inventory data found") {
+            setVouchers([]);
+          } else {
+            throw new Error(
+              `Failed to load voucher inventory: ${fetchError.message}`
+            );
+          }
+        } else {
+          setVouchers(data || []);
+          console.log(`${selectedType.name} vouchers:`, data);
         }
-
-        setVouchers(data || []);
-        console.log(`${selectedType.name} vouchers:`, data);
       } catch (err) {
         console.error("Error loading voucher data:", err);
         setError(
@@ -81,6 +89,28 @@ export default function VoucherTypeDetail() {
 
     loadData();
   }, [typeId]);
+
+  // Handle upload success
+  const handleUploadSuccess = () => {
+    setShowUploadDialog(false);
+    // Reload data after successful upload
+    setIsLoading(true);
+    if (typeId && typeof typeId === "string") {
+      fetchVoucherInventory(typeId)
+        .then(({ data, error: fetchError }) => {
+          if (fetchError) {
+            throw new Error(`Failed to reload voucher inventory: ${fetchError.message}`);
+          }
+          setVouchers(data || []);
+        })
+        .catch((err) => {
+          console.error("Error reloading voucher data:", err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  };
 
   // Group vouchers by amount for better inventory overview
   const groupedVouchers = React.useMemo(() => {
@@ -252,6 +282,53 @@ export default function VoucherTypeDetail() {
     );
   }
 
+  // Empty state - if we have no vouchers at all but no error
+  if (vouchers.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Link href="/admin/vouchers">
+          <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
+            <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+            Back to vouchers
+          </button>
+        </Link>
+        
+        <div style={{ marginTop: 10 }}>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            {typeName} Vouchers
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage {typeName} vouchers by denomination
+          </p>
+        </div>
+        
+        <div className="flex h-[40vh] items-center justify-center">
+          <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+            <CreditCard className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+            <h2 className="mb-2 text-xl font-semibold">No Vouchers Found</h2>
+            <p className="mb-4 text-muted-foreground">
+              There are no {typeName} vouchers available in the inventory.
+            </p>
+            <button
+              onClick={() => setShowUploadDialog(true)}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload {typeName} Vouchers
+            </button>
+          </div>
+        </div>
+        
+        {/* Voucher Upload Dialog */}
+        <VoucherUploadDialog
+          isOpen={showUploadDialog}
+          onClose={() => setShowUploadDialog(false)}
+          onSuccess={handleUploadSuccess}
+        />
+      </div>
+    );
+  }
+
   // Custom column headers with sorting
   const columnHeaders = (
     <tr className="border-b border-border">
@@ -300,13 +377,13 @@ export default function VoucherTypeDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center">
-        <Link href="/admin/vouchers" className="mr-4">
-          <button className="inline-flex items-center justify-center rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/80">
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Back
-          </button>
-        </Link>
+      <Link href="/admin/vouchers">
+        <button className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group">
+          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+          Back to vouchers
+        </button>
+      </Link>
+      <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             {typeName} Vouchers
@@ -315,6 +392,13 @@ export default function VoucherTypeDetail() {
             View and manage {typeName} vouchers by denomination
           </p>
         </div>
+        <button
+          onClick={() => setShowUploadDialog(true)}
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Upload {typeName} Vouchers
+        </button>
       </div>
 
       {/* Inventory Summary */}
@@ -413,6 +497,13 @@ export default function VoucherTypeDetail() {
           </table>
         </div>
       </div>
+
+      {/* Voucher Upload Dialog */}
+      <VoucherUploadDialog
+        isOpen={showUploadDialog}
+        onClose={() => setShowUploadDialog(false)}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }

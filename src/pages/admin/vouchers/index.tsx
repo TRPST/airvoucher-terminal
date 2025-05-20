@@ -1,7 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Upload,
   CreditCard,
   Phone,
   Film,
@@ -14,7 +13,6 @@ import { motion } from "framer-motion";
 import useRequireRole from "@/hooks/useRequireRole";
 import { cn } from "@/utils/cn";
 import { fetchVoucherTypeSummaries, type VoucherTypeSummary } from "@/actions/adminActions";
-import { VoucherUploadDialog } from "@/components/admin/vouchers/VoucherUploadDialog";
 
 // SafeComponent wrapper to catch rendering errors
 function SafeComponent({ children }: { children: React.ReactNode }) {
@@ -59,7 +57,6 @@ function SafeComponent({ children }: { children: React.ReactNode }) {
 function VouchersPageContent() {
   console.log("VouchersPageContent render start");
   
-  const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [voucherTypes, setVoucherTypes] = React.useState<VoucherTypeSummary[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -186,13 +183,6 @@ function VouchersPageContent() {
             Manage voucher stock and upload new vouchers.
           </p>
         </div>
-        <button
-          onClick={() => setShowUploadDialog(true)}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Vouchers
-        </button>
       </div>
 
       {/* Inventory Summary */}
@@ -252,30 +242,6 @@ function VouchersPageContent() {
           </div>
         )}
       </div>
-
-      {/* Voucher Upload Dialog */}
-      <VoucherUploadDialog
-        isOpen={showUploadDialog}
-        onClose={() => setShowUploadDialog(false)}
-        onSuccess={() => {
-          // Reload data after successful upload
-          setShowUploadDialog(false);
-          setIsLoading(true);
-          fetchVoucherTypeSummaries()
-            .then(({ data, error: fetchError }) => {
-              if (fetchError) {
-                throw new Error(`Failed to reload voucher inventory: ${fetchError.message}`);
-              }
-              setVoucherTypes(data || []);
-            })
-            .catch((err) => {
-              console.error("Error reloading voucher data:", err);
-            })
-            .finally(() => {
-              setIsLoading(false);
-            });
-        }}
-      />
     </div>
   );
 }
@@ -349,15 +315,15 @@ const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
             <span className="font-medium">{summary.availableVouchers.toLocaleString()}</span>
           </div>
           
-          {/* Denominations */}
+          {/* Denominations
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Denominations:</span>
-            <span className="font-medium">
+            <span className="font-medium text-right">
               {summary.uniqueAmounts.length > 0
                 ? summary.uniqueAmounts.map((a: number) => `R${a}`).join(", ")
                 : "None"}
             </span>
-          </div>
+          </div> */}
           
           {/* Value */}
           <div className="flex items-center justify-between text-sm">
