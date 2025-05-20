@@ -12,11 +12,11 @@ export function useRequireRole(requiredRole: string) {
   const { session, isLoading, supabaseClient } = useSessionContext();
   const [isAuthorized, setIsAuthorized] = useState(false);
 
-  console.log(`useRequireRole hook called with role: ${requiredRole}`, {
-    path: router.pathname,
-    isLoading,
-    hasSession: !!session
-  });
+  // console.log(`useRequireRole hook called with role: ${requiredRole}`, {
+  //   path: router.pathname,
+  //   isLoading,
+  //   hasSession: !!session
+  // });
 
   useEffect(() => {
     // Wait until session loading is complete
@@ -26,7 +26,7 @@ export function useRequireRole(requiredRole: string) {
     }
 
     const checkAuth = async () => {
-      console.log(`useRequireRole: Checking auth for ${requiredRole}`);
+      //console.log(`useRequireRole: Checking auth for ${requiredRole}`);
       
       // If no session, redirect to auth page for the required role
       if (!session) {
@@ -40,11 +40,11 @@ export function useRequireRole(requiredRole: string) {
         data: { user },
       } = await supabaseClient.auth.getUser();
 
-      console.log(`useRequireRole: User data for ${requiredRole}`, { 
-        userId: user?.id,
-        userRole: user?.app_metadata?.role,
-        userEmail: user?.email
-      });
+      // console.log(`useRequireRole: User data for ${requiredRole}`, { 
+      //   userId: user?.id,
+      //   userRole: user?.app_metadata?.role,
+      //   userEmail: user?.email
+      // });
 
       if (!user) {
         console.log(`No user found. Redirecting to /auth/${requiredRole}`);
@@ -68,7 +68,7 @@ export function useRequireRole(requiredRole: string) {
         return;
       }
 
-      console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
+      //console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
       setIsAuthorized(true);
     };
 
@@ -82,7 +82,7 @@ export function useRequireRole(requiredRole: string) {
     isLoading: isLoading || (!isLoading && !isAuthorized),
   };
   
-  console.log(`useRequireRole result for ${requiredRole}:`, result);
+  //console.log(`useRequireRole result for ${requiredRole}:`, result);
   
   return result;
 }

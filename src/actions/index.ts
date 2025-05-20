@@ -51,6 +51,7 @@ export type {
 export {
   fetchMyRetailer,
   fetchAvailableVoucherTypes,
+  fetchVoucherInventoryByType,
   sellVoucher,
   fetchSalesHistory,
   fetchTerminals as fetchRetailerTerminals,

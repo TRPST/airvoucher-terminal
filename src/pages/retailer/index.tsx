@@ -9,6 +9,7 @@ import TerminalSelector from "@/components/TerminalSelector";
 import {
   fetchMyRetailer,
   fetchAvailableVoucherTypes,
+  fetchVoucherInventoryByType,
   sellVoucher,
   type RetailerProfile,
   type VoucherType,
@@ -57,7 +58,8 @@ export default function RetailerPOS() {
 
   // State for retailer data and loading/error states
   const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);
-  const [voucherTypes, setVoucherTypes] = React.useState<VoucherType[]>([]);
+  const [voucherTypeNames, setVoucherTypeNames] = React.useState<string[]>([]);
+  const [voucherInventory, setVoucherInventory] = React.useState<VoucherType[]>([]);
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const [dataError, setDataError] = React.useState<string | null>(null);
   const [activeTerminalId, setActiveTerminalId] = React.useState<string | null>(
@@ -109,16 +111,16 @@ export default function RetailerPOS() {
 
         setRetailer(retailerData);
 
-        // Fetch available voucher types
-        const { data: voucherData, error: voucherError } =
+        // Fetch available voucher type names
+        const { data: voucherNames, error: voucherError } =
           await fetchAvailableVoucherTypes();
 
         if (voucherError) {
           setDataError(`Failed to load voucher types: ${voucherError.message}`);
           return;
         }
-
-        setVoucherTypes(voucherData || []);
+        console.log('voucherNames', voucherNames);
+        setVoucherTypeNames(voucherNames || []);
       } catch (err) {
         setDataError(
           `Unexpected error: ${
@@ -133,130 +135,241 @@ export default function RetailerPOS() {
     loadData();
   }, [userId]);
 
-  // Terminal selection handler
-  const handleTerminalSelect = (terminalId: string) => {
-    setActiveTerminalId(terminalId);
-  };
-
-  // Show loading state while checking authentication or loading data
-  if (isLoading || isDataLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="ml-2">Loading...</span>
-      </div>
-    );
-  }
-
-  // Show error state if any
-  if (dataError) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center text-center">
-        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
-          <CreditCard className="h-6 w-6" />
-        </div>
-        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
-        <p className="max-w-md text-muted-foreground">{dataError}</p>
-      </div>
-    );
-  }
-
-  // If retailer data hasn't loaded or there's no active terminal, show appropriate message
-  if (!retailer) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center text-center">
-        <div className="mb-4 rounded-full bg-amber-500/10 p-3 text-amber-500">
-          <Wallet className="h-6 w-6" />
-        </div>
-        <h2 className="mb-2 text-xl font-semibold">Account Not Found</h2>
-        <p className="max-w-md text-muted-foreground">
-          We couldn't find your retailer account. Please contact support for
-          assistance.
-        </p>
-      </div>
-    );
-  }
-
   // Group voucher types by category
   const voucherCategories = React.useMemo(() => {
-    // Get unique category names from start of voucher type name
-    const categoryNames = [
-      ...new Set(voucherTypes.map((vt) => vt.name.split(" ")[0])),
-    ];
+    // Check if voucherTypeNames is empty or undefined
+    if (!voucherTypeNames || voucherTypeNames.length === 0) {
+      // Return default categories if no voucher types are available
+      return [
+        {
+          name: "Mobile Networks",
+          items: [
+            {
+              name: "Vodacom",
+              icon: <CreditCard className="h-6 w-6" />,
+              color: "bg-blue-500/5 hover:bg-blue-500/10",
+            },
+            {
+              name: "MTN",
+              icon: <CreditCard className="h-6 w-6" />,
+              color: "bg-yellow-500/5 hover:bg-yellow-500/10",
+            },
+            {
+              name: "Telkom",
+              icon: <CreditCard className="h-6 w-6" />,
+              color: "bg-blue-500/5 hover:bg-blue-500/10",
+            },
+            {
+              name: "CellC",
+              icon: <CreditCard className="h-6 w-6" />,
+              color: "bg-indigo-500/5 hover:bg-indigo-500/10",
+            },
+          ],
+        },
+        {
+          name: "Other Services",
+          items: [
+            {
+              name: "OTT",
+              icon: <Tags className="h-6 w-6" />,
+              color: "bg-purple-500/5 hover:bg-purple-500/10",
+            },
+            {
+              name: "Hollywoodbets",
+              icon: <Wallet className="h-6 w-6" />,
+              color: "bg-green-500/5 hover:bg-green-500/10",
+            },
+            {
+              name: "Ringa",
+              icon: <Percent className="h-6 w-6" />,
+              color: "bg-amber-500/5 hover:bg-amber-500/10",
+            },
+          ],
+        },
+      ];
+    }
 
-    // Create category objects with appropriate icons
-    return categoryNames.map((name, index) => {
-      let icon = <CreditCard className="h-6 w-6" />;
-      let color = "bg-blue-500/5 hover:bg-blue-500/10";
-
-      // Assign different icons and colors based on name or index
-      switch (name.toLowerCase()) {
-        case "mobile":
-        case "vodacom":
-        case "mtn":
-        case "telkom":
-          icon = <CreditCard className="h-6 w-6" />;
+    // Categorize voucher types into Mobile Networks and Other Services
+    const mobileNetworks = voucherTypeNames
+      .filter(name => 
+        ['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
+          network => name && name.includes(network)
+        )
+      )
+      .map(name => {
+        let icon = <CreditCard className="h-6 w-6" />;
+        let color = "bg-blue-500/5 hover:bg-blue-500/10";
+        
+        // Assign different colors based on network
+        if (name?.includes('Vodacom')) {
           color = "bg-blue-500/5 hover:bg-blue-500/10";
-          break;
-        case "ott":
-        case "netflix":
-        case "showmax":
-          icon = <Tags className="h-6 w-6" />;
-          color = "bg-purple-500/5 hover:bg-purple-500/10";
-          break;
-        case "betting":
-        case "hollywoodbets":
-        case "betway":
-          icon = <Wallet className="h-6 w-6" />;
-          color = "bg-green-500/5 hover:bg-green-500/10";
-          break;
-        default:
-          // Use index for others to get a nice variety
-          const colors = [
-            "bg-amber-500/5 hover:bg-amber-500/10",
-            "bg-pink-500/5 hover:bg-pink-500/10",
-            "bg-teal-500/5 hover:bg-teal-500/10",
-            "bg-indigo-500/5 hover:bg-indigo-500/10",
-            "bg-red-500/5 hover:bg-red-500/10",
-          ];
-          color = colors[index % colors.length];
-          break;
-      }
-
-      return { name, icon, color };
-    });
-  }, [voucherTypes]);
+        } else if (name?.includes('MTN')) {
+          color = "bg-yellow-500/5 hover:bg-yellow-500/10";
+        } else if (name?.includes('CellC')) {
+          color = "bg-indigo-500/5 hover:bg-indigo-500/10";
+        } else if (name?.includes('Telkom')) {
+          color = "bg-teal-500/5 hover:bg-teal-500/10";
+        }
+        
+        return {
+          name: name?.split(' ')[0] || name,
+          icon,
+          color
+        };
+      });
+    
+    // Other services (those not in mobile networks)
+    const otherServices = voucherTypeNames
+      .filter(name => 
+        !['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
+          network => name && name.includes(network)
+        )
+      )
+      .map((name, index) => {
+        let icon = <CreditCard className="h-6 w-6" />;
+        let color = "bg-blue-500/5 hover:bg-blue-500/10";
+        
+        // Get the first word of the name as the category
+        const categoryName = name?.split(' ')[0] || name;
+        
+        // Assign different icons and colors based on name
+        switch (categoryName?.toLowerCase()) {
+          case "ott":
+          case "netflix":
+          case "showmax":
+            icon = <Tags className="h-6 w-6" />;
+            color = "bg-purple-500/5 hover:bg-purple-500/10";
+            break;
+          case "betting":
+          case "hollywoodbets":
+          case "betway":
+            icon = <Wallet className="h-6 w-6" />;
+            color = "bg-green-500/5 hover:bg-green-500/10";
+            break;
+          case "ringa":
+            icon = <Percent className="h-6 w-6" />;
+            color = "bg-amber-500/5 hover:bg-amber-500/10";
+            break;
+          case "easyload":
+            icon = <CreditCard className="h-6 w-6" />;
+            color = "bg-green-500/5 hover:bg-green-500/10";
+            break;
+          default:
+            // Use index for others to get a nice variety
+            const colors = [
+              "bg-amber-500/5 hover:bg-amber-500/10",
+              "bg-pink-500/5 hover:bg-pink-500/10",
+              "bg-teal-500/5 hover:bg-teal-500/10",
+              "bg-indigo-500/5 hover:bg-indigo-500/10",
+              "bg-red-500/5 hover:bg-red-500/10",
+            ];
+            color = colors[index % colors.length];
+            break;
+        }
+        
+        return {
+          name: categoryName,
+          icon,
+          color
+        };
+      });
+    
+    // Create category groups
+    const categories = [];
+    
+    // Add mobile networks category if there are any
+    if (mobileNetworks.length > 0) {
+      categories.push({
+        name: 'Mobile Networks',
+        items: mobileNetworks
+      });
+    }
+    
+    // Add others as a category
+    if (otherServices.length > 0) {
+      categories.push({
+        name: 'Other Services',
+        items: otherServices
+      });
+    }
+    
+    return categories;
+  }, [voucherTypeNames]);
 
   // Get vouchers for a specific category
-  const getVouchersForCategory = (category: string) => {
-    return voucherTypes.filter(
-      (voucher) => voucher.name.startsWith(category) && voucher.count > 0
+  const getVouchersForCategory = React.useCallback((category: string) => {
+    // If no voucher inventory is available, return empty array
+    if (!voucherInventory || voucherInventory.length === 0) {
+      return [];
+    }
+    
+    // Filter vouchers that match the category and have available inventory
+    const matchingVouchers = voucherInventory.filter(
+      (voucher) => 
+        voucher.name && 
+        voucher.name.toLowerCase().includes(category.toLowerCase()) && 
+        voucher.count > 0
     );
-  };
+    
+    //console.log(`Found ${matchingVouchers.length} matching vouchers for ${category}:`, 
+     matchingVouchers.map(v => `${v.name} R${v.amount}`);
+    
+    return matchingVouchers;
+  }, [voucherInventory]);
+
+  // Terminal selection handler
+  const handleTerminalSelect = React.useCallback((terminalId: string) => {
+    setActiveTerminalId(terminalId);
+  }, []);
 
   // Handle category selection
-  const handleCategorySelect = (category: string) => {
+  const handleCategorySelect = React.useCallback(async (category: string) => {
     setSelectedCategory(category);
     setSelectedValue(null);
-  };
+    
+    // Fetch voucher inventory for this category
+    try {
+      console.log(`Fetching inventory for category: ${category}`);
+      const { data: inventoryData, error } = await fetchVoucherInventoryByType(category);
+      
+      if (error) {
+        console.error(`Error fetching inventory for ${category}:`, error);
+        return;
+      }
+      
+      if (inventoryData && inventoryData.length > 0) {
+        console.log(`Loaded ${inventoryData.length} voucher options for ${category}:`, 
+          inventoryData.map(v => `${v.name} R${v.amount} (${v.count})`));
+        setVoucherInventory(inventoryData);
+      } else {
+        console.log(`No voucher inventory found for ${category}`);
+        setVoucherInventory([]);
+      }
+    } catch (err) {
+      console.error(`Unexpected error loading voucher inventory for ${category}:`, err);
+      setVoucherInventory([]);
+    }
+  }, []);
 
   // Handle voucher value selection
-  const handleValueSelect = (value: number) => {
+  const handleValueSelect = React.useCallback((value: number) => {
     setSelectedValue(value);
     setShowConfirmDialog(true);
-  };
+  }, []);
 
   // Handle sale confirmation
-  const handleConfirmSale = async () => {
+  const handleConfirmSale = React.useCallback(async () => {
     if (!activeTerminalId || !selectedValue || !selectedCategory) {
       setSaleError("Missing required information for sale");
       return;
     }
 
     // Get the voucher type ID for the selected category and value
-    const selectedVoucher = voucherTypes.find(
+    const selectedVoucher = voucherInventory.find(
       (vt) =>
-        vt.name.startsWith(selectedCategory) && vt.amount === selectedValue
+        vt.name && 
+        vt.name.toLowerCase().includes(selectedCategory.toLowerCase()) && 
+        vt.amount === selectedValue
     );
 
     if (!selectedVoucher) {
@@ -316,7 +429,46 @@ export default function RetailerPOS() {
     } finally {
       setIsSelling(false);
     }
-  };
+  }, [activeTerminalId, selectedValue, selectedCategory, voucherInventory, userId]);
+
+  // Show loading state while checking authentication or loading data
+  if (isLoading || isDataLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show error state if any
+  if (dataError) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
+          <CreditCard className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
+        <p className="max-w-md text-muted-foreground">{dataError}</p>
+      </div>
+    );
+  }
+
+  // If retailer data hasn't loaded or there's no active terminal, show appropriate message
+  if (!retailer) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center text-center">
+        <div className="mb-4 rounded-full bg-amber-500/10 p-3 text-amber-500">
+          <Wallet className="h-6 w-6" />
+        </div>
+        <h2 className="mb-2 text-xl font-semibold">Account Not Found</h2>
+        <p className="max-w-md text-muted-foreground">
+          We couldn't find your retailer account. Please contact support for
+          assistance.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -370,17 +522,22 @@ export default function RetailerPOS() {
       {!selectedCategory ? (
         <div>
           <h2 className="mb-4 text-lg font-medium">Select Voucher Type</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-            {voucherCategories.map((category) => (
-              <VoucherCategory
-                key={category.name}
-                name={category.name}
-                icon={category.icon}
-                color={category.color}
-                onClick={() => handleCategorySelect(category.name)}
-              />
-            ))}
-          </div>
+          {voucherCategories.map((categoryGroup) => (
+            <div key={categoryGroup.name} className="mb-6">
+              <h3 className="mb-3 text-md font-medium text-muted-foreground">{categoryGroup.name}</h3>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+                {categoryGroup.items.map((category) => (
+                  <VoucherCategory
+                    key={category.name}
+                    name={category.name}
+                    icon={category.icon}
+                    color={category.color}
+                    onClick={() => handleCategorySelect(category.name)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         // Voucher Values Grid
@@ -398,22 +555,32 @@ export default function RetailerPOS() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {getVouchersForCategory(selectedCategory).map((voucher) => (
-              <motion.button
-                key={voucher.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleValueSelect(voucher.amount)}
-                className="flex flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
-              >
-                <div className="mb-2 text-sm text-muted-foreground">
-                  {voucher.name}
-                </div>
-                <div className="text-2xl font-bold">
-                  R {voucher.amount.toFixed(2)}
-                </div>
-              </motion.button>
-            ))}
+            {getVouchersForCategory(selectedCategory).length > 0 ? (
+              getVouchersForCategory(selectedCategory).map((voucher) => (
+                <motion.button
+                  key={`${voucher.id}-${voucher.amount}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleValueSelect(voucher.amount)}
+                  className="flex flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
+                >
+                  <div className="mb-2 text-sm text-muted-foreground">
+                    {voucher.name}
+                  </div>
+                  <div className="text-2xl font-bold">
+                    R {voucher.amount.toFixed(2)}
+                  </div>
+                </motion.button>
+              ))
+            ) : (
+              <div className="col-span-full flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
+                <CreditCard className="mb-2 h-8 w-8 text-muted-foreground" />
+                <h3 className="text-lg font-medium">No Vouchers Available</h3>
+                <p className="text-sm text-muted-foreground">
+                  There are no {selectedCategory} vouchers available at the moment.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

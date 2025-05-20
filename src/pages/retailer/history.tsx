@@ -119,6 +119,84 @@ export default function RetailerHistory() {
     loadData();
   }, [userId, activeTab]);
 
+  // Get filtered sales - filter by search term only since date filtering is already done on the server
+  const filteredSales = React.useMemo(() => {
+    let retailerSales = [...sales];
+
+    // Apply date filter
+    const now = new Date();
+    if (activeTab === "today") {
+      const today = now.toISOString().split("T")[0];
+      retailerSales = retailerSales.filter((sale) =>
+        sale.created_at.startsWith(today)
+      );
+    } else if (activeTab === "week") {
+      const oneWeekAgo = new Date(now);
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      retailerSales = retailerSales.filter(
+        (sale) => new Date(sale.created_at) >= oneWeekAgo
+      );
+    } else if (activeTab === "month") {
+      const oneMonthAgo = new Date(now);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      retailerSales = retailerSales.filter(
+        (sale) => new Date(sale.created_at) >= oneMonthAgo
+      );
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      retailerSales = retailerSales.filter(
+        (sale) =>
+          sale.voucher_type.toLowerCase().includes(term) ||
+          (sale.pin && sale.pin.includes(term)) ||
+          (sale.serial_number && sale.serial_number.includes(term))
+      );
+    }
+
+    return retailerSales;
+  }, [sales, activeTab, searchTerm]);
+
+  // Format table data
+  const tableData = React.useMemo(() => {
+    return filteredSales.map((sale) => ({
+      Date: new Date(sale.created_at).toLocaleString("en-ZA", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      Type: (
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "h-2 w-2 rounded-full",
+              sale.voucher_type === "Mobile"
+                ? "bg-blue-500"
+                : sale.voucher_type === "OTT"
+                ? "bg-purple-500"
+                : sale.voucher_type === "Hollywoodbets"
+                ? "bg-green-500"
+                : sale.voucher_type === "Ringa"
+                ? "bg-amber-500"
+                : "bg-pink-500"
+            )}
+          />
+          <span>{sale.voucher_type}</span>
+        </div>
+      ),
+      Value: `R ${sale.voucher_amount.toFixed(2)}`,
+      Commission: `R ${sale.retailer_commission.toFixed(2)}`,
+      "PIN/Serial": sale.pin
+        ? `${sale.pin.slice(0, 3)}****`
+        : sale.serial_number
+        ? `${sale.serial_number.slice(0, 3)}****`
+        : "-",
+    }));
+  }, [filteredSales]);
+
   // Show loading state while checking authentication or loading data
   if (isLoading || isDataLoading) {
     return (
@@ -157,82 +235,6 @@ export default function RetailerHistory() {
       </div>
     );
   }
-
-  // Get filtered sales - filter by search term only since date filtering is already done on the server
-  const filteredSales = React.useMemo(() => {
-    let retailerSales = [...sales];
-
-    // Apply date filter
-    const now = new Date();
-    if (activeTab === "today") {
-      const today = now.toISOString().split("T")[0];
-      retailerSales = retailerSales.filter((sale) =>
-        sale.created_at.startsWith(today)
-      );
-    } else if (activeTab === "week") {
-      const oneWeekAgo = new Date(now);
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      retailerSales = retailerSales.filter(
-        (sale) => new Date(sale.created_at) >= oneWeekAgo
-      );
-    } else if (activeTab === "month") {
-      const oneMonthAgo = new Date(now);
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      retailerSales = retailerSales.filter(
-        (sale) => new Date(sale.created_at) >= oneMonthAgo
-      );
-    }
-
-    // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      retailerSales = retailerSales.filter(
-        (sale) =>
-          sale.voucher_type.toLowerCase().includes(term) ||
-          (sale.pin && sale.pin.includes(term)) ||
-          (sale.serial_number && sale.serial_number.includes(term))
-      );
-    }
-
-    return retailerSales;
-  }, [retailer.id, activeTab, searchTerm]);
-
-  // Format table data
-  const tableData = filteredSales.map((sale) => ({
-    Date: new Date(sale.created_at).toLocaleString("en-ZA", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    Type: (
-      <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            "h-2 w-2 rounded-full",
-            sale.voucher_type === "Mobile"
-              ? "bg-blue-500"
-              : sale.voucher_type === "OTT"
-              ? "bg-purple-500"
-              : sale.voucher_type === "Hollywoodbets"
-              ? "bg-green-500"
-              : sale.voucher_type === "Ringa"
-              ? "bg-amber-500"
-              : "bg-pink-500"
-          )}
-        />
-        <span>{sale.voucher_type}</span>
-      </div>
-    ),
-    Value: `R ${sale.voucher_amount.toFixed(2)}`,
-    Commission: `R ${sale.retailer_commission.toFixed(2)}`,
-    "PIN/Serial": sale.pin
-      ? `${sale.pin.slice(0, 3)}****`
-      : sale.serial_number
-      ? `${sale.serial_number.slice(0, 3)}****`
-      : "-",
-  }));
 
   // Date filter tabs
   const tabs = [

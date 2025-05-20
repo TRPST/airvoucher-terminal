@@ -31,6 +31,48 @@ export default function RetailerAccount() {
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const [dataError, setDataError] = React.useState<string | null>(null);
 
+  // Bank details (mock data) - moved before conditional returns
+  const bankDetails = React.useMemo(() => ({
+    accountName: "Soweto Corner Shop",
+    accountNumber: "1234567890",
+    bankName: "FNB",
+    branchCode: "250655",
+    accountType: "Business",
+    reference: retailer ? "AV" + retailer.id.toUpperCase() : "",
+  }), [retailer]);
+
+  // Tooltip component - moved before conditional returns
+  const Tooltip = React.useMemo(() => {
+    return function TooltipComponent({ text }: { text: string }) {
+      const [isVisible, setIsVisible] = React.useState(false);
+
+      return (
+        <div className="relative">
+          <button
+            className="text-muted-foreground hover:text-foreground"
+            onMouseEnter={() => setIsVisible(true)}
+            onMouseLeave={() => setIsVisible(false)}
+            onFocus={() => setIsVisible(true)}
+            onBlur={() => setIsVisible(false)}
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+
+          {isVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute -right-2 bottom-full z-50 mb-2 w-60 rounded-lg bg-popover p-3 text-sm text-popover-foreground shadow-md"
+            >
+              {text}
+              <div className="absolute -bottom-1 right-2 h-2 w-2 rotate-45 bg-popover" />
+            </motion.div>
+          )}
+        </div>
+      );
+    };
+  }, []);
+
   // Fetch retailer data on mount
   React.useEffect(() => {
     const loadData = async () => {
@@ -109,46 +151,6 @@ export default function RetailerAccount() {
       </div>
     );
   }
-
-  // Bank details (mock data)
-  const bankDetails = {
-    accountName: "Soweto Corner Shop",
-    accountNumber: "1234567890",
-    bankName: "FNB",
-    branchCode: "250655",
-    accountType: "Business",
-    reference: "AV" + retailer.id.toUpperCase(),
-  };
-
-  // Tooltip component
-  const Tooltip = ({ text }: { text: string }) => {
-    const [isVisible, setIsVisible] = React.useState(false);
-
-    return (
-      <div className="relative">
-        <button
-          className="text-muted-foreground hover:text-foreground"
-          onMouseEnter={() => setIsVisible(true)}
-          onMouseLeave={() => setIsVisible(false)}
-          onFocus={() => setIsVisible(true)}
-          onBlur={() => setIsVisible(false)}
-        >
-          <HelpCircle className="h-4 w-4" />
-        </button>
-
-        {isVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute -right-2 bottom-full z-50 mb-2 w-60 rounded-lg bg-popover p-3 text-sm text-popover-foreground shadow-md"
-          >
-            {text}
-            <div className="absolute -bottom-1 right-2 h-2 w-2 rotate-45 bg-popover" />
-          </motion.div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">

@@ -113,145 +113,156 @@ export async function fetchMyRetailer(userId: string): Promise<{
 }
 
 /**
- * Fetch available voucher types with counts
+ * Fetch all available voucher type names
  */
 export async function fetchAvailableVoucherTypes(): Promise<{
+  data: string[] | null;
+  error: PostgrestError | Error | null;
+}> {
+  try {
+    console.log("Fetching available voucher type names");
+
+    // Get all voucher types 
+    const { data: voucherTypes, error: voucherTypesError } = await supabase
+      .from("voucher_types")
+      .select("name")
+      .order("name");
+      
+    if (voucherTypesError) {
+      console.error("Error fetching voucher types:", voucherTypesError);
+      return { data: null, error: voucherTypesError };
+    }
+    
+    if (!voucherTypes || voucherTypes.length === 0) {
+      console.log("No voucher types found");
+      return { data: [], error: null };
+    }
+    
+    // Extract unique voucher type names
+    const uniqueNames = [...new Set(voucherTypes.map(type => type.name))];
+    
+    console.log(`Found ${uniqueNames.length} unique voucher types`);
+    return { data: uniqueNames, error: null };
+  } catch (err) {
+    console.error("Unexpected error in fetchAvailableVoucherTypes:", err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Fetch all available voucher inventory options for a specific voucher type
+ */
+export async function fetchVoucherInventoryByType(voucherTypeName: string): Promise<{
   data: VoucherType[] | null;
   error: PostgrestError | Error | null;
 }> {
   try {
-    console.log("Fetching available voucher types");
+    console.log(`Fetching inventory for voucher type: ${voucherTypeName}`);
 
-    // Try RPC first if it exists
-    try {
-      const { data, error } = await supabase.rpc("get_available_voucher_types");
-
-      if (!error && data) {
-        console.log(`Found ${data.length} voucher types via RPC`);
-        return { data, error: null };
-      }
-    } catch (rpcErr) {
-      console.log("RPC not available, falling back to regular query", rpcErr);
+    // Get the voucher type ID(s) for this type name
+    const { data: voucherTypes, error: voucherTypesError } = await supabase
+      .from("voucher_types")
+      .select("id, name")
+      .like("name", `${voucherTypeName}%`);
+      
+    if (voucherTypesError) {
+      console.error("Error fetching voucher type:", voucherTypesError);
+      return { data: null, error: voucherTypesError };
     }
-
-    // If RPC fails or doesn't exist, fall back to a regular query with client-side aggregation
-    const { data: inventoryData, error: inventoryError } = await supabase
-      .from("voucher_inventory")
-      .select(
-        `
-        voucher_type_id,
-        amount,
-        voucher_types(name)
-      `
-      )
-      .eq("status", "available");
-
-    if (inventoryError) {
-      console.error("Error fetching voucher inventory:", inventoryError);
-
-      // In development, return mock data
-      if (process.env.NODE_ENV === "development") {
-        console.log("Creating mock voucher types for development");
-        return {
-          data: [
-            {
-              id: "mock-voucher-type-1",
-              name: "Vodacom 50",
-              amount: 50,
-              count: 5,
-            },
-            {
-              id: "mock-voucher-type-2",
-              name: "MTN 100",
-              amount: 100,
-              count: 3,
-            },
-            {
-              id: "mock-voucher-type-3",
-              name: "Telkom 30",
-              amount: 30,
-              count: 7,
-            },
-            {
-              id: "mock-voucher-type-4",
-              name: "Netflix Basic",
-              amount: 99,
-              count: 2,
-            },
-          ],
-          error: null,
-        };
-      }
-
-      return { data: null, error: inventoryError };
-    }
-
-    if (!inventoryData || inventoryData.length === 0) {
-      console.log("No vouchers found in inventory");
-
-      // In development, return mock data
-      if (process.env.NODE_ENV === "development") {
-        console.log("Creating mock voucher types for development");
-        return {
-          data: [
-            {
-              id: "mock-voucher-type-1",
-              name: "Vodacom 50",
-              amount: 50,
-              count: 5,
-            },
-            {
-              id: "mock-voucher-type-2",
-              name: "MTN 100",
-              amount: 100,
-              count: 3,
-            },
-            {
-              id: "mock-voucher-type-3",
-              name: "Telkom 30",
-              amount: 30,
-              count: 7,
-            },
-            {
-              id: "mock-voucher-type-4",
-              name: "Netflix Basic",
-              amount: 99,
-              count: 2,
-            },
-          ],
-          error: null,
-        };
-      }
-
+    
+    if (!voucherTypes || voucherTypes.length === 0) {
+      console.log(`No voucher type found with name: ${voucherTypeName}`);
       return { data: [], error: null };
     }
-
-    // Client-side aggregation to count vouchers per type
-    const voucherTypesMap = new Map<string, VoucherType>();
-
-    for (const voucher of inventoryData) {
-      const id = voucher.voucher_type_id;
-      const typeName = voucher.voucher_types?.[0]?.name || "Unknown";
-      const amount = voucher.amount;
-
-      if (!voucherTypesMap.has(id)) {
-        voucherTypesMap.set(id, {
-          id,
-          name: typeName,
-          amount,
-          count: 0,
-        });
+    
+    // Get the type IDs
+    const typeIds = voucherTypes.map(type => type.id);
+    
+    // Get all available vouchers of this type with pagination to handle large inventories
+    let allVouchers: any[] = [];
+    let hasMore = true;
+    let page = 0;
+    const pageSize = 1000;
+    
+    while (hasMore) {
+      // Query vouchers with status = available
+      const { data: pageData, error: pageError } = await supabase
+        .from("voucher_inventory")
+        .select("id, voucher_type_id, amount")
+        .in("voucher_type_id", typeIds)
+        .eq("status", "available")
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (pageError) {
+        console.error(`Error fetching voucher inventory page ${page}:`, pageError);
+        return { data: null, error: pageError };
       }
-
-      const type = voucherTypesMap.get(id)!;
-      type.count += 1;
+      
+      if (pageData && pageData.length > 0) {
+        allVouchers = [...allVouchers, ...pageData];
+        page++;
+        console.log(`Fetched page ${page} with ${pageData.length} vouchers. Total: ${allVouchers.length}`);
+      } else {
+        hasMore = false;
+      }
+      
+      // Safety check to prevent infinite loops
+      if (page > 10) {
+        console.warn("Stopped pagination after 10 pages to prevent infinite loops");
+        hasMore = false;
+      }
     }
-
-    const result = Array.from(voucherTypesMap.values());
-    console.log(`Found ${result.length} voucher types from inventory`);
+    
+    if (allVouchers.length === 0) {
+      console.log(`No available vouchers found for type: ${voucherTypeName}`);
+      return { data: [], error: null };
+    }
+    
+    // Group vouchers by amount and count them
+    const amountGroups = new Map<number, { id: string, name: string, count: number }>();
+    
+    // Create a mapping of type IDs to names
+    const typeNameMap = new Map<string, string>();
+    voucherTypes.forEach(type => {
+      typeNameMap.set(type.id, type.name);
+    });
+    
+    // Group and count vouchers by amount
+    allVouchers.forEach(voucher => {
+      const amount = voucher.amount;
+      const typeId = voucher.voucher_type_id;
+      const typeName = typeNameMap.get(typeId) || voucherTypeName;
+      
+      if (!amountGroups.has(amount)) {
+        amountGroups.set(amount, {
+          id: typeId,
+          name: typeName,
+          count: 1
+        });
+      } else {
+        const group = amountGroups.get(amount)!;
+        group.count++;
+      }
+    });
+    
+    // Convert to array and sort by amount
+    const result: VoucherType[] = Array.from(amountGroups.entries()).map(
+      ([amount, group]) => ({
+        id: group.id,
+        name: group.name,
+        amount,
+        count: group.count
+      })
+    ).sort((a, b) => a.amount - b.amount);
+    
+    console.log(`Grouped ${allVouchers.length} vouchers into ${result.length} amount options for ${voucherTypeName}`);
+    
     return { data: result, error: null };
   } catch (err) {
-    console.error("Unexpected error in fetchAvailableVoucherTypes:", err);
+    console.error(`Unexpected error in fetchVoucherInventoryByType for ${voucherTypeName}:`, err);
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err)),
