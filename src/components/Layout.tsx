@@ -3,6 +3,8 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCallback } from "react";
+import { getUserRole, signOutUser } from "@/actions/userActions";
 import {
   LayoutDashboard,
   Store,
@@ -70,12 +72,49 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   // Handle sign out
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Use the signOutUser action instead of directly calling supabase
+      const { error } = await signOutUser();
+      if (error) {
+        console.error("Error signing out:", error);
+        return;
+      }
       router.push("/");
     } catch (error) {
       console.error("Error signing out:", error);
     }
   };
+
+  // Helper function to get user's role from profiles table
+  const getUserRoleFromProfile = async (userId: string) => {
+    // Use the getUserRole action instead of directly querying supabase
+    const { data, error } = await getUserRole(userId);
+    
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+    
+    return data;
+  };
+
+  // Handle cross-portal navigation
+  const handlePortalNavigation = useCallback(async (targetRole: UserRole) => {
+    if (role !== targetRole) {
+      try {
+        console.log(`Switching from ${role} portal to ${targetRole} portal. Signing out first.`);
+        // Sign out the current user using the action
+        const { error: signOutError } = await signOutUser();
+        if (signOutError) {
+          console.error("Error signing out:", signOutError);
+          return;
+        }
+        // Redirect to the auth page for the target role
+        router.push(`/auth/${targetRole}`);
+      } catch (error) {
+        console.error("Error during portal navigation:", error);
+      }
+    }
+  }, [role, router]);
 
   // Generate navigation items based on user role
   const getNavItems = (role: UserRole) => {
@@ -197,6 +236,8 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
                 {role.charAt(0).toUpperCase() + role.slice(1)} Portal
               </div>
+              
+             
             </div>
             <nav className="mt-8 flex flex-col space-y-1">
               {navItems.map((item) => (
@@ -324,7 +365,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             </div>
             <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
               {role.charAt(0).toUpperCase() + role.slice(1)} Portal
-            </div>
+            </div>        
           </div>
           {/* User info removed from here - moved to bottom */}
 

@@ -4,6 +4,7 @@ import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import supabase from "@/lib/supabaseClient";
+import { getUserRole, signOutUser } from "@/actions/userActions";
 import { motion } from "framer-motion";
 
 export default function AuthPage() {
@@ -11,13 +12,56 @@ export default function AuthPage() {
   const { role } = router.query;
   const [loading, setLoading] = useState(true);
 
+  // Helper function to get user's role from profiles table using the action
+  const getUserRoleFromProfile = async (userId: string) => {
+    // Use the getUserRole action instead of directly querying supabase
+    const { data, error } = await getUserRole(userId);
+    
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+    
+    return data;
+  };
+
   // Handle redirect after successful authentication
   const handleAuthChange = useCallback(
     async (event: AuthChangeEvent, session: Session | null) => {
       if (event === "SIGNED_IN" && session) {
-        console.log("User signed in, redirecting to dashboard...");
-        if (role) {
-          await router.push(`/${role}`);
+        console.log("User signed in, checking role...");
+        
+        if (!session.user?.id) {
+          console.error("No user ID found in session");
+          return;
+        }
+        
+        // Get user's role from profiles table
+        const userRole = await getUserRoleFromProfile(session.user.id);
+        console.log(`User role from profiles table: ${userRole}`);
+        
+        if (userRole && role) {
+          if (userRole === role) {
+            // Role matches, redirect to dashboard
+            console.log(`User has correct role (${userRole}), redirecting to dashboard...`);
+            await router.push(`/${role}`);
+          } else {
+            // Role doesn't match, sign them out
+            console.log(`User has role ${userRole} but trying to access ${role} portal. Access denied.`);
+            const { error: signOutError } = await signOutUser();
+            if (signOutError) {
+              console.error("Error signing out:", signOutError);
+            }
+            alert(`Access denied. You don't have permission to access the ${role} portal.`);
+          }
+        } else if (!userRole) {
+          // No role found in profiles table
+          console.log("No role found in user profile. Access denied.");
+          const { error: signOutError } = await signOutUser();
+          if (signOutError) {
+            console.error("Error signing out:", signOutError);
+          }
+          alert("Your account doesn't have access permissions. Please contact an administrator.");
         }
       }
     },
@@ -25,13 +69,38 @@ export default function AuthPage() {
   );
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if user is already logged in and has the correct role
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // Redirect to the appropriate dashboard
-        if (role) {
+      if (data.session?.user?.id) {
+        
+        // Get user's role from profiles table
+        const userRole = await getUserRoleFromProfile(data.session.user.id);
+        console.log(`Existing session check - user role from profile: ${userRole}`);
+        
+        // Check if user has the required role
+        if (role && userRole === role) {
+          // User has correct role, redirect to dashboard
           await router.push(`/${role}`);
+        } else if (role && userRole && userRole !== role) {
+          // User has a different role, sign them out and stay on auth page
+          console.log(`User has role ${userRole} but trying to access ${role} portal. Signing out.`);
+          const { error: signOutError } = await signOutUser();
+          if (signOutError) {
+            console.error("Error signing out:", signOutError);
+          }
+          setLoading(false);
+        } else if (!userRole) {
+          // No role assigned, sign them out
+          console.log("User has no assigned role in profile. Signing out.");
+          const { error: signOutError } = await signOutUser();
+          if (signOutError) {
+            console.error("Error signing out:", signOutError);
+          }
+          setLoading(false);
+        } else {
+          // No role info, continue to auth page
+          setLoading(false);
         }
       } else {
         setLoading(false);
@@ -197,6 +266,20 @@ export default function AuthPage() {
                     brandAccent: "hsl(var(--primary))",
                   },
                 },
+                dark: {
+                  colors: {
+                    inputText: "white",
+                    inputBackground: "hsl(var(--card))",
+                    inputBorder: "hsl(var(--border))",
+                    inputLabelText: "hsl(var(--foreground))",
+                    inputPlaceholder: "hsl(var(--muted-foreground))",
+                  },
+                },
+              },
+              style: {
+                input: {
+                  color: "var(--foreground)",
+                },
               },
             }}
             providers={[]}
@@ -204,19 +287,6 @@ export default function AuthPage() {
             showLinks={false}
             view="sign_in"
             magicLink={false}
-            authOptions={{
-              emailRedirectTo:
-                window?.location?.origin + (role ? `/${role}` : "/"),
-              emailAuth: {
-                emailConfirmationRequired: false,
-              },
-              onSuccess: async (response: any) => {
-                console.log("Auth success, redirecting...");
-                if (role) {
-                  await router.push(`/${role}`);
-                }
-              },
-            }}
           />
         </motion.div>
       </main>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useSessionContext } from "@supabase/auth-helpers-react";
+import { getUserRole, signOutUser } from "@/actions/userActions";
 
 /**
  * A hook to protect routes based on user roles
@@ -12,11 +13,18 @@ export function useRequireRole(requiredRole: string) {
   const { session, isLoading, supabaseClient } = useSessionContext();
   const [isAuthorized, setIsAuthorized] = useState(false);
 
-  // console.log(`useRequireRole hook called with role: ${requiredRole}`, {
-  //   path: router.pathname,
-  //   isLoading,
-  //   hasSession: !!session
-  // });
+  // Helper function to get user's role from profiles table using the action
+  const getUserRoleFromProfile = async (userId: string) => {
+    // Use the getUserRole action instead of directly querying supabase
+    const { data, error } = await getUserRole(userId);
+    
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+    
+    return data;
+  };
 
   useEffect(() => {
     // Wait until session loading is complete
@@ -40,31 +48,39 @@ export function useRequireRole(requiredRole: string) {
         data: { user },
       } = await supabaseClient.auth.getUser();
 
-      // console.log(`useRequireRole: User data for ${requiredRole}`, { 
-      //   userId: user?.id,
-      //   userRole: user?.app_metadata?.role,
-      //   userEmail: user?.email
-      // });
-
       if (!user) {
         console.log(`No user found. Redirecting to /auth/${requiredRole}`);
         router.replace(`/auth/${requiredRole}`);
         return;
       }
 
-      // Check if user has the required role
-      // Note: In a real implementation, you'd check app_metadata.role from Supabase
-      // For this MVP, we'll assume the role is stored in app_metadata.role
-      const userRole = user.app_metadata?.role;
+      // First get user's role from the profiles table rather than relying on app_metadata
+      const userRole = await getUserRoleFromProfile(user.id);
+      console.log(`User role from profiles table: ${userRole}`);
 
-      // For demo purposes, if no role is set, we'll assume the role matches the page path
-      // In a real app, you'd want to enforce strict role checking
+      // If user doesn't have the required role, sign them out and redirect to auth page for the required role
       if (userRole && userRole !== requiredRole) {
         console.log(
-          `User role (${userRole}) doesn't match required role (${requiredRole}). Redirecting to /`
+          `User role (${userRole}) doesn't match required role (${requiredRole}). Signing out and redirecting to auth/${requiredRole}`
         );
-        // If user doesn't have the required role, redirect to home
-        router.replace("/");
+        
+        // Sign out the user using the action
+        const { error: signOutError } = await signOutUser();
+        if (signOutError) {
+          console.error("Error signing out:", signOutError);
+        }
+        
+        // Redirect to the auth page for the required role
+        router.replace(`/auth/${requiredRole}`);
+        return;
+      } else if (!userRole) {
+        // No role found
+        console.log("No role found in user profile. Redirecting to auth.");
+        const { error: signOutError } = await signOutUser();
+        if (signOutError) {
+          console.error("Error signing out:", signOutError);
+        }
+        router.replace(`/auth/${requiredRole}`);
         return;
       }
 

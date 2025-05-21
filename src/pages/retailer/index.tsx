@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Wallet, CreditCard, Percent, Tags } from "lucide-react";
+import { Wallet, CreditCard, Percent, Tags, ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "@supabase/auth-helpers-react";
 
@@ -61,6 +61,7 @@ export default function RetailerPOS() {
   const [voucherTypeNames, setVoucherTypeNames] = React.useState<string[]>([]);
   const [voucherInventory, setVoucherInventory] = React.useState<VoucherType[]>([]);
   const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [isVoucherInventoryLoading, setIsVoucherInventoryLoading] = React.useState(false);
   const [dataError, setDataError] = React.useState<string | null>(null);
   const [activeTerminalId, setActiveTerminalId] = React.useState<string | null>(
     null
@@ -326,6 +327,7 @@ export default function RetailerPOS() {
   const handleCategorySelect = React.useCallback(async (category: string) => {
     setSelectedCategory(category);
     setSelectedValue(null);
+    setIsVoucherInventoryLoading(true);
     
     // Fetch voucher inventory for this category
     try {
@@ -334,6 +336,7 @@ export default function RetailerPOS() {
       
       if (error) {
         console.error(`Error fetching inventory for ${category}:`, error);
+        setIsVoucherInventoryLoading(false);
         return;
       }
       
@@ -348,6 +351,8 @@ export default function RetailerPOS() {
     } catch (err) {
       console.error(`Unexpected error loading voucher inventory for ${category}:`, err);
       setVoucherInventory([]);
+    } finally {
+      setIsVoucherInventoryLoading(false);
     }
   }, []);
 
@@ -542,20 +547,29 @@ export default function RetailerPOS() {
       ) : (
         // Voucher Values Grid
         <div>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 space-y-3">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group"
+            >
+              <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+              Back to Categories
+            </button>
             <h2 className="text-lg font-medium">
               Select {selectedCategory} Voucher Value
             </h2>
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="rounded-md px-3 py-1 text-sm text-muted-foreground hover:bg-muted"
-            >
-              ← Back to Categories
-            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {getVouchersForCategory(selectedCategory).length > 0 ? (
+            {isVoucherInventoryLoading ? (
+              <div className="col-span-full flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
+                <div className="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <h3 className="text-lg font-medium">Loading Vouchers</h3>
+                <p className="text-sm text-muted-foreground">
+                  Please wait while we fetch available {selectedCategory} vouchers.
+                </p>
+              </div>
+            ) : getVouchersForCategory(selectedCategory).length > 0 ? (
               getVouchersForCategory(selectedCategory).map((voucher) => (
                 <motion.button
                   key={`${voucher.id}-${voucher.amount}`}

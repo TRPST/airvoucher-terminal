@@ -2,9 +2,10 @@
 import * as AdminActions from "./adminActions";
 import * as RetailerActions from "./retailerActions";
 import * as AgentActions from "./agentActions";
+import * as UserActions from "./userActions";
 
 // Export namespaces
-export { AdminActions, RetailerActions, AgentActions };
+export { AdminActions, RetailerActions, AgentActions, UserActions };
 
 // Alternatively, we can selectively re-export specific items
 // Admin exports
@@ -59,6 +60,15 @@ export {
 
 // Agent exports
 export type { AgentRetailer, AgentStatement } from "./agentActions";
+
+// User exports
+export type { UserProfile } from "./userActions";
+
+export {
+  getUserRole,
+  getUserProfile,
+  signOutUser,
+} from "./userActions";
 
 export {
   fetchMyRetailers,
