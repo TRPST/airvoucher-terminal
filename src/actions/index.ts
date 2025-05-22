@@ -56,6 +56,7 @@ export {
   sellVoucher,
   fetchSalesHistory,
   fetchTerminals as fetchRetailerTerminals,
+  fetchCommissionRate,
 } from "./retailerActions";
 
 // Agent exports

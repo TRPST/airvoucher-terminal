@@ -493,6 +493,53 @@ export async function fetchSalesHistory({
 }
 
 /**
+ * Fetch commission rate for a specific voucher type and retailer
+ */
+export async function fetchCommissionRate({
+  retailerId,
+  voucherTypeId,
+}: {
+  retailerId: string;
+  voucherTypeId: string;
+}): Promise<{
+  data: { retailer_pct: number } | null;
+  error: PostgrestError | Error | null;
+}> {
+  try {
+    // Get retailer's commission group
+    const { data: retailer, error: retailerError } = await supabase
+      .from("retailers")
+      .select("commission_group_id")
+      .eq("id", retailerId)
+      .single();
+
+    if (retailerError) {
+      return { data: null, error: retailerError };
+    }
+
+    // Get commission rate for this group and voucher type
+    const { data: commissionRate, error: rateError } = await supabase
+      .from("commission_group_rates")
+      .select("retailer_pct")
+      .eq("commission_group_id", retailer.commission_group_id)
+      .eq("voucher_type_id", voucherTypeId)
+      .single();
+
+    if (rateError) {
+      return { data: null, error: rateError };
+    }
+
+    return { data: commissionRate, error: null };
+  } catch (err) {
+    console.error("Unexpected error in fetchCommissionRate:", err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
  * Fetch terminals for a retailer
  */
 export async function fetchTerminals(retailerId: string): Promise<{

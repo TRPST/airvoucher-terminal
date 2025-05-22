@@ -84,6 +84,8 @@ export default function RetailerPOS() {
     pin: string;
     serial_number?: string;
   } | null>(null);
+  const [commissionRate, setCommissionRate] = React.useState<number | null>(null);
+  const [commissionError, setCommissionError] = React.useState<string | null>(null);
 
   // Fetch retailer data and voucher types on mount
   React.useEffect(() => {
@@ -359,8 +361,61 @@ export default function RetailerPOS() {
   // Handle voucher value selection
   const handleValueSelect = React.useCallback((value: number) => {
     setSelectedValue(value);
+    setCommissionRate(null); // Reset commission rate
+    setCommissionError(null); // Reset commission error
     setShowConfirmDialog(true);
-  }, []);
+    
+    // Get the voucher type ID for the selected category and value
+    const selectedVoucher = voucherInventory.find(
+      (vt) =>
+        vt.name && 
+        vt.name.toLowerCase().includes(selectedCategory?.toLowerCase() || '') && 
+        vt.amount === value
+    );
+
+    if (selectedVoucher && retailer) {
+      // Import and fetch commission rate
+      import('@/actions').then(({ fetchCommissionRate }) => {
+        fetchCommissionRate({
+          retailerId: retailer.id,
+          voucherTypeId: selectedVoucher.id,
+        }).then(({ data, error }) => {
+          if (data) {
+            setCommissionRate(data.retailer_pct);
+          } else if (error) {
+            setCommissionError(`Error: ${error.message || 'Failed to get commission rate'}`);
+          } else {
+            setCommissionError('No commission rate found for this voucher type');
+          }
+        }).catch(err => {
+          console.error("Error fetching commission rate:", err);
+          setCommissionError(`Error: ${err instanceof Error ? err.message : 'Failed to get commission rate'}`);
+        });
+      }).catch(err => {
+        console.error("Error importing actions:", err);
+        setCommissionError('Failed to load commission rate module');
+      });
+    } else {
+      // If we don't have enough info to fetch the rate
+      setCommissionError('Missing voucher or retailer information');
+    }
+  }, [selectedCategory, voucherInventory, retailer]);
+
+  // Effect to prevent body scrolling when modal is open
+  React.useEffect(() => {
+    if (showConfirmDialog) {
+      // Disable scrolling on body when modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Re-enable scrolling when modal is closed
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Cleanup function to ensure scrolling is re-enabled when component unmounts
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [showConfirmDialog]);
 
   // Handle sale confirmation
   const handleConfirmSale = React.useCallback(async () => {
@@ -601,12 +656,13 @@ export default function RetailerPOS() {
 
       {/* Confirm Sale Dialog */}
       {showConfirmDialog && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setShowConfirmDialog(false)}
+            aria-hidden="true"
           />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
+          <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
             <div className="flex flex-col items-center text-center">
               <div className="mb-4 rounded-full bg-primary/10 p-3 text-primary">
                 <CreditCard className="h-6 w-6" />
@@ -627,27 +683,33 @@ export default function RetailerPOS() {
                     R {selectedValue?.toFixed(2)}
                   </span>
                 </div>
-                {/* Show voucher name if available */}
-                {selectedCategory &&
-                  getVouchersForCategory(selectedCategory).length > 0 && (
+                {commissionError ? (
+                  <div className="flex flex-col border-t border-border py-2 text-red-500">
+                    <span className="text-sm font-medium mb-1">Commission Rate Error:</span>
+                    <span className="text-sm">{commissionError}</span>
+                  </div>
+                ) : (
+                  <>
                     <div className="flex justify-between border-t border-border py-2">
                       <span className="text-sm text-muted-foreground">
-                        Voucher:
+                        Commission Rate:
                       </span>
-                      <span className="font-medium">
-                        {selectedCategory &&
-                          getVouchersForCategory(selectedCategory)[0]?.name}
+                      <span className="font-medium text-green-500">
+                        {commissionRate !== null 
+                          ? `${(commissionRate * 100).toFixed(1)}%` 
+                          : 'Loading...'}
                       </span>
                     </div>
-                  )}
-                <div className="flex justify-between border-t border-border py-2">
-                  <span className="text-sm text-muted-foreground">
-                    Commission:
-                  </span>
-                  <span className="font-medium text-green-500">
-                    R {((selectedValue || 0) * 0.02).toFixed(2)}
-                  </span>
-                </div>
+                    <div className="flex justify-between border-t border-border py-2">
+                      <span className="text-sm text-muted-foreground">
+                        Your Commission:
+                      </span>
+                      <span className="font-medium text-green-500">
+                        R {((selectedValue || 0) * (commissionRate || 0)).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
@@ -659,6 +721,7 @@ export default function RetailerPOS() {
                 </button>
                 <button
                   onClick={handleConfirmSale}
+                  disabled={commissionError !== null}
                   className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
                 >
                   Complete Sale
@@ -666,7 +729,7 @@ export default function RetailerPOS() {
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Success Toast */}
