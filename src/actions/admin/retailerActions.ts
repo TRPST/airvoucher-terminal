@@ -12,63 +12,49 @@ import {
  */
 export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
   try {
-    console.log("Fetching retailers from Supabase");
-
+    // Step 1: Fetch all retailers
     const { data, error } = await supabase.from("retailers").select(`
-        id,
-        name,
-        contact_name,
-        contact_email,
-        balance,
-        credit_limit,
-        credit_used,
-        commission_balance,
-        status,
-        agent_profile_id,
-        commission_group_id,
-        profiles!retailers_user_profile_id_fkey(full_name, email),
-        agent_profiles:profiles!retailers_agent_profile_id_fkey(id, full_name),
-        commission_groups(id, name)
-      `);
+      id,
+      name,
+      contact_name,
+      contact_email,
+      balance,
+      credit_limit,
+      credit_used,
+      commission_balance,
+      status,
+      agent_profile_id,
+      commission_group_id,
+      profiles!retailers_user_profile_id_fkey(full_name, email),
+      agent_profiles:profiles!retailers_agent_profile_id_fkey(id, full_name)
+    `);
 
     if (error) {
-      console.error("Supabase error when fetching retailers:", error);
       return { data: null, error };
     }
 
-    if (!data || data.length === 0) {
-      console.log("No retailers found in the database");
-      // In development, return mock data for testing
-      if (process.env.NODE_ENV === "development") {
-        const mockRetailers: Retailer[] = [
-          {
-            id: "mock-retailer-1",
-            name: "Dev Test Retailer",
-            contact_name: "Dev Contact Person",
-            contact_email: "contact@example.com",
-            balance: 1000,
-            credit_limit: 5000,
-            credit_used: 200,
-            commission_balance: 150,
-            status: "active",
-            full_name: "Dev User",
-            email: "dev@example.com",
-            agent_name: "Dev Agent",
-            commission_group_name: "Standard",
-            agent_profile_id: "mock-agent-1",
-            commission_group_id: "mock-group-1",
-          },
-        ];
-        return { data: mockRetailers, error: null };
+    // Step 2: Collect unique commission_group_ids
+    const groupIds = Array.from(
+      new Set(data.map((r) => r.commission_group_id).filter(Boolean))
+    );
+
+    // Step 3: Fetch all commission groups for those IDs
+    let groupMap: Record<string, string> = {};
+    if (groupIds.length > 0) {
+      const { data: groups, error: groupError } = await supabase
+        .from("commission_groups")
+        .select("id, name")
+        .in("id", groupIds);
+
+      if (groupError) {
+        return { data: null, error: groupError };
       }
 
-      return { data: [], error: null };
+      groupMap = Object.fromEntries(groups.map((g: any) => [g.id, g.name]));
     }
 
-    console.log(`Found ${data.length} retailers`);
-
-    // Transform the data to match the Retailer type
-    const retailers = data.map((retailer) => ({
+    // Step 4: Map commission group name to each retailer
+    const retailers = data.map((retailer: any) => ({
       id: retailer.id,
       name: retailer.name,
       contact_name: retailer.contact_name || "",
@@ -81,14 +67,15 @@ export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
       full_name: retailer.profiles?.[0]?.full_name || "",
       email: retailer.profiles?.[0]?.email || "",
       agent_name: retailer.agent_profiles?.[0]?.full_name,
-      commission_group_name: retailer.commission_groups?.[0]?.name,
-      agent_profile_id: retailer.agent_profile_id, // Original field from retailer
-      commission_group_id: retailer.commission_group_id, // Original field from retailer
+      commission_group_name: retailer.commission_group_id
+        ? groupMap[retailer.commission_group_id] || undefined
+        : undefined,
+      agent_profile_id: retailer.agent_profile_id,
+      commission_group_id: retailer.commission_group_id,
     }));
 
     return { data: retailers, error: null };
   } catch (err) {
-    console.error("Unexpected error in fetchRetailers:", err);
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err)),
