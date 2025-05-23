@@ -423,6 +423,7 @@ export default function RetailerPOS() {
       const { data, error } = await sellVoucher({
         terminalId: activeTerminalId,
         voucherTypeId: selectedVoucher.id,
+        amount: selectedValue,
       });
 
       if (error) {

@@ -60,7 +60,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
           </p>
 
           <div className="mb-6 w-full rounded-lg bg-muted p-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between pb-2">
               <span className="text-sm text-muted-foreground">Type:</span>
               <span className="font-medium">{selectedCategory}</span>
             </div>
@@ -92,7 +92,9 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
                     Your Commission:
                   </span>
                   <span className="font-medium text-green-500">
-                    R {((selectedValue || 0) * (commissionRate || 0)).toFixed(2)}
+                  {commissionRate !== null 
+                      ? `R ${((selectedValue || 0) * (commissionRate || 0)).toFixed(2)}`
+                      : 'Loading...'}
                   </span>
                 </div>
               </>
@@ -105,7 +107,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
             </div>
           )}
 
-          <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+          <div className="flex w-full justify-end space-x-2 mt-4">
             <button
               onClick={onCancel}
               className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"

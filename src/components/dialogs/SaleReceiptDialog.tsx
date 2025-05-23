@@ -26,6 +26,8 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
   onClose,
   receipt,
 }) => {
+
+  console.log('receipt', receipt);
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
     if (showDialog) {
@@ -82,34 +84,38 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
-        <div className="flex flex-col items-center">
-          <div className="mb-4 rounded-full bg-green-500/10 p-3 text-green-500">
+      <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card shadow-lg max-h-[90vh] flex flex-col">
+        {/* Header - Fixed */}
+        <div className="flex flex-col items-center p-4 pb-2">
+          <div className="mb-2 rounded-full bg-green-500/10 p-3 text-green-500">
             <Receipt className="h-6 w-6" />
           </div>
-          <h2 className="mb-4 text-xl font-semibold">Voucher Sale Completed</h2>
-
-          <div className="mb-6 w-full rounded-lg bg-muted p-4">
+          <h2 className="mb-2 text-xl font-semibold">Voucher Sale Completed</h2>
+        </div>
+        
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-4">
+          <div className="w-full rounded-lg bg-muted p-4 mb-4">
             {/* Receipt content */}
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium">Retailer:</span>
-                <span>{receipt.retailer_name}</span>
+                <span className="text-right">{receipt.retailer_name}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
-                <span className="font-medium">Terminal ID:</span>
-                <span>{receipt.terminal_id}</span>
+                <span className="font-medium whitespace-nowrap">Terminal:</span>
+                <span className="text-right">{receipt.terminal_name}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
-                <span className="font-medium">Product:</span>
-                <span>{receipt.product_name}</span>
+                <span className="font-medium">Voucher:</span>
+                <span className="text-right">{receipt.product_name} R {receipt.sale_amount.toFixed(2)}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-medium">Amount Paid:</span>
-                <span>{formatAmount(receipt.sale_amount)}</span>
+                <span className="text-right">{formatAmount(receipt.sale_amount)}</span>
               </div>
 
               <div className="border-t border-border pt-2">
@@ -134,7 +140,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
 
               <div className="flex justify-between border-t border-border pt-2 items-center">
                 <span className="font-medium">Serial Number:</span>
-                <code className="font-mono text-xs bg-background/50 p-1 rounded">
+                <code className="font-mono text-xs bg-background/50 p-1 rounded text-right">
                   {receipt.serial_number}
                 </code>
               </div>
@@ -144,7 +150,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Date & Time:</span>
                 </div>
-                <span>{formatDate(receipt.timestamp)}</span>
+                <span className="text-right">{formatDate(receipt.timestamp)}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2 items-center">
@@ -152,18 +158,21 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                   <Hash className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Ref Number:</span>
                 </div>
-                <span className="text-sm">{receipt.ref_number}</span>
+                <span className="text-sm text-right">{receipt.ref_number}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-2 mb-4 w-full p-2 bg-blue-500/10 rounded-md text-sm text-blue-700 dark:text-blue-300">
+          <div className="w-full p-2 bg-blue-500/10 rounded-md text-sm text-blue-700 dark:text-blue-300 mb-2">
             <p className="text-center">
               🛈 Please save this receipt. It will not be shown again after closing.
             </p>
           </div>
+        </div>
 
-          <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+        {/* Footer - Fixed */}
+        <div className="p-4 pt-2 border-t border-border mt-auto">
+          <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0 justify-end pt-2">
             <button
               onClick={handlePrint}
               className="inline-flex items-center justify-center gap-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"

@@ -277,9 +277,11 @@ export async function fetchVoucherInventoryByType(voucherTypeName: string): Prom
 export async function sellVoucher({
   terminalId,
   voucherTypeId,
+  amount,
 }: {
   terminalId: string;
   voucherTypeId: string;
+  amount: number;
 }): Promise<{
   data: {
     sale_id: string;
@@ -289,11 +291,12 @@ export async function sellVoucher({
   error: PostgrestError | Error | null;
 }> {
   try {
-    // Step 1: Get one available voucher of the requested type
+    // Step 1: Get one available voucher of the requested type with the correct amount
     const { data: voucher, error: voucherError } = await supabase
       .from("voucher_inventory")
       .select("id, amount, pin, serial_number, voucher_type_id")
       .eq("voucher_type_id", voucherTypeId)
+      .eq("amount", amount)
       .eq("status", "available")
       .limit(1)
       .single();
