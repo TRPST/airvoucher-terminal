@@ -1,5 +1,6 @@
 import supabase from "@/lib/supabaseClient";
 import { PostgrestError } from "@supabase/supabase-js";
+import { completeVoucherSale, VoucherSaleReceipt } from "@/lib/sale/completeVoucherSale";
 
 export type RetailerProfile = {
   id: string;
@@ -283,15 +284,12 @@ export async function sellVoucher({
   data: {
     sale_id: string;
     voucher: { pin: string; serial_number?: string };
+    receipt: VoucherSaleReceipt | null;
   } | null;
   error: PostgrestError | Error | null;
 }> {
   try {
-    // Step 1: Begin a transaction
-    // Note: Supabase JS client doesn't support transactions, so we'll use multiple queries
-    // In a production app, this would ideally be a stored procedure in PostgreSQL
-
-    // Step 2: Get one available voucher of the requested type
+    // Step 1: Get one available voucher of the requested type
     const { data: voucher, error: voucherError } = await supabase
       .from("voucher_inventory")
       .select("id, amount, pin, serial_number, voucher_type_id")
@@ -304,10 +302,10 @@ export async function sellVoucher({
       return { data: null, error: voucherError };
     }
 
-    // Step 3: Get terminal and retailer information
+    // Step 2: Get terminal and retailer information
     const { data: terminal, error: terminalError } = await supabase
       .from("terminals")
-      .select("retailer_id")
+      .select("retailer_id, name")
       .eq("id", terminalId)
       .single();
 
@@ -315,10 +313,10 @@ export async function sellVoucher({
       return { data: null, error: terminalError };
     }
 
-    // Step 4: Get retailer and commission information
+    // Step 3: Get retailer information
     const { data: retailer, error: retailerError } = await supabase
       .from("retailers")
-      .select("id, agent_profile_id, commission_group_id")
+      .select("id, name, agent_profile_id, commission_group_id")
       .eq("id", terminal.retailer_id)
       .single();
 
@@ -326,7 +324,7 @@ export async function sellVoucher({
       return { data: null, error: retailerError };
     }
 
-    // Step 5: Get commission rates for this retailer's group and voucher type
+    // Step 4: Get commission rates for this retailer's group and voucher type
     const { data: commissionRate, error: rateError } = await supabase
       .from("commission_group_rates")
       .select("retailer_pct, agent_pct")
@@ -341,83 +339,66 @@ export async function sellVoucher({
       };
     }
 
-    // Step 6: Calculate commissions
-    const retailerCommission = voucher.amount * commissionRate.retailer_pct;
-    const agentCommission = voucher.amount * commissionRate.agent_pct;
+    // Step 5: Get voucher type name
+    const { data: voucherType, error: voucherTypeError } = await supabase
+      .from("voucher_types")
+      .select("name")
+      .eq("id", voucherTypeId)
+      .single();
 
-    // Step 7: Update voucher status to sold
-    const { error: updateVoucherError } = await supabase
-      .from("voucher_inventory")
-      .update({
-        status: "sold",
-        sold_at: new Date().toISOString(),
-      })
-      .eq("id", voucher.id);
-
-    if (updateVoucherError) {
-      return { data: null, error: updateVoucherError };
+    if (voucherTypeError) {
+      return { data: null, error: voucherTypeError };
     }
 
-    // Step 8: Create a sale record
-    const { data: sale, error: saleError } = await supabase
-      .from("sales")
-      .insert({
-        terminal_id: terminalId,
-        voucher_inventory_id: voucher.id,
-        sale_amount: voucher.amount,
-        retailer_commission: retailerCommission,
-        agent_commission: agentCommission,
-      })
-      .select("id")
-      .single();
+    // Step 6: Use completeVoucherSale to process the transaction
+    const { data: receiptData, error: saleError } = await completeVoucherSale({
+      voucher_inventory_id: voucher.id,
+      retailer_id: retailer.id,
+      terminal_id: terminalId,
+      voucher_type_id: voucherTypeId,
+      sale_amount: voucher.amount,
+      retailer_commission_pct: commissionRate.retailer_pct,
+      agent_commission_pct: commissionRate.agent_pct,
+    });
 
     if (saleError) {
       return { data: null, error: saleError };
     }
 
-    // Step 9: Update retailer balance and commissions
-    const { error: updateRetailerError } = await supabase
-      .from("retailers")
-      .update({
-        balance: supabase.rpc("decrement", { x: voucher.amount }),
-        credit_used: supabase.rpc("increment", { x: voucher.amount }),
-        commission_balance: supabase.rpc("increment", {
-          x: retailerCommission,
-        }),
-      })
-      .eq("id", retailer.id);
-
-    if (updateRetailerError) {
-      return { data: null, error: updateRetailerError };
+    // If we don't have receipt data from the RPC function yet,
+    // we can generate a basic receipt with the available info
+    let receipt: VoucherSaleReceipt | null = receiptData;
+    
+    if (!receipt && receiptData?.sale_id) {
+      // Generate a ref number based on timestamp if not provided
+      const refNumber = `REF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      // Create basic receipt with available data
+      receipt = {
+        sale_id: receiptData.sale_id,
+        voucher_code: voucher.pin,
+        serial_number: voucher.serial_number || "",
+        ref_number: refNumber,
+        retailer_name: retailer.name,
+        terminal_name: terminal.name,
+        terminal_id: terminalId,
+        product_name: voucherType.name,
+        sale_amount: voucher.amount,
+        retailer_commission: voucher.amount * commissionRate.retailer_pct,
+        agent_commission: voucher.amount * commissionRate.agent_pct,
+        timestamp: new Date().toISOString(),
+        instructions: "Dial *136*(voucher number)#",
+      };
     }
 
-    // Step 10: Create a transaction record
-    const { error: transactionError } = await supabase
-      .from("transactions")
-      .insert({
-        type: "sale",
-        amount: voucher.amount,
-        balance_after: supabase.rpc("get_retailer_balance", {
-          retailer_id: retailer.id,
-        }),
-        retailer_id: retailer.id,
-        agent_profile_id: retailer.agent_profile_id,
-        sale_id: sale.id,
-        notes: `Voucher sale of ${voucher.amount} via terminal ${terminalId}`,
-      });
-
-    if (transactionError) {
-      return { data: null, error: transactionError };
-    }
-
-    // Return the sale info with voucher details
     return {
       data: {
-        sale_id: sale.id,
+        sale_id: receiptData?.sale_id || "",
         voucher: {
           pin: voucher.pin,
           serial_number: voucher.serial_number,
         },
+        receipt: receipt,
       },
       error: null,
     };

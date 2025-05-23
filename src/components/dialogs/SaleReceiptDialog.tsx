@@ -1,0 +1,186 @@
+import * as React from "react";
+import { Printer, X, Receipt, Clock, Hash } from "lucide-react";
+
+interface SaleReceiptDialogProps {
+  showDialog: boolean;
+  onClose: () => void;
+  receipt: {
+    sale_id: string;
+    voucher_code: string;
+    serial_number: string;
+    ref_number: string;
+    retailer_name: string;
+    terminal_name: string;
+    sale_amount: number;
+    retailer_commission: number;
+    agent_commission: number;
+    timestamp: string;
+    product_name: string;
+    terminal_id: string;
+    instructions: string;
+  } | null;
+}
+
+export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
+  showDialog,
+  onClose,
+  receipt,
+}) => {
+  // Effect to prevent body scrolling when modal is open
+  React.useEffect(() => {
+    if (showDialog) {
+      // Disable scrolling on body when modal is open
+      document.body.style.overflow = "hidden";
+    } else {
+      // Re-enable scrolling when modal is closed
+      document.body.style.overflow = "auto";
+    }
+
+    // Cleanup function to ensure scrolling is re-enabled when component unmounts
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showDialog]);
+
+  // Format amount with Rand symbol
+  const formatAmount = (amount: number) => {
+    return `R ${amount.toFixed(2)}`;
+  };
+
+  // Format voucher code with spaces (xxxx xxxx xxxx xxxx)
+  const formatVoucherCode = (code: string) => {
+    if (!code) return "";
+    return code.replace(/(.{4})(?=.)/g, "$1 ");
+  };
+
+  // Format date to local format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-ZA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  // Handle print button click
+  const handlePrint = () => {
+    // This will be implemented in the future
+    console.log("Print functionality will be added in the future");
+    window.print();
+  };
+
+  if (!showDialog || !receipt) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+      <div
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+        <div className="flex flex-col items-center">
+          <div className="mb-4 rounded-full bg-green-500/10 p-3 text-green-500">
+            <Receipt className="h-6 w-6" />
+          </div>
+          <h2 className="mb-4 text-xl font-semibold">Voucher Sale Completed</h2>
+
+          <div className="mb-6 w-full rounded-lg bg-muted p-4">
+            {/* Receipt content */}
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium">Retailer:</span>
+                <span>{receipt.retailer_name}</span>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="font-medium">Terminal ID:</span>
+                <span>{receipt.terminal_id}</span>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="font-medium">Product:</span>
+                <span>{receipt.product_name}</span>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="font-medium">Amount Paid:</span>
+                <span>{formatAmount(receipt.sale_amount)}</span>
+              </div>
+
+              <div className="border-t border-border pt-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Voucher Code:</span>
+                </div>
+                <div className="mt-1 flex items-center justify-center bg-background/50 p-2 rounded">
+                  <code className="text-lg font-bold tracking-wider text-primary">
+                    {formatVoucherCode(receipt.voucher_code)}
+                  </code>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Instructions:</span>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {receipt.instructions}
+                </div>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2 items-center">
+                <span className="font-medium">Serial Number:</span>
+                <code className="font-mono text-xs bg-background/50 p-1 rounded">
+                  {receipt.serial_number}
+                </code>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2 items-center">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Date & Time:</span>
+                </div>
+                <span>{formatDate(receipt.timestamp)}</span>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2 items-center">
+                <div className="flex items-center gap-1">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Ref Number:</span>
+                </div>
+                <span className="text-sm">{receipt.ref_number}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 mb-4 w-full p-2 bg-blue-500/10 rounded-md text-sm text-blue-700 dark:text-blue-300">
+            <p className="text-center">
+              🛈 Please save this receipt. It will not be shown again after closing.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              <Printer className="h-4 w-4" />
+              Print Receipt
+            </button>
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center gap-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+            >
+              <X className="h-4 w-4" />
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

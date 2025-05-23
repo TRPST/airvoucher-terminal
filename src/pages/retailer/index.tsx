@@ -22,6 +22,7 @@ import { VoucherCategoriesGrid } from "@/components/retailer/VoucherCategoriesGr
 import { VoucherValuesGrid } from "@/components/retailer/VoucherValuesGrid";
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
 import { SuccessToast } from "@/components/retailer/SuccessToast";
+import { SaleReceiptDialog } from "@/components/dialogs/SaleReceiptDialog";
 
 
 export default function RetailerPOS() {
@@ -52,6 +53,7 @@ export default function RetailerPOS() {
   const [showConfetti, setShowConfetti] = React.useState(false);
   const [showToast, setShowToast] = React.useState(false);
   const [saleComplete, setSaleComplete] = React.useState(false);
+  const [showReceiptDialog, setShowReceiptDialog] = React.useState(false);
 
   // Sale process state
   const [isSelling, setIsSelling] = React.useState(false);
@@ -60,6 +62,7 @@ export default function RetailerPOS() {
     pin: string;
     serial_number?: string;
   } | null>(null);
+  const [receiptData, setReceiptData] = React.useState<any>(null);
   const [commissionRate, setCommissionRate] = React.useState<number | null>(null);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
 
@@ -424,14 +427,19 @@ export default function RetailerPOS() {
 
       if (error) {
         setSaleError(`Sale failed: ${error.message}`);
-        setShowConfirmDialog(false);
         return;
       }
 
       setShowConfirmDialog(false);
 
-      // Store voucher info for display
-      if (data) {
+      // Store receipt data for display
+      if (data && data.receipt) {
+        setReceiptData(data.receipt);
+        
+        // Show receipt dialog
+        setShowReceiptDialog(true);
+        
+        // Store voucher info for backup display
         setSaleInfo(data.voucher);
       }
 
@@ -449,15 +457,6 @@ export default function RetailerPOS() {
           setRetailer(refreshedRetailer);
         }
       }
-
-      // Reset after a delay
-      setTimeout(() => {
-        setSelectedCategory(null);
-        setSelectedValue(null);
-        setSaleComplete(false);
-        setShowToast(false);
-        setSaleInfo(null);
-      }, 4000);
     } catch (err) {
       setSaleError(
         `Unexpected error: ${err instanceof Error ? err.message : String(err)}`
@@ -466,6 +465,19 @@ export default function RetailerPOS() {
       setIsSelling(false);
     }
   }, [activeTerminalId, selectedValue, selectedCategory, voucherInventory, userId]);
+
+  // Handle receipt dialog close
+  const handleReceiptClose = React.useCallback(() => {
+    setShowReceiptDialog(false);
+    
+    // Reset sale state
+    setReceiptData(null);
+    setSelectedCategory(null);
+    setSelectedValue(null);
+    setSaleComplete(false);
+    setShowToast(false);
+    setSaleInfo(null);
+  }, []);
 
   // Show loading state while checking authentication or loading data
   if (isLoading || isDataLoading) {
@@ -558,6 +570,7 @@ export default function RetailerPOS() {
         onCancel={() => setShowConfirmDialog(false)}
         onConfirm={handleConfirmSale}
         isSelling={isSelling}
+        saleError={saleError}
       />
 
       {/* Success Toast */}
@@ -565,6 +578,13 @@ export default function RetailerPOS() {
         show={showToast}
         category={selectedCategory}
         value={selectedValue}
+      />
+
+      {/* Sale Receipt Dialog */}
+      <SaleReceiptDialog
+        showDialog={showReceiptDialog}
+        onClose={handleReceiptClose}
+        receipt={receiptData}
       />
     </div>
   );

@@ -10,6 +10,7 @@ type ConfirmSaleDialogProps = {
   onCancel: () => void;
   onConfirm: () => void;
   isSelling?: boolean;
+  saleError?: string | null;
 };
 
 export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
@@ -21,6 +22,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
   onCancel,
   onConfirm,
   isSelling = false,
+  saleError = null,
 }) => {
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
@@ -96,6 +98,12 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
               </>
             )}
           </div>
+
+          {saleError && (
+            <div className="mb-4 w-full rounded-md bg-red-50 p-3 text-red-500 dark:bg-red-900/20">
+              <p className="text-sm font-medium">Error: {saleError}</p>
+            </div>
+          )}
 
           <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
             <button
