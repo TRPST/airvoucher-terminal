@@ -1,11 +1,11 @@
 import * as React from "react";
-import { Wallet, CreditCard, Percent, Tags, ChevronLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { CreditCard, Wallet, Percent, Tags, ChevronLeft } from "lucide-react";
 import { useSession } from "@supabase/auth-helpers-react";
+import { motion } from "framer-motion";
 
-import { StatsTile } from "@/components/ui/stats-tile";
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import TerminalSelector from "@/components/TerminalSelector";
+import { StatsTile } from "@/components/ui/stats-tile";
 import {
   fetchMyRetailer,
   fetchAvailableVoucherTypes,
@@ -14,39 +14,15 @@ import {
   type RetailerProfile,
   type VoucherType,
 } from "@/actions";
-import { cn } from "@/utils/cn";
 import useRequireRole from "@/hooks/useRequireRole";
 
-type VoucherCategoryProps = {
-  name: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick: () => void;
-};
+// Import custom components
+import { RetailerStats } from "@/components/retailer/RetailerStats";
+import { VoucherCategoriesGrid } from "@/components/retailer/VoucherCategoriesGrid";
+import { VoucherValuesGrid } from "@/components/retailer/VoucherValuesGrid";
+import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
+import { SuccessToast } from "@/components/retailer/SuccessToast";
 
-const VoucherCategory = ({
-  name,
-  icon,
-  color,
-  onClick,
-}: VoucherCategoryProps) => (
-  <motion.button
-    whileHover={{ scale: 1.03 }}
-    whileTap={{ scale: 0.97 }}
-    onClick={onClick}
-    className={cn(
-      "flex flex-col items-center justify-center rounded-lg border border-border p-4 text-center shadow-sm transition-colors",
-      "sm:p-6",
-      "hover:border-primary/20 hover:shadow-md",
-      color
-    )}
-  >
-    <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-      {icon}
-    </div>
-    <span className="font-medium">{name}</span>
-  </motion.button>
-);
 
 export default function RetailerPOS() {
   // Protect this route - only allow retailer role
@@ -554,213 +530,42 @@ export default function RetailerPOS() {
       </div>
 
       {/* Balance Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatsTile
-          label="Available Balance"
-          value={`R ${retailer.balance.toFixed(2)}`}
-          icon={Wallet}
-          intent="success"
-          subtitle="Current account balance"
-        />
-        <StatsTile
-          label="Credit Used"
-          value={`R ${retailer.credit_used.toFixed(2)}`}
-          icon={CreditCard}
-          intent="warning"
-          subtitle="Active credit amount"
-        />
-        <StatsTile
-          label="Commission Earned"
-          value={`R ${retailer.commission_balance.toFixed(2)}`}
-          icon={Percent}
-          intent="info"
-          subtitle="Total earned to date"
-        />
-      </div>
+      <RetailerStats retailer={retailer} />
 
-      {/* Voucher Categories Grid */}
+      {/* Voucher Categories Grid or Voucher Values Grid */}
       {!selectedCategory ? (
-        <div>
-          <h2 className="mb-4 text-lg font-medium">Select Voucher Type</h2>
-          {voucherCategories.map((categoryGroup) => (
-            <div key={categoryGroup.name} className="mb-6">
-              <h3 className="mb-3 text-md font-medium text-muted-foreground">{categoryGroup.name}</h3>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-                {categoryGroup.items.map((category) => (
-                  <VoucherCategory
-                    key={category.name}
-                    name={category.name}
-                    icon={category.icon}
-                    color={category.color}
-                    onClick={() => handleCategorySelect(category.name)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <VoucherCategoriesGrid 
+          categories={voucherCategories}
+          onCategorySelect={handleCategorySelect}
+        />
       ) : (
-        // Voucher Values Grid
-        <div>
-          <div className="mb-4 space-y-3">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group"
-            >
-              <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
-              Back to Categories
-            </button>
-            <h2 className="text-lg font-medium">
-              Select {selectedCategory} Voucher Value
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {isVoucherInventoryLoading ? (
-              <div className="col-span-full flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
-                <div className="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <h3 className="text-lg font-medium">Loading Vouchers</h3>
-                <p className="text-sm text-muted-foreground">
-                  Please wait while we fetch available {selectedCategory} vouchers.
-                </p>
-              </div>
-            ) : getVouchersForCategory(selectedCategory).length > 0 ? (
-              getVouchersForCategory(selectedCategory).map((voucher) => (
-                <motion.button
-                  key={`${voucher.id}-${voucher.amount}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleValueSelect(voucher.amount)}
-                  className="flex flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
-                >
-                  <div className="mb-2 text-sm text-muted-foreground">
-                    {voucher.name}
-                  </div>
-                  <div className="text-2xl font-bold">
-                    R {voucher.amount.toFixed(2)}
-                  </div>
-                </motion.button>
-              ))
-            ) : (
-              <div className="col-span-full flex h-40 flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
-                <CreditCard className="mb-2 h-8 w-8 text-muted-foreground" />
-                <h3 className="text-lg font-medium">No Vouchers Available</h3>
-                <p className="text-sm text-muted-foreground">
-                  There are no {selectedCategory} vouchers available at the moment.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <VoucherValuesGrid
+          selectedCategory={selectedCategory}
+          isLoading={isVoucherInventoryLoading}
+          vouchers={getVouchersForCategory(selectedCategory)}
+          onValueSelect={handleValueSelect}
+          onBackToCategories={() => setSelectedCategory(null)}
+        />
       )}
 
       {/* Confirm Sale Dialog */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-          <div 
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowConfirmDialog(false)}
-            aria-hidden="true"
-          />
-          <div className="relative z-50 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
-            <div className="flex flex-col items-center text-center">
-              <div className="mb-4 rounded-full bg-primary/10 p-3 text-primary">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              <h2 className="mb-1 text-xl font-semibold">Confirm Sale</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                You're about to sell the following voucher:
-              </p>
-
-              <div className="mb-6 w-full rounded-lg bg-muted p-4">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Type:</span>
-                  <span className="font-medium">{selectedCategory}</span>
-                </div>
-                <div className="flex justify-between border-t border-border py-2">
-                  <span className="text-sm text-muted-foreground">Value:</span>
-                  <span className="font-medium">
-                    R {selectedValue?.toFixed(2)}
-                  </span>
-                </div>
-                {commissionError ? (
-                  <div className="flex flex-col border-t border-border py-2 text-red-500">
-                    <span className="text-sm font-medium mb-1">Commission Rate Error:</span>
-                    <span className="text-sm">{commissionError}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between border-t border-border py-2">
-                      <span className="text-sm text-muted-foreground">
-                        Commission Rate:
-                      </span>
-                      <span className="font-medium text-green-500">
-                        {commissionRate !== null 
-                          ? `${(commissionRate * 100).toFixed(1)}%` 
-                          : 'Loading...'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-border py-2">
-                      <span className="text-sm text-muted-foreground">
-                        Your Commission:
-                      </span>
-                      <span className="font-medium text-green-500">
-                        R {((selectedValue || 0) * (commissionRate || 0)).toFixed(2)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="flex w-full flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
-                <button
-                  onClick={() => setShowConfirmDialog(false)}
-                  className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmSale}
-                  disabled={commissionError !== null}
-                  className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-                >
-                  Complete Sale
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmSaleDialog
+        showDialog={showConfirmDialog}
+        selectedCategory={selectedCategory}
+        selectedValue={selectedValue}
+        commissionRate={commissionRate}
+        commissionError={commissionError}
+        onCancel={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmSale}
+        isSelling={isSelling}
+      />
 
       {/* Success Toast */}
-      {showToast && (
-        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5 fade-in-20 max-w-md rounded-lg border border-green-500/20 bg-green-500/10 p-4 text-green-500 shadow-lg">
-          <div className="flex items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-2 h-5 w-5"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            <div>
-              <h4 className="font-medium">Sale Successful!</h4>
-              <p className="text-sm">
-                {selectedCategory} voucher for R {selectedValue?.toFixed(2)}{" "}
-                sold successfully.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <SuccessToast
+        show={showToast}
+        category={selectedCategory}
+        value={selectedValue}
+      />
     </div>
   );
 }
