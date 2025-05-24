@@ -24,6 +24,7 @@ export async function fetchSalesReport({
     sale_amount,
     retailer_commission,
     agent_commission,
+    profit,
     terminal:terminals (
       name,
       retailer:retailers (
@@ -52,7 +53,7 @@ export async function fetchSalesReport({
     return { data: null, error };
   }
 
-  const salesReport = data.map((sale) => ({
+  const salesReport = data.map((sale: any) => ({
     id: sale.id,
     created_at: sale.created_at,
     terminal_name: sale.terminal?.name || "",
@@ -62,6 +63,7 @@ export async function fetchSalesReport({
     amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
     agent_commission: sale.agent_commission,
+    profit: sale.profit || 0,
   }));
   
 
@@ -83,6 +85,7 @@ export async function fetchEarningsSummary({
       sale_amount,
       retailer_commission,
       agent_commission,
+      profit,
       voucher_inventory!inner (
         voucher_types!inner (name)
       )
@@ -105,15 +108,16 @@ export async function fetchEarningsSummary({
   // Client-side aggregation to calculate summaries by voucher type
   const summaryMap = new Map<string, EarningsSummary>();
 
-  for (const sale of data) {
+  for (const sale of data as any[]) {
     const voucherType =
-      sale.voucher_inventory?.[0]?.voucher_types?.[0]?.name || "Unknown";
+      sale.voucher_inventory?.voucher_types?.name || "Unknown";
     const amount = sale.sale_amount || 0;
     const retailerCommission = sale.retailer_commission || 0;
     const agentCommission = sale.agent_commission || 0;
+    const profit = sale.profit || 0;
 
-    // Calculate platform commission (could be determined by your business logic)
-    const platformCommission = amount * 0.02; // Example: 2% platform fee
+    // Use the actual profit from database instead of calculating platform commission
+    const platformCommission = profit;
 
     if (!summaryMap.has(voucherType)) {
       summaryMap.set(voucherType, {
@@ -155,8 +159,8 @@ export async function fetchInventoryReport(): Promise<
   // Client-side aggregation to count vouchers by type and status
   const reportMap = new Map<string, InventoryReport>();
 
-  for (const voucher of data) {
-    const voucherType = voucher.voucher_types?.[0]?.name || "Unknown";
+  for (const voucher of data as any[]) {
+    const voucherType = voucher.voucher_types?.name || "Unknown";
 
     if (!reportMap.has(voucherType)) {
       reportMap.set(voucherType, {

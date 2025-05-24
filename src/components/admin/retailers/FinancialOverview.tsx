@@ -30,11 +30,11 @@ export function FinancialOverview({ retailer, onBalanceUpdate }: FinancialOvervi
           subtitle="Current account balance"
         />
         <StatsTile
-          label="Credit Limit"
-          value={`R ${retailer.credit_limit.toFixed(2)}`}
+          label="Available Credit"
+          value={`R ${(retailer.credit_limit - retailer.credit_used).toFixed(2)}`}
           icon={CreditCard}
-          intent="info"
-          subtitle="Maximum credit allowed"
+          intent="warning"
+          subtitle={`R ${retailer.credit_used.toFixed(2)} used of R ${retailer.credit_limit.toFixed(2)} limit`}
         />
         <StatsTile
           label="Commission Earned"

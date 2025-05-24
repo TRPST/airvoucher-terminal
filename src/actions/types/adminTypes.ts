@@ -62,6 +62,7 @@ export type SalesReport = {
   amount: number;
   retailer_commission: number;
   agent_commission: number;
+  profit: number;
 };
 
 export type EarningsSummary = {

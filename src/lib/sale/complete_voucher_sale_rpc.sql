@@ -12,8 +12,11 @@ CREATE OR REPLACE FUNCTION complete_voucher_sale(
 ) RETURNS JSONB AS $$
 DECLARE
   sale_id UUID;
+  voucher_supplier_commission_pct NUMERIC(5,2);
+  airvoucher_commission NUMERIC(12,2);
   retailer_commission NUMERIC(12,2);
   agent_commission NUMERIC(12,2);
+  profit NUMERIC(12,2);
   voucher_pin TEXT;
   voucher_serial TEXT;
   retailer_balance NUMERIC(12,2);
@@ -75,14 +78,21 @@ BEGIN
     FROM terminals
     WHERE id = terminal_id;
 
-  -- Get product name from voucher type
-  SELECT name INTO product_name
-    FROM voucher_types
-    WHERE id = voucher_type_id;
+  -- Get product name and supplier commission percentage from voucher type
+  SELECT vt.name, vt.supplier_commission_pct INTO product_name, voucher_supplier_commission_pct
+    FROM voucher_types vt
+    WHERE vt.id = voucher_type_id;
 
-  -- Calculate commissions
-  retailer_commission := sale_amount * retailer_commission_pct;
-  agent_commission := sale_amount * agent_commission_pct;
+  -- Calculate commissions correctly:
+  -- 1. AirVoucher gets commission from supplier based on sale amount
+  airvoucher_commission := sale_amount * (voucher_supplier_commission_pct / 100);
+  
+  -- 2. Retailer and agent commissions are percentages of what AirVoucher receives
+  retailer_commission := airvoucher_commission * retailer_commission_pct;
+  agent_commission := airvoucher_commission * agent_commission_pct;
+  
+  -- 3. Calculate profit (what AirVoucher keeps)
+  profit := airvoucher_commission - retailer_commission - agent_commission;
   
   -- Get voucher details
   SELECT pin, serial_number INTO voucher_pin, voucher_serial
@@ -107,13 +117,15 @@ BEGIN
     voucher_inventory_id,
     sale_amount,
     retailer_commission,
-    agent_commission
+    agent_commission,
+    profit
   ) VALUES (
     terminal_id,
     voucher_inventory_id,
     sale_amount,
     retailer_commission,
-    agent_commission
+    agent_commission,
+    profit
   ) RETURNING id, created_at INTO sale_id, sale_timestamp;
   
   -- 3. Update retailer balance, credit_used, and commission

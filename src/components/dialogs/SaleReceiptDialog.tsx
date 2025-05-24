@@ -27,7 +27,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
   receipt,
 }) => {
 
-  console.log('receipt', receipt);
+  
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
     if (showDialog) {

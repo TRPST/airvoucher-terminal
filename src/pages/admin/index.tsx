@@ -175,12 +175,11 @@ export default function AdminDashboard() {
     startIndex + itemsPerPage
   );
 
-  // Table data formatting - Updated to include all three commission types
+  // Table data formatting - Now using profit directly from database
   const tableData = useMemo(() => {
     return paginatedSales.map((sale) => {
-      // Calculate actual AirVoucher profit: Supplier Commission - Retailer Commission - Agent Commission
-      const supplierCommission = sale.amount * (sale.supplier_commission_pct / 100);
-      const airVoucherProfit = supplierCommission - sale.retailer_commission - sale.agent_commission;
+      // Use the profit field directly from the database (calculated by RPC function)
+      const airVoucherProfit = sale.profit || 0;
       
       return {
         Date: new Date(sale.created_at).toLocaleString("en-ZA", {
@@ -247,11 +246,9 @@ export default function AdminDashboard() {
     0
   );
 
-  // Calculate today's AirVoucher profit
+  // Calculate today's AirVoucher profit using the profit field from database
   const todaysProfit = todaySales.reduce((sum, sale) => {
-    const supplierCommission = sale.amount * (sale.supplier_commission_pct / 100);
-    const airVoucherProfit = supplierCommission - sale.retailer_commission - sale.agent_commission;
-    return sum + airVoucherProfit;
+    return sum + (sale.profit || 0);
   }, 0);
 
   const activeRetailers = retailers.filter(
@@ -313,6 +310,34 @@ export default function AdminDashboard() {
         }
 
         console.log('salesData30Days: ', salesData30Days);
+        
+        // Debug: Display profit values from database
+        if (salesData30Days && salesData30Days.length > 0) {
+          console.log('DEBUG: Profit values from database by voucher type:');
+          
+          // Group by voucher type to see the pattern
+          const voucherTypeMap = new Map();
+          salesData30Days.forEach((sale) => {
+            const key = sale.voucher_type;
+            if (!voucherTypeMap.has(key)) {
+              const retailerPct = (sale.retailer_commission / sale.amount * 100).toFixed(2);
+              const agentPct = (sale.agent_commission / sale.amount * 100).toFixed(2);
+              
+              voucherTypeMap.set(key, {
+                voucher_type: sale.voucher_type,
+                amount: sale.amount,
+                supplier_commission_pct: sale.supplier_commission_pct,
+                retailer_commission: sale.retailer_commission,
+                agent_commission: sale.agent_commission,
+                profit_from_db: sale.profit || 0,
+                retailer_pct_calculated: retailerPct + '%',
+                agent_pct_calculated: agentPct + '%'
+              });
+            }
+          });
+          
+          console.table(Array.from(voucherTypeMap.values()));
+        }
 
         // Update state with fetched data
         setRetailers(retailersData || []);
