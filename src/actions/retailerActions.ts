@@ -534,6 +534,124 @@ export async function fetchCommissionRate({
 }
 
 /**
+ * Fetch complete commission data for a specific voucher type and retailer
+ * This includes commission rate, calculated amount, and group name
+ */
+export async function fetchRetailerCommissionData({
+  retailerId,
+  voucherTypeId,
+  voucherValue,
+}: {
+  retailerId: string;
+  voucherTypeId: string;
+  voucherValue: number;
+}): Promise<{
+  data: {
+    rate: number;
+    amount: number;
+    groupName: string;
+  } | null;
+  error: PostgrestError | Error | null;
+}> {
+  try {
+    // Step 1: Get retailer's commission group ID
+    const { data: retailer, error: retailerError } = await supabase
+      .from("retailers")
+      .select("commission_group_id")
+      .eq("id", retailerId)
+      .single();
+
+    if (retailerError) {
+      console.error("Error fetching retailer:", retailerError);
+      return { data: null, error: retailerError };
+    }
+
+    if (!retailer?.commission_group_id) {
+      return {
+        data: null,
+        error: new Error("Retailer has no commission group assigned"),
+      };
+    }
+
+    // Step 2: Get commission group name
+    const { data: commissionGroup, error: groupError } = await supabase
+      .from("commission_groups")
+      .select("name")
+      .eq("id", retailer.commission_group_id)
+      .single();
+
+    if (groupError) {
+      console.error("Error fetching commission group:", groupError);
+      return { data: null, error: groupError };
+    }
+
+    // Step 3: Get retailer commission rate for this voucher type
+    const { data: commissionRate, error: rateError } = await supabase
+      .from("commission_group_rates")
+      .select("retailer_pct")
+      .eq("commission_group_id", retailer.commission_group_id)
+      .eq("voucher_type_id", voucherTypeId)
+      .single();
+
+    if (rateError) {
+      console.error("Error fetching commission rate:", rateError);
+      return {
+        data: null,
+        error: new Error("Commission rate not found for this voucher type and retailer group"),
+      };
+    }
+
+    // Step 4: Get supplier commission rate from voucher type
+    const { data: voucherType, error: voucherTypeError } = await supabase
+      .from("voucher_types")
+      .select("supplier_commission_pct")
+      .eq("id", voucherTypeId)
+      .single();
+
+    if (voucherTypeError) {
+      console.error("Error fetching voucher type:", voucherTypeError);
+      return { data: null, error: voucherTypeError };
+    }
+
+    // Step 5: Calculate the correct commission amount
+    // Handle the different formats:
+    // - supplier_commission_pct is stored as whole number (3.00 = 3%)
+    // - retailer_pct is stored as decimal (0.07 = 7%)
+    const supplierCommissionPct = (voucherType.supplier_commission_pct || 0) / 100; // Convert 3.00 to 0.03
+    const retailerPct = commissionRate.retailer_pct || 0; // Already decimal format 0.07
+    
+    // Calculate: Retailer gets a percentage of what Airvoucher receives from the supplier
+    const supplierCommissionAmount = voucherValue * supplierCommissionPct;
+    const retailerCommissionAmount = supplierCommissionAmount * retailerPct;
+
+    console.log('Commission calculation:', {
+      voucherValue,
+      supplierCommissionPct_raw: voucherType.supplier_commission_pct,
+      supplierCommissionPct_decimal: supplierCommissionPct,
+      retailerPct_raw: commissionRate.retailer_pct,
+      retailerPct_decimal: retailerPct,
+      supplierCommissionAmount,
+      retailerCommissionAmount
+    });
+
+    return {
+      data: {
+        rate: retailerPct, // Already in decimal format for display
+        amount: retailerCommissionAmount,
+        groupName: commissionGroup.name || "Unknown",
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error("Unexpected error in fetchRetailerCommissionData:", err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
  * Fetch terminals for a retailer
  */
 export async function fetchTerminals(retailerId: string): Promise<{

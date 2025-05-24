@@ -5,7 +5,11 @@ type ConfirmSaleDialogProps = {
   showDialog: boolean;
   selectedCategory: string | null;
   selectedValue: number | null;
-  commissionRate: number | null;
+  commissionData: {
+    rate: number;
+    amount: number;
+    groupName: string;
+  } | null;
   commissionError: string | null;
   onCancel: () => void;
   onConfirm: () => void;
@@ -17,7 +21,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
   showDialog,
   selectedCategory,
   selectedValue,
-  commissionRate,
+  commissionData,
   commissionError,
   onCancel,
   onConfirm,
@@ -72,28 +76,28 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
             </div>
             {commissionError ? (
               <div className="flex flex-col border-t border-border py-2 text-red-500">
-                <span className="text-sm font-medium mb-1">Commission Rate Error:</span>
+                <span className="text-sm font-medium mb-1">Commission Error:</span>
                 <span className="text-sm">{commissionError}</span>
               </div>
             ) : (
               <>
-                <div className="flex justify-between border-t border-border py-2">
-                  <span className="text-sm text-muted-foreground">
-                    Commission Rate:
-                  </span>
-                  <span className="font-medium text-green-500">
-                    {commissionRate !== null 
-                      ? `${(commissionRate * 100).toFixed(1)}%` 
-                      : 'Loading...'}
-                  </span>
-                </div>
+                {commissionData && (
+                  <div className="flex justify-between border-t border-border py-2">
+                    <span className="text-sm text-muted-foreground">
+                      Commission Group:
+                    </span>
+                    <span className="font-medium text-blue-500">
+                      {commissionData.groupName}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-border py-2">
                   <span className="text-sm text-muted-foreground">
                     Your Commission:
                   </span>
                   <span className="font-medium text-green-500">
-                  {commissionRate !== null 
-                      ? `R ${((selectedValue || 0) * (commissionRate || 0)).toFixed(2)}`
+                    {commissionData !== null 
+                      ? `R ${commissionData.amount.toFixed(2)}`
                       : 'Loading...'}
                   </span>
                 </div>

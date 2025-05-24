@@ -10,6 +10,7 @@ import {
   fetchMyRetailer,
   fetchAvailableVoucherTypes,
   fetchVoucherInventoryByType,
+  fetchRetailerCommissionData,
   sellVoucher,
   type RetailerProfile,
   type VoucherType,
@@ -63,7 +64,11 @@ export default function RetailerPOS() {
     serial_number?: string;
   } | null>(null);
   const [receiptData, setReceiptData] = React.useState<any>(null);
-  const [commissionRate, setCommissionRate] = React.useState<number | null>(null);
+  const [commissionData, setCommissionData] = React.useState<{
+    rate: number;
+    amount: number;
+    groupName: string;
+  } | null>(null);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
 
   // Fetch retailer data and voucher types on mount
@@ -340,7 +345,7 @@ export default function RetailerPOS() {
   // Handle voucher value selection
   const handleValueSelect = React.useCallback((value: number) => {
     setSelectedValue(value);
-    setCommissionRate(null); // Reset commission rate
+    setCommissionData(null); // Reset commission data
     setCommissionError(null); // Reset commission error
     setShowConfirmDialog(true);
     
@@ -353,26 +358,21 @@ export default function RetailerPOS() {
     );
 
     if (selectedVoucher && retailer) {
-      // Import and fetch commission rate
-      import('@/actions').then(({ fetchCommissionRate }) => {
-        fetchCommissionRate({
-          retailerId: retailer.id,
-          voucherTypeId: selectedVoucher.id,
-        }).then(({ data, error }) => {
-          if (data) {
-            setCommissionRate(data.retailer_pct);
-          } else if (error) {
-            setCommissionError(`Error: ${error.message || 'Failed to get commission rate'}`);
-          } else {
-            setCommissionError('No commission rate found for this voucher type');
-          }
-        }).catch(err => {
-          console.error("Error fetching commission rate:", err);
-          setCommissionError(`Error: ${err instanceof Error ? err.message : 'Failed to get commission rate'}`);
-        });
-      }).catch(err => {
-        console.error("Error importing actions:", err);
-        setCommissionError('Failed to load commission rate module');
+      // Use the new fetchRetailerCommissionData function instead of manual calculations
+      fetchRetailerCommissionData({
+        retailerId: retailer.id,
+        voucherTypeId: selectedVoucher.id,
+        voucherValue: value,
+      }).then((result: { data: { rate: number; amount: number; groupName: string } | null; error: any }) => {
+        const { data, error } = result;
+        if (data && !error) {
+          setCommissionData(data);
+        } else {
+          setCommissionError(`Error: ${error?.message || 'Failed to get commission data'}`);
+        }
+      }).catch((err: unknown) => {
+        console.error("Error fetching commission data:", err);
+        setCommissionError(`Error: ${err instanceof Error ? err.message : 'Failed to get commission data'}`);
       });
     } else {
       // If we don't have enough info to fetch the rate
@@ -566,7 +566,7 @@ export default function RetailerPOS() {
         showDialog={showConfirmDialog}
         selectedCategory={selectedCategory}
         selectedValue={selectedValue}
-        commissionRate={commissionRate}
+        commissionData={commissionData}
         commissionError={commissionError}
         onCancel={() => setShowConfirmDialog(false)}
         onConfirm={handleConfirmSale}
