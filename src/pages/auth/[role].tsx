@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import supabase from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getUserRole, signOutUser } from "@/actions/userActions";
 import { motion } from "framer-motion";
 
@@ -12,10 +12,18 @@ export default function AuthPage() {
   const { role } = router.query;
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [supabaseClient, setSupabaseClient] = useState<any>(null);
 
   // Ensure component only renders on client-side to prevent hydration issues
   useEffect(() => {
     setMounted(true);
+    // Initialize Supabase client only on client side
+    try {
+      const client = getSupabaseClient();
+      setSupabaseClient(client);
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+    }
   }, []);
 
   // Helper function to get user's role from profiles table using the action
@@ -75,9 +83,12 @@ export default function AuthPage() {
   );
 
   useEffect(() => {
+    // Only proceed if we have a Supabase client
+    if (!supabaseClient) return;
+
     // Check if user is already logged in and has the correct role
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabaseClient.auth.getSession();
       if (data.session?.user?.id) {
         
         // Get user's role from profiles table
@@ -121,13 +132,13 @@ export default function AuthPage() {
 
     // Set up auth state change listener
     const { data: authListener } =
-      supabase.auth.onAuthStateChange(handleAuthChange);
+      supabaseClient.auth.onAuthStateChange(handleAuthChange);
 
     // Clean up the subscription
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [role, router, handleAuthChange]);
+  }, [role, router, handleAuthChange, supabaseClient]);
 
   // Get proper title case role name for display
   const getRoleDisplay = () => {
@@ -135,7 +146,8 @@ export default function AuthPage() {
     return role.toString().charAt(0).toUpperCase() + role.toString().slice(1);
   };
 
-  if (loading || !mounted) {
+  // Show loading until mounted and Supabase client is ready
+  if (loading || !mounted || !supabaseClient) {
     return (
       <div
         style={{
@@ -262,7 +274,7 @@ export default function AuthPage() {
           </h2>
 
           <Auth
-            supabaseClient={supabase}
+            supabaseClient={supabaseClient}
             appearance={{
               theme: ThemeSupa,
               variables: {

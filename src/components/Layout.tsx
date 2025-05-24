@@ -22,7 +22,7 @@ import {
   LogOut,
 } from "lucide-react";
 // Import Supabase client directly
-import supabase from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import * as Avatar from "@radix-ui/react-avatar";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion } from "framer-motion";
@@ -41,21 +41,36 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [supabaseClient, setSupabaseClient] = React.useState<any>(null);
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
 
+  // Initialize client-side only
+  React.useEffect(() => {
+    setMounted(true);
+    try {
+      const client = getSupabaseClient();
+      setSupabaseClient(client);
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+    }
+  }, []);
+
   // Fetch user session on component mount
   React.useEffect(() => {
+    if (!supabaseClient) return;
+
     // Get current session
     const fetchSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabaseClient.auth.getSession();
       setSession(data.session);
       setUser(data.session?.user || null);
 
       // Listen for auth changes
-      const { data: authListener } = supabase.auth.onAuthStateChange(
+      const { data: authListener } = supabaseClient.auth.onAuthStateChange(
         (event: string, currentSession: any) => {
           setSession(currentSession);
           setUser(currentSession?.user || null);
@@ -69,7 +84,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
     };
 
     fetchSession();
-  }, []);
+  }, [supabaseClient]);
 
   // Fetch retailer profile if user is a retailer
   React.useEffect(() => {
@@ -215,6 +230,15 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   };
 
   const navItems = getNavItems(role);
+
+  // Show loading until mounted and Supabase client is ready
+  if (!mounted || !supabaseClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">

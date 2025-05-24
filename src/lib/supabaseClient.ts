@@ -8,17 +8,22 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
 const createSupabaseClient = () => {
+  // Only create client on the browser side
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   if (supabaseInstance) {
     return supabaseInstance;
   }
 
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      autoRefreshToken: typeof window !== 'undefined',
-      persistSession: typeof window !== 'undefined',
-      detectSessionInUrl: typeof window !== 'undefined',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
       storageKey: 'airvoucher-auth',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storage: window.localStorage,
     },
     // Enable real-time only on client-side
     realtime: {
@@ -31,7 +36,16 @@ const createSupabaseClient = () => {
   return supabaseInstance;
 };
 
-export const supabase = createSupabaseClient();
+// Export a getter function instead of the client directly
+export const getSupabaseClient = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client can only be used on the client side');
+  }
+  return createSupabaseClient();
+};
+
+// For backwards compatibility, but this should only be used on client-side
+export const supabase = typeof window !== 'undefined' ? createSupabaseClient() : null;
 
 // IMPORTANT: Service role key should NEVER be exposed to the client
 // This should only be used in API routes or server-side code
