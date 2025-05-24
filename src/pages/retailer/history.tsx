@@ -1,22 +1,24 @@
 import * as React from "react";
-import { Calendar, Search, Filter, AlertCircle } from "lucide-react";
+import { Calendar, Search, Filter, AlertCircle, BarChart2, PieChart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "@supabase/auth-helpers-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
+import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
 import { cn } from "@/utils/cn";
 import {
   fetchMyRetailer,
   fetchSalesHistory,
-  fetchRetailerTerminals,
+  fetchTerminals,
   type RetailerProfile,
-  type RetailerSale,
-  type RetailerTerminal,
-} from "@/actions";
+  type Sale,
+  type Terminal,
+} from "@/actions/retailerActions";
 import useRequireRole from "@/hooks/useRequireRole";
 
 // Define tab types for date filtering
 type DateFilter = "today" | "week" | "month" | "all";
+type TerminalFilter = "all" | string;
 
 export default function RetailerHistory() {
   // Protect this route - only allow retailer role
@@ -28,14 +30,16 @@ export default function RetailerHistory() {
 
   // State for retailer data and loading/error states
   const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);
-  const [sales, setSales] = React.useState<RetailerSale[]>([]);
-  const [terminals, setTerminals] = React.useState<RetailerTerminal[]>([]);
+  const [sales, setSales] = React.useState<Sale[]>([]);
+  const [terminals, setTerminals] = React.useState<Terminal[]>([]);
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const [dataError, setDataError] = React.useState<string | null>(null);
 
   // UI state
   const [activeTab, setActiveTab] = React.useState<DateFilter>("week");
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [activeTerminal, setActiveTerminal] = React.useState<TerminalFilter>("all");
+  const [showFilters, setShowFilters] = React.useState(false);
 
   // Fetch retailer data and sales history
   React.useEffect(() => {
@@ -81,7 +85,7 @@ export default function RetailerHistory() {
 
         // Fetch terminals for this retailer
         const { data: terminalsData, error: terminalsError } =
-          await fetchRetailerTerminals(retailerData.id);
+          await fetchTerminals(retailerData.id);
 
         if (terminalsError) {
           setDataError(`Failed to load terminals: ${terminalsError.message}`);
@@ -91,11 +95,14 @@ export default function RetailerHistory() {
         setTerminals(terminalsData || []);
 
         // Get terminal IDs for this retailer
-        const terminalIds = terminalsData?.map((terminal) => terminal.id) || [];
+        const terminalIds = terminalsData?.map((terminal: Terminal) => terminal.id) || [];
 
-        // We can't directly query by retailer ID in fetchSalesHistory
-        // We'll fetch all sales for all terminals of this retailer
+        // Determine terminal ID filter
+        const terminalId = activeTerminal !== "all" ? activeTerminal : undefined;
+
+        // Fetch sales history with filters
         const { data: salesData, error: salesError } = await fetchSalesHistory({
+          terminalId,
           startDate: startDate?.toISOString(),
         });
 
@@ -117,9 +124,9 @@ export default function RetailerHistory() {
     };
 
     loadData();
-  }, [userId, activeTab]);
+  }, [userId, activeTab, activeTerminal]);
 
-  // Get filtered sales - filter by search term only since date filtering is already done on the server
+  // Get filtered sales based on all active filters
   const filteredSales = React.useMemo(() => {
     let retailerSales = [...sales];
 
@@ -144,6 +151,17 @@ export default function RetailerHistory() {
       );
     }
 
+    // Apply terminal filter
+    if (activeTerminal !== "all") {
+      // Find terminal name for the selected ID
+      const terminal = terminals.find(term => term.id === activeTerminal);
+      if (terminal) {
+        retailerSales = retailerSales.filter(
+          (sale) => sale.terminal_name === terminal.name
+        );
+      }
+    }
+
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -156,10 +174,11 @@ export default function RetailerHistory() {
     }
 
     return retailerSales;
-  }, [sales, activeTab, searchTerm]);
+  }, [sales, activeTab, searchTerm, activeTerminal, terminals]);
 
   // Format table data
   const tableData = React.useMemo(() => {
+    console.log('filteredSales', filteredSales);
     return filteredSales.map((sale) => ({
       Date: new Date(sale.created_at).toLocaleString("en-ZA", {
         day: "numeric",
@@ -184,16 +203,12 @@ export default function RetailerHistory() {
                 : "bg-pink-500"
             )}
           />
-          <span>{sale.voucher_type}</span>
+          <span>{sale.voucher_type || "Unknown"}</span>
         </div>
       ),
-      Value: `R ${sale.voucher_amount.toFixed(2)}`,
+      Value: `R ${(sale.voucher_amount || sale.sale_amount).toFixed(2)}`,
       Commission: `R ${sale.retailer_commission.toFixed(2)}`,
-      "PIN/Serial": sale.pin
-        ? `${sale.pin.slice(0, 3)}****`
-        : sale.serial_number
-        ? `${sale.serial_number.slice(0, 3)}****`
-        : "-",
+      "Reference": sale.ref_number || `REF-${sale.id.slice(0,8)}`,
     }));
   }, [filteredSales]);
 
@@ -274,7 +289,7 @@ export default function RetailerHistory() {
           ))}
         </div>
 
-        {/* Search */}
+        {/* Search & Filter */}
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -286,12 +301,68 @@ export default function RetailerHistory() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm",
+              showFilters 
+                ? "bg-primary text-primary-foreground border-primary" 
+                : "border-input bg-background hover:bg-muted"
+            )}
+          >
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </button>
         </div>
       </div>
+
+      {/* Terminal Filter */}
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="rounded-lg border border-border bg-card p-4 shadow-sm"
+        >
+          <h3 className="mb-3 font-medium">Filter Options</h3>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="terminalFilter" className="mb-1 block text-sm font-medium">
+                Terminal
+              </label>
+              <select
+                id="terminalFilter"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={activeTerminal}
+                onChange={(e) => setActiveTerminal(e.target.value)}
+              >
+                <option value="all">All Terminals</option>
+                {terminals.map((terminal) => (
+                  <option key={terminal.id} value={terminal.id}>
+                    {terminal.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Charts Section */}
+      {filteredSales.length > 0 && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <ChartPlaceholder
+            title="Sales Over Time"
+            description="Daily sales trend for the past 30 days"
+            icon={<BarChart2 className="mb-3 h-12 w-12 opacity-20" />}
+          />
+          <ChartPlaceholder
+            title="Sales by Voucher Type"
+            description="Distribution of sales by voucher category"
+            icon={<PieChart className="mb-3 h-12 w-12 opacity-20" />}
+          />
+        </div>
+      )}
 
       {/* Transactions Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -389,7 +460,7 @@ export default function RetailerHistory() {
       {filteredSales.length > 0 ? (
         <div className="rounded-lg border border-border shadow-sm">
           <TablePlaceholder
-            columns={["Date", "Type", "Value", "Commission", "PIN/Serial"]}
+            columns={["Date", "Type", "Value", "Commission", "Reference"]}
             data={tableData}
           />
         </div>

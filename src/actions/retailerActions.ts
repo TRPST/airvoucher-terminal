@@ -22,6 +22,7 @@ export type VoucherType = {
   name: string;
   amount: number;
   count: number;
+  supplier_commission_pct: number;
 };
 
 export type Terminal = {
@@ -41,6 +42,7 @@ export type Sale = {
   voucher_amount: number;
   pin: string;
   serial_number?: string;
+  ref_number: string;
 };
 
 /**
@@ -163,10 +165,10 @@ export async function fetchVoucherInventoryByType(voucherTypeName: string): Prom
   try {
     console.log(`Fetching inventory for voucher type: ${voucherTypeName}`);
 
-    // Get the voucher type ID(s) for this type name
+    // Get the voucher type ID(s) for this type name including supplier commission
     const { data: voucherTypes, error: voucherTypesError } = await supabase
       .from("voucher_types")
-      .select("id, name")
+      .select("id, name, supplier_commission_pct")
       .like("name", `${voucherTypeName}%`);
       
     if (voucherTypesError) {
@@ -223,25 +225,31 @@ export async function fetchVoucherInventoryByType(voucherTypeName: string): Prom
     }
     
     // Group vouchers by amount and count them
-    const amountGroups = new Map<number, { id: string, name: string, count: number }>();
+    const amountGroups = new Map<number, { id: string, name: string, count: number, supplier_commission_pct: number }>();
     
-    // Create a mapping of type IDs to names
-    const typeNameMap = new Map<string, string>();
+    // Create a mapping of type IDs to names and commission rates
+    const typeDataMap = new Map<string, { name: string, supplier_commission_pct: number }>();
     voucherTypes.forEach(type => {
-      typeNameMap.set(type.id, type.name);
+      typeDataMap.set(type.id, {
+        name: type.name,
+        supplier_commission_pct: type.supplier_commission_pct || 0
+      });
     });
     
     // Group and count vouchers by amount
     allVouchers.forEach(voucher => {
       const amount = voucher.amount;
       const typeId = voucher.voucher_type_id;
-      const typeName = typeNameMap.get(typeId) || voucherTypeName;
+      const typeData = typeDataMap.get(typeId);
+      const typeName = typeData?.name || voucherTypeName;
+      const supplierCommissionPct = typeData?.supplier_commission_pct || 0;
       
       if (!amountGroups.has(amount)) {
         amountGroups.set(amount, {
           id: typeId,
           name: typeName,
-          count: 1
+          count: 1,
+          supplier_commission_pct: supplierCommissionPct
         });
       } else {
         const group = amountGroups.get(amount)!;
@@ -255,7 +263,8 @@ export async function fetchVoucherInventoryByType(voucherTypeName: string): Prom
         id: group.id,
         name: group.name,
         amount,
-        count: group.count
+        count: group.count,
+        supplier_commission_pct: group.supplier_commission_pct
       })
     ).sort((a, b) => a.amount - b.amount);
     
@@ -471,6 +480,7 @@ export async function fetchSalesHistory({
     voucher_amount: sale.voucher_inventory?.[0]?.amount || 0,
     pin: sale.voucher_inventory?.[0]?.pin || "",
     serial_number: sale.voucher_inventory?.[0]?.serial_number,
+    ref_number: `REF-${sale.id.slice(0, 8)}` // Generate a reference number based on sale ID
   }));
 
   return { data: sales, error: null };

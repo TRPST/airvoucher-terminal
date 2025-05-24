@@ -28,6 +28,7 @@ export interface ChartPlaceholderProps
     VariantProps<typeof chartPlaceholderVariants> {
   title: string;
   description?: string;
+  icon?: React.ReactNode;
 }
 
 export function ChartPlaceholder({
@@ -35,6 +36,7 @@ export function ChartPlaceholder({
   height,
   title,
   description = "Chart goes here",
+  icon,
   ...props
 }: ChartPlaceholderProps) {
   return (
@@ -47,7 +49,7 @@ export function ChartPlaceholder({
       </div>
 
       <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
-        <BarChart className="mb-3 h-12 w-12 opacity-20" />
+        {icon || <BarChart className="mb-3 h-12 w-12 opacity-20" />}
         <p className="max-w-[160px] text-center text-sm opacity-70">
           {description}
         </p>

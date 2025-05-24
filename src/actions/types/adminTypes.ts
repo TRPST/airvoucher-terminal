@@ -57,6 +57,7 @@ export type SalesReport = {
   terminal_name: string;
   retailer_name: string;
   voucher_type: string;
+  supplier_commission_pct: number;
   amount: number;
   retailer_commission: number;
   agent_commission: number;

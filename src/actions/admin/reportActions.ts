@@ -16,20 +16,27 @@ export async function fetchSalesReport({
   startDate?: string;
   endDate?: string;
 }): Promise<ResponseType<SalesReport[]>> {
-  let query = supabase.from("sales").select(`
-      id,
-      created_at,
-      sale_amount,
-      retailer_commission,
-      agent_commission,
-      terminals!inner (
-        name,
-        retailers!inner (name)
-      ),
-      voucher_inventory!inner (
-        voucher_types!inner (name)
+  let query = supabase
+  .from("sales")
+  .select(`
+    id,
+    created_at,
+    sale_amount,
+    retailer_commission,
+    agent_commission,
+    terminal:terminals (
+      name,
+      retailer:retailers (
+        name
       )
-    `);
+    ),
+    voucher:voucher_inventory (
+      voucher_type:voucher_types (
+        name,
+        supplier_commission_pct
+      )
+    )
+  `);
 
   if (startDate) {
     query = query.gte("created_at", startDate);
@@ -45,17 +52,18 @@ export async function fetchSalesReport({
     return { data: null, error };
   }
 
-  // Transform the data to match the SalesReport type
   const salesReport = data.map((sale) => ({
     id: sale.id,
     created_at: sale.created_at,
-    terminal_name: sale.terminals?.[0]?.name || "",
-    retailer_name: sale.terminals?.[0]?.retailers?.[0]?.name || "",
-    voucher_type: sale.voucher_inventory?.[0]?.voucher_types?.[0]?.name || "",
+    terminal_name: sale.terminal?.name || "",
+    retailer_name: sale.terminal?.retailer?.name || "",
+    voucher_type: sale.voucher?.voucher_type?.name || "",
+    supplier_commission_pct: sale.voucher?.voucher_type?.supplier_commission_pct || 0,
     amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
     agent_commission: sale.agent_commission,
   }));
+  
 
   return { data: salesReport, error: null };
 }
