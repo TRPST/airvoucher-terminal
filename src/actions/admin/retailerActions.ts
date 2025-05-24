@@ -1,4 +1,4 @@
-import supabase, { supabaseAdmin } from "@/lib/supabaseClient";
+import supabase from "@/lib/supabaseClient";
 import {
   Retailer,
   RetailerData,
@@ -92,22 +92,29 @@ export async function createRetailer({
   password,
 }: CreateRetailerParams): Promise<ResponseType<{ id: string }>> {
   try {
-    // Use the admin API to create a user without affecting the current session
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: profileData.email,
-      password: password,
-      email_confirm: true,
-      user_metadata: {
-        role: "retailer",
+    // Use the API route to create a user (this calls the server-side admin client)
+    const response = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        email: profileData.email,
+        password: password,
+        userData: {
+          role: "retailer",
+        },
+      }),
     });
 
-    if (authError) {
-      console.error("Error creating auth user:", authError);
-      return { data: null, error: authError };
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { data: null, error: new Error(errorData.error || 'Failed to create user') };
     }
 
-    if (!authData.user) {
+    const { user } = await response.json();
+
+    if (!user) {
       return {
         data: null,
         error: new Error("Failed to create user in authentication system"),
@@ -118,7 +125,7 @@ export async function createRetailer({
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .insert({
-        id: authData.user.id, // Use the UUID from Supabase auth
+        id: user.id, // Use the UUID from Supabase auth
         full_name: profileData.full_name,
         email: profileData.email,
         phone: profileData.phone,
@@ -138,7 +145,7 @@ export async function createRetailer({
     const { data: retailer, error: retailerError } = await supabase
       .from("retailers")
       .insert({
-        user_profile_id: profiles.id, // This should be the same as authData.user.id
+        user_profile_id: profiles.id, // This should be the same as user.id
         name: retailerData.name,
         contact_name: retailerData.contact_name,
         contact_email: retailerData.contact_email,

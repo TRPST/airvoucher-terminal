@@ -11,6 +11,12 @@ export default function AuthPage() {
   const router = useRouter();
   const { role } = router.query;
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component only renders on client-side to prevent hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Helper function to get user's role from profiles table using the action
   const getUserRoleFromProfile = async (userId: string) => {
@@ -129,7 +135,7 @@ export default function AuthPage() {
     return role.toString().charAt(0).toUpperCase() + role.toString().slice(1);
   };
 
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <div
         style={{
