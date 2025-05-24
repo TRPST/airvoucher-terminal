@@ -185,3 +185,48 @@ export async function updateRetailer(
 
   return { data, error };
 }
+
+/**
+ * Update retailer balance and credit limit
+ */
+export async function updateRetailerBalance(
+  id: string,
+  balance: number,
+  creditLimit: number
+): Promise<ResponseType<{ id: string }>> {
+  const { data, error } = await supabase
+    .from("retailers")
+    .update({
+      balance: balance,
+      credit_limit: creditLimit,
+    })
+    .eq("id", id)
+    .select("id")
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Fetch all profiles with agent role
+ */
+export async function fetchAgents(): Promise<ResponseType<{ id: string; full_name: string }[]>> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("role", "agent")
+      .order("full_name");
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    return { data: data || [], error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}

@@ -26,6 +26,8 @@ export {
   fetchRetailers,
   createRetailer,
   updateRetailer,
+  updateRetailerBalance,
+  fetchAgents,
   fetchTerminals as fetchAdminTerminals,
   createTerminal,
   fetchVoucherInventory,
