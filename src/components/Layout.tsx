@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCallback } from "react";
 import { getUserRole, signOutUser } from "@/actions/userActions";
+import { fetchMyRetailer, RetailerProfile } from "@/actions/retailerActions";
 import {
   LayoutDashboard,
   Store,
@@ -43,6 +44,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
+  const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
 
   // Fetch user session on component mount
   React.useEffect(() => {
@@ -68,6 +70,28 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
 
     fetchSession();
   }, []);
+
+  // Fetch retailer profile if user is a retailer
+  React.useEffect(() => {
+    const fetchRetailerProfile = async () => {
+      if (role === "retailer" && user?.id) {
+        try {
+          const { data, error } = await fetchMyRetailer(user.id);
+          if (error) {
+            console.error("Error fetching retailer profile:", error);
+          } else {
+            setRetailerProfile(data);
+          }
+        } catch (err) {
+          console.error("Error fetching retailer profile:", err);
+        }
+      } else {
+        setRetailerProfile(null);
+      }
+    };
+
+    fetchRetailerProfile();
+  }, [role, user?.id]);
 
   // Handle sign out
   const handleSignOut = async () => {
@@ -234,7 +258,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                 {/* Spacer to maintain layout */}
               </div>
               <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
-                {role.charAt(0).toUpperCase() + role.slice(1)} Portal
+                {role === "retailer" && retailerProfile?.name
+                  ? retailerProfile.name
+                  : `${role.charAt(0).toUpperCase() + role.slice(1)} Portal`}
               </div>
               
              
@@ -364,8 +390,10 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               <div className="w-8 h-5"></div> {/* Spacer to maintain layout */}
             </div>
             <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
-              {role.charAt(0).toUpperCase() + role.slice(1)} Portal
-            </div>        
+              {role === "retailer" && retailerProfile?.name
+                ? retailerProfile.name
+                : `${role.charAt(0).toUpperCase() + role.slice(1)} Portal`}
+            </div>
           </div>
           {/* User info removed from here - moved to bottom */}
 

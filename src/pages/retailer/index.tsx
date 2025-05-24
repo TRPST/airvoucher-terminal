@@ -566,6 +566,7 @@ export default function RetailerPOS() {
         showDialog={showConfirmDialog}
         selectedCategory={selectedCategory}
         selectedValue={selectedValue}
+        retailer={retailer}
         commissionData={commissionData}
         commissionError={commissionError}
         onCancel={() => setShowConfirmDialog(false)}

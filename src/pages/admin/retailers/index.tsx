@@ -269,6 +269,8 @@ export default function AdminRetailers() {
 
   // Format data for the table
   const tableData = retailers.map((retailer) => {
+    const availableCredit = retailer.credit_limit - (retailer.credit_used || 0);
+    
     const row = {
       Name: (
         <div className="flex items-center gap-2">
@@ -286,6 +288,7 @@ export default function AdminRetailers() {
       Agent: retailer.agent_name || "None",
       "Commission Group": retailer.commission_group_name || "None",
       Balance: `R ${retailer.balance.toFixed(2)}`,
+      "Available Credit": `R ${availableCredit.toFixed(2)}`,
       Status: (
         <div
           className={cn(
@@ -338,7 +341,7 @@ export default function AdminRetailers() {
       </div>
 
       <TablePlaceholder
-        columns={["Name", "Agent", "Commission Group", "Balance", "Status"]}
+        columns={["Name", "Agent", "Commission Group", "Balance", "Available Credit", "Status"]}
         data={tableData}
         rowsClickable={true}
       />

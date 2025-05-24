@@ -213,7 +213,14 @@ export default function AdminDashboard() {
         Retailer: sale.retailer_name || "Unknown",
         "Ret. Com.": `R ${sale.retailer_commission.toFixed(2)}`,
         "Agent Com.": `R ${sale.agent_commission.toFixed(2)}`,
-        "AV Com.": `R ${airVoucherProfit.toFixed(2)}`,
+        "AV Profit": (
+          <span className={cn(
+            "font-medium",
+            airVoucherProfit >= 0 ? "text-green-600" : "text-red-600"
+          )}>
+            R {airVoucherProfit.toFixed(2)}
+          </span>
+        ),
       };
     });
   }, [paginatedSales]);
@@ -587,8 +594,8 @@ export default function AdminDashboard() {
                       <td className="px-3 py-3 text-sm whitespace-nowrap text-blue-600 font-medium">
                         {row["Agent Com."]}
                       </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-purple-600 font-medium">
-                        {row["AV Com."]}
+                      <td className="px-3 py-3 text-sm whitespace-nowrap">
+                        {row["AV Profit"]}
                       </td>
                     </tr>
                   ))}

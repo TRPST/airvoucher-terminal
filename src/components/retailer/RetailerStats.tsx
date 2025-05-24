@@ -8,6 +8,9 @@ type RetailerStatsProps = {
 };
 
 export const RetailerStats: React.FC<RetailerStatsProps> = ({ retailer }) => {
+  // Calculate available credit
+  const availableCredit = retailer.credit_limit - retailer.credit_used;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <StatsTile
@@ -18,11 +21,11 @@ export const RetailerStats: React.FC<RetailerStatsProps> = ({ retailer }) => {
         subtitle="Current account balance"
       />
       <StatsTile
-        label="Credit Used"
-        value={`R ${retailer.credit_used.toFixed(2)}`}
+        label="Available Credit"
+        value={`R ${availableCredit.toFixed(2)}`}
         icon={CreditCard}
         intent="warning"
-        subtitle="Active credit amount"
+        subtitle={`R ${retailer.credit_used.toFixed(2)} used of R ${retailer.credit_limit.toFixed(2)} limit`}
       />
       <StatsTile
         label="Commission Earned"

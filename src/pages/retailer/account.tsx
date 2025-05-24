@@ -113,6 +113,12 @@ export default function RetailerAccount() {
     loadData();
   }, [userId]);
 
+  // Calculate available credit
+  const availableCredit = React.useMemo(() => {
+    if (!retailer) return 0;
+    return retailer.credit_limit - retailer.credit_used;
+  }, [retailer]);
+
   // Show loading state while checking authentication or loading data
   if (isLoading || isDataLoading) {
     return (
@@ -173,11 +179,11 @@ export default function RetailerAccount() {
           subtitle="Current account balance"
         />
         <StatsTile
-          label="Credit Used"
-          value={`R ${retailer.credit_used.toFixed(2)}`}
+          label="Available Credit"
+          value={`R ${availableCredit.toFixed(2)}`}
           icon={CreditCard}
           intent="warning"
-          subtitle="Active credit amount"
+          subtitle={`R ${retailer.credit_used.toFixed(2)} used of R ${retailer.credit_limit.toFixed(2)} limit`}
         />
         <StatsTile
           label="Pending Commission"
