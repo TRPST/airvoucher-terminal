@@ -15,7 +15,7 @@ export async function fetchCommissionGroups(): Promise<
 > {
   const { data: groups, error: groupsError } = await supabase
     .from("commission_groups")
-    .select("id, name");
+    .select("id, name, description");
 
   if (groupsError) {
     return { data: null, error: groupsError };
@@ -66,6 +66,7 @@ export async function fetchCommissionGroups(): Promise<
     result.push({
       id: group.id,
       name: group.name,
+      description: group.description,
       rates: transformedRates,
     });
   }
@@ -89,11 +90,12 @@ export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> 
  * Create a new commission group
  */
 export async function createCommissionGroup(
-  name: string
+  name: string,
+  description?: string
 ): Promise<ResponseType<{ id: string }>> {
   const { data, error } = await supabase
     .from("commission_groups")
-    .insert({ name })
+    .insert({ name, description })
     .select("id")
     .single();
 

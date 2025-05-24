@@ -19,7 +19,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
     message: string;
     details?: string[];
   } | null>(null);
-  const [uploadMode, setUploadMode] = React.useState<"merge" | "replace">("merge");
+  const [uploadMode, setUploadMode] = React.useState<"merge" | "replace" | null>(null);
   const [fileValidationError, setFileValidationError] = React.useState<string | null>(null);
   
   // Reset state when dialog is opened/closed
@@ -28,6 +28,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
       setFile(null);
       setUploadResult(null);
       setIsUploading(false);
+      setUploadMode(null);
       setFileValidationError(null);
     }
   }, [isOpen]);
@@ -118,6 +119,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
     if (!file) return;
     
     setIsUploading(true);
+    setUploadMode(mode);
     setUploadResult(null);
     
     try {
@@ -171,7 +173,8 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
           details: data.errors,
         });
         
-        setTimeout(() => onSuccess(), 2000);
+        // Call onSuccess immediately to fetch new vouchers in background
+        onSuccess();
       } else {
         // Success with no errors
         let message = `Successfully uploaded ${data.newVouchers} ${data.voucherType} vouchers`;
@@ -187,7 +190,8 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
           message,
         });
         
-        setTimeout(() => onSuccess(), 2000);
+        // Call onSuccess immediately to fetch new vouchers in background
+        onSuccess();
       }
     } catch (err) {
       setUploadResult({
@@ -196,6 +200,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
       });
     } finally {
       setIsUploading(false);
+      setUploadMode(null);
     }
   };
   
@@ -264,7 +269,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
                   <p className="mt-1 text-xs text-muted-foreground">
                     {voucherTypeName 
                       ? `Only ${voucherTypeName} format files are accepted`
-                      : "Supported formats: Ringa, Hollywoodbets, and Easyload"
+                      : "Supported formats: Ringa, Hollywoodbets, Easyload, Vodacom, Telkom, MTN, and CellC"
                     }
                   </p>
                 </>
@@ -333,7 +338,11 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
               <>
                 <button
                   onClick={() => handleUpload("merge")}
-                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+                  className={`w-full rounded-md px-4 py-2 text-sm font-medium shadow ${
+                    isUploading && uploadMode !== "merge" 
+                      ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
                   disabled={isUploading}
                 >
                   {isUploading && uploadMode === "merge" ? (
@@ -348,7 +357,11 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId,
                 
                 <button
                   onClick={() => handleUpload("replace")}
-                  className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow"
+                  className={`w-full rounded-md px-4 py-2 text-sm font-medium shadow ${
+                    isUploading && uploadMode !== "replace" 
+                      ? "bg-muted text-muted-foreground cursor-not-allowed" 
+                      : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  }`}
                   disabled={isUploading}
                 >
                   {isUploading && uploadMode === "replace" ? (

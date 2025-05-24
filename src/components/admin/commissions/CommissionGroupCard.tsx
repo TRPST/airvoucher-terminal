@@ -47,11 +47,7 @@ export function CommissionGroupCard({
         <div>
           <h2 className="text-lg font-medium">{group.name}</h2>
           <p className="text-sm text-muted-foreground">
-            {group.name === "Premium"
-              ? "Higher commission rates for top performers"
-              : group.name === "Standard"
-              ? "Default commission rates for most retailers"
-              : "Basic commission rates for new retailers"}
+            {group.description || "No description provided"}
           </p>
         </div>
         {editGroup === group.id ? (

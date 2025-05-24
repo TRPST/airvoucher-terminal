@@ -40,6 +40,7 @@ export type VoucherInventory = {
 export type CommissionGroup = {
   id: string;
   name: string;
+  description?: string;
   rates: CommissionRate[];
 };
 

@@ -278,7 +278,8 @@ export default function AdminCommissions() {
     try {
       // Step 1: Create the commission group
       const { data: groupData, error: groupError } = await createCommissionGroup(
-        formData.groupName
+        formData.groupName,
+        formData.description
       );
       
       if (groupError) {

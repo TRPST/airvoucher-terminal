@@ -109,24 +109,20 @@ export default function VoucherTypeDetail() {
     loadData();
   }, [typeId]);
 
-  // Handle upload success
+  // Handle upload success - fetch new vouchers in background without loading state
   const handleUploadSuccess = () => {
-    setShowUploadDialog(false);
-    // Reload data after successful upload
-    setIsLoading(true);
+    // Fetch new vouchers in background without showing loading state
     if (typeId && typeof typeId === "string") {
       fetchVoucherInventory(typeId)
         .then(({ data, error: fetchError }) => {
           if (fetchError) {
-            throw new Error(`Failed to reload voucher inventory: ${fetchError.message}`);
+            console.error("Error reloading voucher inventory:", fetchError.message);
+          } else {
+            setVouchers(data || []);
           }
-          setVouchers(data || []);
         })
         .catch((err) => {
           console.error("Error reloading voucher data:", err);
-        })
-        .finally(() => {
-          setIsLoading(false);
         });
     }
   };
