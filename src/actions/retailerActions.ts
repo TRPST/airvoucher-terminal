@@ -624,15 +624,15 @@ export async function fetchRetailerCommissionData({
     const supplierCommissionAmount = voucherValue * supplierCommissionPct;
     const retailerCommissionAmount = supplierCommissionAmount * retailerPct;
 
-    console.log('Commission calculation:', {
-      voucherValue,
-      supplierCommissionPct_raw: voucherType.supplier_commission_pct,
-      supplierCommissionPct_decimal: supplierCommissionPct,
-      retailerPct_raw: commissionRate.retailer_pct,
-      retailerPct_decimal: retailerPct,
-      supplierCommissionAmount,
-      retailerCommissionAmount
-    });
+    // console.log('Commission calculation:', {
+    //   voucherValue,
+    //   supplierCommissionPct_raw: voucherType.supplier_commission_pct,
+    //   supplierCommissionPct_decimal: supplierCommissionPct,
+    //   retailerPct_raw: commissionRate.retailer_pct,
+    //   retailerPct_decimal: retailerPct,
+    //   supplierCommissionAmount,
+    //   retailerCommissionAmount
+    // });
 
     return {
       data: {
