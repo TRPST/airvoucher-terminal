@@ -312,13 +312,22 @@ export default function VoucherTypeDetail() {
           </button>
         </Link>
         
-        <div style={{ marginTop: 10 }}>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            {typeName} Vouchers
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage {typeName} vouchers by denomination
-          </p>
+        <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              {typeName} Vouchers
+            </h1>
+            <p className="text-muted-foreground">
+              View and manage {typeName} vouchers by denomination
+            </p>
+          </div>
+          <button
+            onClick={() => setShowUploadDialog(true)}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload {typeName} Vouchers
+          </button>
         </div>
         
         {/* Supplier Commission Card - Empty State */}
@@ -434,16 +443,9 @@ export default function VoucherTypeDetail() {
           <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
             <CreditCard className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
             <h2 className="mb-2 text-xl font-semibold">No Vouchers Found</h2>
-            <p className="mb-4 text-muted-foreground">
+            <p className="text-muted-foreground">
               There are no {typeName} vouchers available in the inventory.
             </p>
-            <button
-              onClick={() => setShowUploadDialog(true)}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload {typeName} Vouchers
-            </button>
           </div>
         </div>
         
@@ -452,6 +454,8 @@ export default function VoucherTypeDetail() {
           isOpen={showUploadDialog}
           onClose={() => setShowUploadDialog(false)}
           onSuccess={handleUploadSuccess}
+          voucherTypeId={typeId as string}
+          voucherTypeName={typeName}
         />
       </div>
     );
@@ -740,6 +744,8 @@ export default function VoucherTypeDetail() {
         isOpen={showUploadDialog}
         onClose={() => setShowUploadDialog(false)}
         onSuccess={handleUploadSuccess}
+        voucherTypeId={typeId as string}
+        voucherTypeName={typeName}
       />
     </div>
   );

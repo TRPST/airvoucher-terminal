@@ -2,19 +2,25 @@ import { parseVoucherFile } from "@/utils/voucherFileParser";
 import { fetchVoucherTypes } from "./commissionActions";
 import { uploadVouchers } from "./voucherActions";
 import { ResponseType } from "../types/adminTypes";
+import supabase from "@/lib/supabaseClient";
 
 export type UploadResult = {
   totalLines: number;
   validVouchers: number;
+  newVouchers: number;
+  duplicateVouchers: number;
   errors: string[];
   voucherType: string;
+  mode: "merge" | "replace";
 };
 
 /**
  * Process a voucher file and upload valid vouchers to the database
  */
 export async function processVoucherFile(
-  fileContent: string
+  fileContent: string,
+  mode: "merge" | "replace" = "merge",
+  voucherTypeId?: string
 ): Promise<ResponseType<UploadResult>> {
   try {
     // Get voucher types
@@ -35,10 +41,13 @@ export async function processVoucherFile(
         data: {
           totalLines: result.totalLines,
           validVouchers: 0,
+          newVouchers: 0,
+          duplicateVouchers: 0,
           errors: result.errors.length > 0 
             ? result.errors 
             : ["No valid vouchers found in the file"],
-          voucherType: ""
+          voucherType: "",
+          mode
         },
         error: null
       };
@@ -48,15 +57,83 @@ export async function processVoucherFile(
     const voucherType = voucherTypes.find(
       type => type.id === result.vouchers[0].voucher_type_id
     );
-    
-    // Upload vouchers to the database
-    const { error: uploadError } = await uploadVouchers(result.vouchers);
-    
-    if (uploadError) {
+
+    // If we have a specific voucher type ID, validate that all vouchers match it
+    if (voucherTypeId && result.vouchers.some(v => v.voucher_type_id !== voucherTypeId)) {
       return {
         data: null,
-        error: new Error(`Failed to upload vouchers: ${uploadError.message}`)
+        error: new Error("File contains vouchers that don't match the expected voucher type")
       };
+    }
+    
+    let newVouchers = 0;
+    let duplicateVouchers = 0;
+    
+    if (mode === "replace") {
+      // For replace mode, first delete all existing vouchers of this type
+      const typeIdToReplace = voucherTypeId || result.vouchers[0].voucher_type_id;
+      
+      const { error: deleteError } = await supabase
+        .from("voucher_inventory")
+        .delete()
+        .eq("voucher_type_id", typeIdToReplace);
+      
+      if (deleteError) {
+        return {
+          data: null,
+          error: new Error(`Failed to delete existing vouchers: ${deleteError.message}`)
+        };
+      }
+      
+      // Now insert all vouchers
+      const { error: uploadError } = await uploadVouchers(result.vouchers);
+      
+      if (uploadError) {
+        return {
+          data: null,
+          error: new Error(`Failed to upload vouchers: ${uploadError.message}`)
+        };
+      }
+      
+      newVouchers = result.vouchers.length;
+      duplicateVouchers = 0;
+    } else {
+      // For merge mode, check for duplicates and only insert new ones
+      const pins = result.vouchers.map(v => v.pin);
+      
+      // Get existing vouchers with matching PINs
+      const { data: existingVouchers, error: existingError } = await supabase
+        .from("voucher_inventory")
+        .select("pin")
+        .in("pin", pins);
+      
+      if (existingError) {
+        return {
+          data: null,
+          error: new Error(`Failed to check for existing vouchers: ${existingError.message}`)
+        };
+      }
+      
+      const existingPins = new Set(existingVouchers?.map(v => v.pin) || []);
+      const newVoucherData = result.vouchers.filter(v => !existingPins.has(v.pin));
+      
+      duplicateVouchers = result.vouchers.length - newVoucherData.length;
+      
+      if (newVoucherData.length > 0) {
+        // Insert only new vouchers
+        const { error: uploadError } = await uploadVouchers(newVoucherData);
+        
+        if (uploadError) {
+          return {
+            data: null,
+            error: new Error(`Failed to upload vouchers: ${uploadError.message}`)
+          };
+        }
+        
+        newVouchers = newVoucherData.length;
+      } else {
+        newVouchers = 0;
+      }
     }
     
     // Return success result
@@ -64,8 +141,11 @@ export async function processVoucherFile(
       data: {
         totalLines: result.totalLines,
         validVouchers: result.vouchers.length,
+        newVouchers,
+        duplicateVouchers,
         errors: result.errors,
-        voucherType: voucherType?.name || "Unknown"
+        voucherType: voucherType?.name || "Unknown",
+        mode
       },
       error: null
     };

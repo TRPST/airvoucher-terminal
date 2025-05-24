@@ -7,9 +7,11 @@ type UploadDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  voucherTypeId?: string;
+  voucherTypeName?: string;
 };
 
-export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialogProps) {
+export function VoucherUploadDialog({ isOpen, onClose, onSuccess, voucherTypeId, voucherTypeName }: UploadDialogProps) {
   const [file, setFile] = React.useState<File | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadResult, setUploadResult] = React.useState<{
@@ -18,6 +20,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
     details?: string[];
   } | null>(null);
   const [uploadMode, setUploadMode] = React.useState<"merge" | "replace">("merge");
+  const [fileValidationError, setFileValidationError] = React.useState<string | null>(null);
   
   // Reset state when dialog is opened/closed
   React.useEffect(() => {
@@ -25,23 +28,82 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
       setFile(null);
       setUploadResult(null);
       setIsUploading(false);
+      setFileValidationError(null);
     }
   }, [isOpen]);
   
+  // Validate file type matches current voucher type
+  const validateFileType = async (file: File): Promise<{ isValid: boolean; message?: string }> => {
+    if (!voucherTypeName) {
+      return { isValid: true }; // If no specific type required, allow all
+    }
+
+    try {
+      const fileContent = await readFileAsText(file);
+      const detectedType = getVoucherTypeNameFromFile(fileContent);
+      
+      if (!detectedType) {
+        return { 
+          isValid: false, 
+          message: `Unknown file format. Expected ${voucherTypeName} format.`
+        };
+      }
+      
+      // Case-insensitive comparison
+      if (detectedType.toLowerCase() !== voucherTypeName.toLowerCase()) {
+        return { 
+          isValid: false, 
+          message: `File contains ${detectedType} vouchers, but you can only upload ${voucherTypeName} vouchers on this page.`
+        };
+      }
+      
+      return { isValid: true };
+    } catch (error) {
+      return { 
+        isValid: false, 
+        message: "Failed to read or validate file format."
+      };
+    }
+  };
+  
   // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      setFileValidationError(null);
+      
+      // Validate file type if we have a specific voucher type
+      if (voucherTypeName) {
+        const validation = await validateFileType(selectedFile);
+        if (!validation.isValid) {
+          setFileValidationError(validation.message || "Invalid file type");
+          setFile(null);
+          return;
+        }
+      }
+      
       setFile(selectedFile);
       setUploadResult(null);
     }
   };
   
   // Handle drag and drop
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
+      setFileValidationError(null);
+      
+      // Validate file type if we have a specific voucher type
+      if (voucherTypeName) {
+        const validation = await validateFileType(droppedFile);
+        if (!validation.isValid) {
+          setFileValidationError(validation.message || "Invalid file type");
+          setFile(null);
+          return;
+        }
+      }
+      
       setFile(droppedFile);
       setUploadResult(null);
     }
@@ -52,7 +114,7 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
   };
   
   // Process file upload
-  const handleUpload = async () => {
+  const handleUpload = async (mode: "merge" | "replace") => {
     if (!file) return;
     
     setIsUploading(true);
@@ -62,8 +124,8 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
       // Read file content
       const fileContent = await readFileAsText(file);
       
-      // Send to server for processing
-      const { data, error } = await AdminActions.processVoucherFile(fileContent);
+      // Send to server for processing with mode and voucher type ID
+      const { data, error } = await AdminActions.processVoucherFile(fileContent, mode, voucherTypeId);
       
       if (error) {
         setUploadResult({
@@ -81,25 +143,51 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
         return;
       }
       
-      // Check for validation errors
-      if (data.errors.length > 0) {
+      // Handle the new response format with newVouchers and duplicateVouchers
+      if (data.newVouchers === 0 && data.duplicateVouchers > 0 && mode === "merge") {
+        // All vouchers were duplicates in merge mode
         setUploadResult({
-          success: data.validVouchers > 0,
-          message: data.validVouchers > 0
-            ? `Successfully uploaded ${data.validVouchers} vouchers with ${data.errors.length} errors`
-            : "Upload failed: No valid vouchers found",
+          success: false,
+          message: `No new vouchers to upload. All ${data.duplicateVouchers} vouchers already exist in the database.`,
+        });
+      } else if (data.errors.length > 0 && data.newVouchers === 0) {
+        // Had errors and no valid vouchers
+        setUploadResult({
+          success: false,
+          message: "Upload failed: No valid vouchers found",
           details: data.errors,
         });
-      } else {
+      } else if (data.errors.length > 0) {
+        // Had errors but some valid vouchers
+        let message = `Successfully uploaded ${data.newVouchers} ${data.voucherType} vouchers`;
+        if (data.duplicateVouchers > 0 && mode === "merge") {
+          message += ` (${data.duplicateVouchers} duplicates skipped)`;
+        }
+        message += ` with ${data.errors.length} errors`;
+        
         setUploadResult({
           success: true,
-          message: `Successfully uploaded ${data.validVouchers} ${data.voucherType} vouchers`,
+          message,
+          details: data.errors,
         });
         
-        // Call the success callback after a brief delay to show the success message
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
+        setTimeout(() => onSuccess(), 2000);
+      } else {
+        // Success with no errors
+        let message = `Successfully uploaded ${data.newVouchers} ${data.voucherType} vouchers`;
+        if (data.duplicateVouchers > 0 && mode === "merge") {
+          message += ` (${data.duplicateVouchers} duplicates skipped)`;
+        }
+        if (mode === "replace") {
+          message = `Successfully replaced all ${data.voucherType} vouchers with ${data.newVouchers} new vouchers`;
+        }
+        
+        setUploadResult({
+          success: true,
+          message,
+        });
+        
+        setTimeout(() => onSuccess(), 2000);
       }
     } catch (err) {
       setUploadResult({
@@ -135,7 +223,9 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
       {/* Dialog */}
       <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-lg">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Upload Vouchers</h2>
+          <h2 className="text-lg font-semibold">
+            Upload {voucherTypeName ? `${voucherTypeName} ` : ""}Vouchers
+          </h2>
           <button
             onClick={onClose}
             className="rounded-full p-2 hover:bg-muted"
@@ -169,10 +259,13 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
               ) : (
                 <>
                   <p className="mt-2 text-sm font-medium">
-                    Drag and drop voucher file here
+                    Drag and drop {voucherTypeName ? `${voucherTypeName} ` : ""}voucher file here
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Supported formats: Ringa, Hollywoodbets, and Easyload
+                    {voucherTypeName 
+                      ? `Only ${voucherTypeName} format files are accepted`
+                      : "Supported formats: Ringa, Hollywoodbets, and Easyload"
+                    }
                   </p>
                 </>
               )}
@@ -187,6 +280,19 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
                   disabled={isUploading}
                 />
               </label>
+            </div>
+          )}
+          
+          {/* File Validation Error */}
+          {fileValidationError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                <div>
+                  <p className="font-medium text-destructive">Upload failed: No valid vouchers found</p>
+                  <p className="mt-1 text-sm text-destructive/80">{fileValidationError}</p>
+                </div>
+              </div>
             </div>
           )}
           
@@ -222,45 +328,16 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
           )}
           
           {/* Action Buttons */}
-          <div className="pt-4 flex justify-end space-x-2">
-            <button
-              onClick={onClose}
-              className="rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
-              disabled={isUploading}
-            >
-              {uploadResult?.success ? "Close" : "Cancel"}
-            </button>
-            
-            {!uploadResult && file && (
+          <div className="pt-4 flex flex-col space-y-2">
+            {!uploadResult && file && !fileValidationError && (
               <>
                 <button
-                  onClick={() => {
-                    setUploadMode("replace");
-                    handleUpload();
-                  }}
-                  className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow"
+                  onClick={() => handleUpload("merge")}
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
                   disabled={isUploading}
                 >
-                  {isUploading ? (
-                    <div className="flex items-center">
-                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                      Uploading...
-                    </div>
-                  ) : (
-                    "Upload & Replace All"
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setUploadMode("merge");
-                    handleUpload();
-                  }}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-                  disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <div className="flex items-center">
+                  {isUploading && uploadMode === "merge" ? (
+                    <div className="flex items-center justify-center">
                       <Loader2 className="h-3 w-3 animate-spin mr-2" />
                       Uploading...
                     </div>
@@ -268,20 +345,44 @@ export function VoucherUploadDialog({ isOpen, onClose, onSuccess }: UploadDialog
                     "Upload & Merge"
                   )}
                 </button>
+                
+                <button
+                  onClick={() => handleUpload("replace")}
+                  className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow"
+                  disabled={isUploading}
+                >
+                  {isUploading && uploadMode === "replace" ? (
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      Uploading...
+                    </div>
+                  ) : (
+                    "Upload & Replace All"
+                  )}
+                </button>
               </>
             )}
             
-            {uploadResult && !uploadResult.success && (
+            {(uploadResult && !uploadResult.success) || fileValidationError ? (
               <button
                 onClick={() => {
                   setUploadResult(null);
                   setFile(null);
+                  setFileValidationError(null);
                 }}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
               >
                 Try Again
               </button>
-            )}
+            ) : null}
+            
+            <button
+              onClick={onClose}
+              className="w-full rounded-md px-4 py-2 text-sm font-medium border border-input hover:bg-muted"
+              disabled={isUploading}
+            >
+              {uploadResult?.success ? "Close" : "Cancel"}
+            </button>
           </div>
         </div>
       </div>
