@@ -4,22 +4,30 @@ import { AlertTriangle, RefreshCw, LogIn } from 'lucide-react';
 interface Props {
   children: ReactNode;
   onRetry?: () => void;
+  maxAutoRetries?: number;
+  autoRetryDelay?: number;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
   retryCount: number;
+  autoRetryCount: number;
+  isAutoRetrying: boolean;
 }
 
 export class AuthErrorBoundary extends Component<Props, State> {
+  private retryTimeout?: NodeJS.Timeout;
+
   public state: State = {
     hasError: false,
-    retryCount: 0
+    retryCount: 0,
+    autoRetryCount: 0,
+    isAutoRetrying: false
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, retryCount: 0 };
+    return { hasError: true, error, retryCount: 0, autoRetryCount: 0, isAutoRetrying: false };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -29,14 +37,52 @@ export class AuthErrorBoundary extends Component<Props, State> {
     // Check if this is the specific useState error we're dealing with
     if (error.message.includes('Cannot read properties of null') && error.message.includes('useState')) {
       console.error('Detected useState hydration error in auth component');
+      
+      // Attempt automatic retry for hydration errors (usually resolved after a brief delay)
+      this.attemptAutoRetry();
     }
   }
 
+  public componentWillUnmount() {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+    }
+  }
+
+  private attemptAutoRetry = () => {
+    const maxAutoRetries = this.props.maxAutoRetries ?? 2;
+    const autoRetryDelay = this.props.autoRetryDelay ?? 1500;
+
+    if (this.state.autoRetryCount < maxAutoRetries) {
+      console.log(`Auto-retrying auth component in ${autoRetryDelay}ms (attempt ${this.state.autoRetryCount + 1}/${maxAutoRetries})`);
+      
+      this.setState({ isAutoRetrying: true });
+      
+      this.retryTimeout = setTimeout(() => {
+        this.setState(prevState => ({
+          hasError: false,
+          error: undefined,
+          autoRetryCount: prevState.autoRetryCount + 1,
+          isAutoRetrying: false
+        }));
+        
+        if (this.props.onRetry) {
+          this.props.onRetry();
+        }
+      }, autoRetryDelay);
+    }
+  };
+
   private handleRetry = () => {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+    }
+
     this.setState(prevState => ({
       hasError: false,
       error: undefined,
-      retryCount: prevState.retryCount + 1
+      retryCount: prevState.retryCount + 1,
+      isAutoRetrying: false
     }));
     
     if (this.props.onRetry) {
@@ -50,6 +96,26 @@ export class AuthErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      // Show loading state during auto-retry
+      if (this.state.isAutoRetrying) {
+        return (
+          <div className="w-full max-w-md mx-auto space-y-6 p-6 border border-border rounded-lg bg-card">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-primary/10 p-3">
+                <RefreshCw className="h-6 w-6 text-primary animate-spin" />
+              </div>
+            </div>
+            
+            <div className="space-y-2 text-center">
+              <h3 className="text-lg font-semibold">Retrying...</h3>
+              <p className="text-sm text-muted-foreground">
+                Attempting to reload the authentication form.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="w-full max-w-md mx-auto space-y-6 p-6 border border-border rounded-lg bg-card">
           <div className="flex justify-center">
@@ -61,7 +127,8 @@ export class AuthErrorBoundary extends Component<Props, State> {
           <div className="space-y-2 text-center">
             <h3 className="text-lg font-semibold">Authentication Error</h3>
             <p className="text-sm text-muted-foreground">
-              We encountered an issue loading the authentication form. This is usually temporary.
+              We encountered an issue loading the authentication form. 
+              {this.state.autoRetryCount > 0 && ` We've already tried ${this.state.autoRetryCount} time(s) automatically.`}
             </p>
           </div>
 
@@ -91,6 +158,9 @@ export class AuthErrorBoundary extends Component<Props, State> {
               <div className="mt-2 text-xs font-mono">
                 <div className="rounded-md bg-muted p-2">
                   <strong>Error:</strong> {this.state.error.message}
+                </div>
+                <div className="rounded-md bg-muted p-2 mt-1">
+                  <strong>Auto Retries:</strong> {this.state.autoRetryCount} / {this.props.maxAutoRetries ?? 2}
                 </div>
               </div>
             </details>
