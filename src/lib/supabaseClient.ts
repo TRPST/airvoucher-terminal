@@ -44,8 +44,21 @@ export const getSupabaseClient = () => {
   return createSupabaseClient();
 };
 
-// For backwards compatibility, but this should only be used on client-side
-export const supabase = typeof window !== 'undefined' ? createSupabaseClient() : null;
+// Create a proxy object that throws helpful error for SSR
+const createSupabaseProxy = () => {
+  if (typeof window === 'undefined') {
+    // Return a proxy that throws an error when any property is accessed during SSR
+    return new Proxy({}, {
+      get() {
+        throw new Error('Supabase client accessed during server-side rendering. Use getSupabaseClient() in useEffect or client-side code only.');
+      }
+    });
+  }
+  return createSupabaseClient();
+};
+
+// For backwards compatibility, but will throw clear error if used during SSR
+export const supabase = createSupabaseProxy() as ReturnType<typeof createClient>;
 
 // IMPORTANT: Service role key should NEVER be exposed to the client
 // This should only be used in API routes or server-side code

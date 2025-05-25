@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useSessionContext } from "@supabase/auth-helpers-react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getUserRole, signOutUser } from "@/actions/userActions";
 
 /**
@@ -10,8 +10,23 @@ import { getUserRole, signOutUser } from "@/actions/userActions";
  */
 export function useRequireRole(requiredRole: string) {
   const router = useRouter();
-  const { session, isLoading, supabaseClient } = useSessionContext();
+  const [mounted, setMounted] = useState(false);
+  const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize client-side only
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const client = getSupabaseClient();
+      setSupabaseClient(client);
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+      setIsLoading(false);
+    }
+  }, []);
 
   // Helper function to get user's role from profiles table using the action
   const getUserRoleFromProfile = async (userId: string) => {
@@ -27,19 +42,24 @@ export function useRequireRole(requiredRole: string) {
   };
 
   useEffect(() => {
-    // Wait until session loading is complete
-    if (isLoading) {
-      console.log(`useRequireRole: Still loading session for ${requiredRole}`);
+    // Only proceed if mounted and we have a Supabase client
+    if (!mounted || !supabaseClient) {
       return;
     }
 
     const checkAuth = async () => {
-      //console.log(`useRequireRole: Checking auth for ${requiredRole}`);
+      console.log(`useRequireRole: Checking auth for ${requiredRole}`);
+      
+      // Get current session
+      const { data } = await supabaseClient.auth.getSession();
+      const currentSession = data.session;
+      setSession(currentSession);
       
       // If no session, redirect to auth page for the required role
-      if (!session) {
+      if (!currentSession) {
         console.log(`No session found. Redirecting to /auth/${requiredRole}`);
         router.replace(`/auth/${requiredRole}`);
+        setIsLoading(false);
         return;
       }
 
@@ -51,6 +71,7 @@ export function useRequireRole(requiredRole: string) {
       if (!user) {
         console.log(`No user found. Redirecting to /auth/${requiredRole}`);
         router.replace(`/auth/${requiredRole}`);
+        setIsLoading(false);
         return;
       }
 
@@ -72,6 +93,7 @@ export function useRequireRole(requiredRole: string) {
         
         // Redirect to the auth page for the required role
         router.replace(`/auth/${requiredRole}`);
+        setIsLoading(false);
         return;
       } else if (!userRole) {
         // No role found
@@ -81,24 +103,26 @@ export function useRequireRole(requiredRole: string) {
           console.error("Error signing out:", signOutError);
         }
         router.replace(`/auth/${requiredRole}`);
+        setIsLoading(false);
         return;
       }
 
-      //console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
+      console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
       setIsAuthorized(true);
+      setIsLoading(false);
     };
 
     checkAuth();
-  }, [isLoading, requiredRole, router, session, supabaseClient]);
+  }, [mounted, supabaseClient, requiredRole, router]);
 
   const result = {
     session,
     user: session?.user,
     isAuthorized,
-    isLoading: isLoading || (!isLoading && !isAuthorized),
+    isLoading,
   };
   
-  //console.log(`useRequireRole result for ${requiredRole}:`, result);
+  console.log(`useRequireRole result for ${requiredRole}:`, result);
   
   return result;
 }

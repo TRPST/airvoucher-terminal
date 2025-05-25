@@ -11,7 +11,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useSession } from "@supabase/auth-helpers-react";
 
 import { StatsTile } from "@/components/ui/stats-tile";
 import { cn } from "@/utils/cn";
@@ -20,11 +19,10 @@ import useRequireRole from "@/hooks/useRequireRole";
 
 export default function RetailerAccount() {
   // Protect this route - only allow retailer role
-  const { isLoading } = useRequireRole("retailer");
+  const { isLoading, user } = useRequireRole("retailer");
 
-  // Get the current user from Supabase Auth
-  const session = useSession();
-  const userId = session?.user?.id;
+  // Get the current user ID
+  const userId = user?.id;
 
   // State for retailer data and loading/error states
   const [retailer, setRetailer] = React.useState<RetailerProfile | null>(null);

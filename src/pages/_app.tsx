@@ -12,6 +12,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
   const isLandingPage = router.pathname === "/";
   const isAuthPage = router.pathname.startsWith("/auth/");
 
@@ -24,6 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
       setSupabaseClient(client);
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
+      setClientError(error instanceof Error ? error.message : 'Failed to initialize Supabase client');
     }
   }, []);
 
@@ -36,7 +38,27 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   // Show loading state until mounted on client-side and Supabase is ready
-  if (!mounted || !supabaseClient) {
+  if (!mounted) {
+    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }} />;
+  }
+
+  // Show error if Supabase client failed to initialize
+  if (clientError) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "hsl(var(--destructive))", textAlign: "center" }}>
+          <h1>Application Error</h1>
+          <p>{clientError}</p>
+          <button onClick={() => window.location.reload()} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: "1px solid", borderRadius: "0.375rem" }}>
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render SessionContextProvider until we have a valid client
+  if (!supabaseClient) {
     return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }} />;
   }
 
