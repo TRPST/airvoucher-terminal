@@ -1,26 +1,17 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getUserRole, signOutUser } from "@/actions/userActions";
 
 /**
- * A hook to protect routes based on user roles
+ * A hook to protect routes based on user roles - CLIENT SIDE ONLY
  * @param requiredRole The role required to access the route
  * @returns Session and user information if authorized
  */
 export function useRequireRole(requiredRole: string) {
   const router = useRouter();
-  
-  // Early return for SSR - prevent any hook calls during server-side rendering
-  if (typeof window === 'undefined') {
-    return {
-      session: null,
-      user: null,
-      isAuthorized: false,
-      isLoading: true,
-    };
-  }
-
   const [mounted, setMounted] = useState(false);
   const [supabaseClient, setSupabaseClient] = useState<any>(null);
   const [session, setSession] = useState<any>(null);

@@ -2,7 +2,7 @@ import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ToastProvider";
 import { Layout } from "@/components/Layout";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthGate } from "@/components/AuthGate";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import type { AppProps } from "next/app";
@@ -13,11 +13,10 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [supabaseClient, setSupabaseClient] = useState<any>(null);
-  const [clientError, setClientError] = useState<string | null>(null);
   const isLandingPage = router.pathname === "/";
   const isAuthPage = router.pathname.startsWith("/auth/");
 
-  // Ensure component only renders on client-side to prevent hydration issues
+  // Ensure component only renders on client-side
   useEffect(() => {
     setMounted(true);
     // Initialize Supabase client only on client side
@@ -26,7 +25,6 @@ export default function App({ Component, pageProps }: AppProps) {
       setSupabaseClient(client);
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
-      setClientError(error instanceof Error ? error.message : 'Failed to initialize Supabase client');
     }
   }, []);
 
@@ -38,55 +36,58 @@ export default function App({ Component, pageProps }: AppProps) {
     role = "agent";
   }
 
-  // Show loading state until mounted on client-side and Supabase is ready
+  // Show loading state until mounted on client-side
   if (!mounted) {
-    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }} />;
-  }
-
-  // Show error if Supabase client failed to initialize
-  if (clientError) {
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "hsl(var(--destructive))", textAlign: "center" }}>
-          <h1>Application Error</h1>
-          <p>{clientError}</p>
-          <button onClick={() => window.location.reload()} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: "1px solid", borderRadius: "0.375rem" }}>
-            Reload Page
-          </button>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
-  // Don't render SessionContextProvider until we have a valid client
+  // For auth pages, render without SessionContextProvider to avoid hydration issues
+  if (isAuthPage) {
+    return (
+      <ThemeProvider attribute="class">
+        <ToastProvider>
+          <Component {...pageProps} />
+        </ToastProvider>
+      </ThemeProvider>
+    );
+  }
+
+  // For landing page, render without SessionContextProvider
+  if (isLandingPage) {
+    return (
+      <ThemeProvider attribute="class">
+        <Component {...pageProps} />
+      </ThemeProvider>
+    );
+  }
+
+  // For protected pages, use AuthGate with SessionContextProvider
   if (!supabaseClient) {
-    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }} />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider attribute="class">
-        <ErrorBoundary>
-          <SessionContextProvider 
-            supabaseClient={supabaseClient}
-            initialSession={pageProps.initialSession}
-          >
-            <ErrorBoundary>
-              <ToastProvider>
-                <ErrorBoundary>
-                  {isLandingPage || isAuthPage ? (
-                    <Component {...pageProps} />
-                  ) : (
-                    <Layout role={role}>
-                      <Component {...pageProps} />
-                    </Layout>
-                  )}
-                </ErrorBoundary>
-              </ToastProvider>
-            </ErrorBoundary>
-          </SessionContextProvider>
-        </ErrorBoundary>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <ThemeProvider attribute="class">
+      <AuthGate>
+        <SessionContextProvider 
+          supabaseClient={supabaseClient}
+          initialSession={pageProps.initialSession}
+        >
+          <ToastProvider>
+            <Layout role={role}>
+              <Component {...pageProps} />
+            </Layout>
+          </ToastProvider>
+        </SessionContextProvider>
+      </AuthGate>
+    </ThemeProvider>
   );
 }
