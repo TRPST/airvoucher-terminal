@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export type UserProfile = {
@@ -20,15 +20,7 @@ export async function getUserRole(userId: string): Promise<{
   error: PostgrestError | Error | null;
 }> {
   try {
-    // Only proceed if we're on the client side
-    if (typeof window === 'undefined') {
-      return { data: null, error: new Error('getUserRole can only be called on the client side') };
-    }
-
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') };
-    }
+    const supabase = createClient();
 
     // Get user's role from the profiles table
     const { data, error } = await supabase
@@ -63,15 +55,7 @@ export async function getUserProfile(userId: string): Promise<{
   error: PostgrestError | Error | null;
 }> {
   try {
-    // Only proceed if we're on the client side
-    if (typeof window === 'undefined') {
-      return { data: null, error: new Error('getUserProfile can only be called on the client side') };
-    }
-
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return { data: null, error: new Error('Supabase client not available') };
-    }
+    const supabase = createClient();
 
     const { data, error } = await supabase
       .from('profiles')
@@ -101,15 +85,7 @@ export async function signOutUser(): Promise<{
   error: Error | null;
 }> {
   try {
-    // Only proceed if we're on the client side
-    if (typeof window === 'undefined') {
-      return { error: new Error('signOutUser can only be called on the client side') };
-    }
-
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      return { error: new Error('Supabase client not available') };
-    }
+    const supabase = createClient();
 
     await supabase.auth.signOut();
     return { error: null };

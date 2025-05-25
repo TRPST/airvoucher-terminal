@@ -2,7 +2,7 @@ import { parseVoucherFile } from "@/utils/voucherFileParser";
 import { fetchVoucherTypes } from "./commissionActions";
 import { uploadVouchers } from "./voucherActions";
 import { ResponseType } from "../types/adminTypes";
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 
 export type UploadResult = {
   totalLines: number;
@@ -22,6 +22,8 @@ export async function processVoucherFile(
   mode: "merge" | "replace" = "merge",
   voucherTypeId?: string
 ): Promise<ResponseType<UploadResult>> {
+  const supabase = createClient();
+  
   try {
     // Get voucher types
     const { data: voucherTypes, error: typesError } = await fetchVoucherTypes();

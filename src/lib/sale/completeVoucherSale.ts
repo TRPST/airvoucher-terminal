@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 
 export interface CompleteVoucherSaleParams {
   voucher_inventory_id: string;
@@ -41,6 +41,8 @@ export interface VoucherSaleReceipt {
 export const completeVoucherSale = async (
   params: CompleteVoucherSaleParams
 ): Promise<{ data: VoucherSaleReceipt | null; error: Error | null }> => {
+  const supabase = createClient();
+  
   try {
     // Call the RPC function
     const { data, error } = await supabase.rpc('complete_voucher_sale', params);

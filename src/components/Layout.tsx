@@ -22,7 +22,7 @@ import {
   LogOut,
 } from "lucide-react";
 // Import Supabase client directly
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import * as Avatar from "@radix-ui/react-avatar";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion } from "framer-motion";
@@ -38,36 +38,17 @@ interface LayoutProps {
 }
 
 export function Layout({ children, role = "admin" }: LayoutProps) {
-  // Early return for SSR - prevent any hook calls during server-side rendering
-  if (typeof window === 'undefined') {
-    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }}>{children}</div>;
-  }
-
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [mounted, setMounted] = React.useState(false);
-  const [supabaseClient, setSupabaseClient] = React.useState<any>(null);
+  const [supabaseClient] = React.useState(() => createClient());
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
 
-  // Initialize client-side only
-  React.useEffect(() => {
-    setMounted(true);
-    try {
-      const client = getSupabaseClient();
-      setSupabaseClient(client);
-    } catch (error) {
-      console.error('Error initializing Supabase client:', error);
-    }
-  }, []);
-
   // Fetch user session on component mount
   React.useEffect(() => {
-    if (!supabaseClient) return;
-
     // Get current session
     const fetchSession = async () => {
       const { data } = await supabaseClient.auth.getSession();
@@ -235,11 +216,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   };
 
   const navItems = getNavItems(role);
-
-  // Show loading state until mounted and client ready
-  if (!mounted || !supabaseClient) {
-    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }}>{children}</div>;
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">

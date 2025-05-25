@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { PostgrestError } from "@supabase/supabase-js";
 import { completeVoucherSale, VoucherSaleReceipt } from "@/lib/sale/completeVoucherSale";
 
@@ -52,6 +52,8 @@ export async function fetchMyRetailer(userId: string): Promise<{
   data: RetailerProfile | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log("Fetching retailer for user ID:", userId);
 
@@ -122,6 +124,8 @@ export async function fetchAvailableVoucherTypes(): Promise<{
   data: string[] | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log("Fetching available voucher type names");
 
@@ -162,6 +166,8 @@ export async function fetchVoucherInventoryByType(voucherTypeName: string): Prom
   data: VoucherType[] | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log(`Fetching inventory for voucher type: ${voucherTypeName}`);
 
@@ -299,6 +305,8 @@ export async function sellVoucher({
   } | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     // Step 1: Get one available voucher of the requested type with the correct amount
     const { data: voucher, error: voucherError } = await supabase
@@ -434,6 +442,8 @@ export async function fetchSalesHistory({
   data: Sale[] | null;
   error: PostgrestError | null;
 }> {
+  const supabase = createClient();
+  
   let query = supabase.from("sales").select(`
     id,
     created_at,
@@ -499,6 +509,8 @@ export async function fetchCommissionRate({
   data: { retailer_pct: number } | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     // Get retailer's commission group
     const { data: retailer, error: retailerError } = await supabase
@@ -553,6 +565,8 @@ export async function fetchRetailerCommissionData({
   } | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     // Step 1: Get retailer's commission group ID
     const { data: retailer, error: retailerError } = await supabase
@@ -658,6 +672,8 @@ export async function fetchTerminals(retailerId: string): Promise<{
   data: Terminal[] | null;
   error: PostgrestError | null;
 }> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("terminals")
     .select(

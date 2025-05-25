@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { Terminal, ResponseType } from "../types/adminTypes";
 
 /**
@@ -7,6 +7,8 @@ import { Terminal, ResponseType } from "../types/adminTypes";
 export async function fetchTerminals(
   retailerId: string
 ): Promise<ResponseType<Terminal[]>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("terminals")
     .select(
@@ -43,6 +45,8 @@ export async function createTerminal(
   retailerId: string,
   name: string
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   // Create the terminal for the retailer
   const { data: terminal, error: terminalError } = await supabase
     .from("terminals")

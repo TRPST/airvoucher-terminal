@@ -1,17 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-// Server-side admin client with service role key
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // Note: NOT NEXT_PUBLIC_
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { createClient } from '@/utils/supabase/server';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -21,8 +9,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { email, password, userData } = req.body;
 
+    // Create server-side admin client
+    const supabase = createClient(req, res);
+
     // Create user with admin API
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,

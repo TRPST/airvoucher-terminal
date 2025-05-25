@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import {
   Retailer,
   RetailerData,
@@ -11,6 +11,7 @@ import {
  * Fetch all retailers with their profile and agent information
  */
 export async function fetchRetailers(): Promise<ResponseType<Retailer[]>> {
+  const supabase = createClient();
   try {
     // Step 1: Fetch all retailers
     const { data, error } = await supabase.from("retailers").select(`
@@ -91,6 +92,8 @@ export async function createRetailer({
   retailerData,
   password,
 }: CreateRetailerParams): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   try {
     // Use the API route to create a user (this calls the server-side admin client)
     const response = await fetch('/api/admin/create-user', {
@@ -183,6 +186,8 @@ export async function updateRetailer(
   id: string,
   updates: Partial<RetailerData>
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("retailers")
     .update(updates)
@@ -201,6 +206,8 @@ export async function updateRetailerBalance(
   balance: number,
   creditLimit: number
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("retailers")
     .update({
@@ -218,6 +225,7 @@ export async function updateRetailerBalance(
  * Fetch all profiles with agent role
  */
 export async function fetchAgents(): Promise<ResponseType<{ id: string; full_name: string }[]>> {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from("profiles")
