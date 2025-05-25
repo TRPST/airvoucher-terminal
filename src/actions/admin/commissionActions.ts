@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { CommissionGroup, ResponseType } from "../types/adminTypes";
 
 export type VoucherType = {
@@ -13,6 +13,8 @@ export type VoucherType = {
 export async function fetchCommissionGroups(): Promise<
   ResponseType<CommissionGroup[]>
 > {
+  const supabase = createClient();
+  
   const { data: groups, error: groupsError } = await supabase
     .from("commission_groups")
     .select("id, name, description");
@@ -78,6 +80,8 @@ export async function fetchCommissionGroups(): Promise<
  * Fetch all voucher types from the database
  */
 export async function fetchVoucherTypes(): Promise<ResponseType<VoucherType[]>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("voucher_types")
     .select("id, name, supplier_commission_pct")
@@ -93,6 +97,8 @@ export async function createCommissionGroup(
   name: string,
   description?: string
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("commission_groups")
     .insert({ name, description })
@@ -113,6 +119,8 @@ export async function createCommissionRates(
     agent_pct: number;
   }[]
 ): Promise<ResponseType<{ count: number }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("commission_group_rates")
     .insert(rates);
@@ -129,6 +137,8 @@ export async function upsertCommissionRate(
   retailerPct: number,
   agentPct: number
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("commission_group_rates")
     .upsert(

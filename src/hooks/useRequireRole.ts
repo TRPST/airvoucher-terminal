@@ -2,33 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { getUserRole, signOutUser } from "@/actions/userActions";
 
 /**
- * A hook to protect routes based on user roles - CLIENT SIDE ONLY
+ * A hook to protect routes based on user roles
  * @param requiredRole The role required to access the route
  * @returns Session and user information if authorized
  */
 export function useRequireRole(requiredRole: string) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  const [supabaseClient] = useState(() => createClient());
   const [session, setSession] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Initialize client-side only
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const client = getSupabaseClient();
-      setSupabaseClient(client);
-    } catch (error) {
-      console.error('Error initializing Supabase client:', error);
-      setIsLoading(false);
-    }
-  }, []);
 
   // Helper function to get user's role from profiles table using the action
   const getUserRoleFromProfile = async (userId: string) => {
@@ -44,11 +31,6 @@ export function useRequireRole(requiredRole: string) {
   };
 
   useEffect(() => {
-    // Only proceed if mounted and we have a Supabase client
-    if (!mounted || !supabaseClient) {
-      return;
-    }
-
     const checkAuth = async () => {
       console.log(`useRequireRole: Checking auth for ${requiredRole}`);
       
@@ -115,7 +97,7 @@ export function useRequireRole(requiredRole: string) {
     };
 
     checkAuth();
-  }, [mounted, supabaseClient, requiredRole, router]);
+  }, [supabaseClient, requiredRole, router]);
 
   const result = {
     session,

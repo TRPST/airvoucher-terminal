@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import {
   SalesReport,
   EarningsSummary,
@@ -16,6 +16,8 @@ export async function fetchSalesReport({
   startDate?: string;
   endDate?: string;
 }): Promise<ResponseType<SalesReport[]>> {
+  const supabase = createClient();
+  
   let query = supabase
   .from("sales")
   .select(`
@@ -80,6 +82,8 @@ export async function fetchEarningsSummary({
   startDate?: string;
   endDate?: string;
 }): Promise<ResponseType<EarningsSummary[]>> {
+  const supabase = createClient();
+  
   // This is a complex query, so we'll use a custom SQL function or client-side aggregation
   let query = supabase.from("sales").select(`
       sale_amount,
@@ -147,6 +151,8 @@ export async function fetchEarningsSummary({
 export async function fetchInventoryReport(): Promise<
   ResponseType<InventoryReport[]>
 > {
+  const supabase = createClient();
+  
   const { data, error } = await supabase.from("voucher_inventory").select(`
       status,
       voucher_types!inner (name)

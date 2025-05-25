@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { VoucherInventory, ResponseType } from "../types/adminTypes";
 
 /**
@@ -7,6 +7,8 @@ import { VoucherInventory, ResponseType } from "../types/adminTypes";
 export async function fetchVoucherType(
   id: string
 ): Promise<ResponseType<{ id: string; name: string; supplier_commission_pct: number }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("voucher_types")
     .select("id, name, supplier_commission_pct")
@@ -23,6 +25,8 @@ export async function updateSupplierCommission(
   id: string,
   supplierCommissionPct: number
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("voucher_types")
     .update({ supplier_commission_pct: supplierCommissionPct })
@@ -53,6 +57,8 @@ export type VoucherTypeSummary = {
 export async function fetchVoucherInventory(
   typeId?: string
 ): Promise<ResponseType<VoucherInventory[]>> {
+  const supabase = createClient();
+  
   // First, get all voucher types to use as a lookup table
   const { data: voucherTypes, error: typesError } = await supabase
     .from("voucher_types")
@@ -66,7 +72,7 @@ export async function fetchVoucherInventory(
 
   // Create a lookup map for voucher type names by ID
   const typeNameMap = new Map<string, string>();
-  voucherTypes.forEach((type) => {
+  voucherTypes.forEach((type: { id: string; name: string }) => {
     typeNameMap.set(type.id, type.name);
   });
   
@@ -172,6 +178,8 @@ export async function uploadVouchers(
     expiry_date?: string;
   }>
 ): Promise<ResponseType<{ count: number }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase.from("voucher_inventory").insert(
     vouchers.map((v) => ({
       ...v,
@@ -192,6 +200,8 @@ export async function uploadVouchers(
 export async function disableVoucher(
   id: string
 ): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
   const { data, error } = await supabase
     .from("voucher_inventory")
     .update({ status: "disabled" })
@@ -208,6 +218,8 @@ export async function disableVoucher(
 export async function fetchVoucherTypeSummaries(): Promise<
   ResponseType<VoucherTypeSummary[]>
 > {
+  const supabase = createClient();
+  
   try {
     console.log("Starting fetchVoucherTypeSummaries");
     
@@ -230,7 +242,7 @@ export async function fetchVoucherTypeSummaries(): Promise<
     }
 
     // Create default summaries with empty statistics
-    const summaries: VoucherTypeSummary[] = voucherTypes.map(type => {
+    const summaries: VoucherTypeSummary[] = voucherTypes.map((type: { id: string; name: string; supplier_commission_pct: number }) => {
       let icon = "credit-card";
       if (type.name.toLowerCase().includes("ringa")) {
         icon = "phone";

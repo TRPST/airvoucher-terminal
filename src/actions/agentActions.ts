@@ -1,4 +1,4 @@
-import supabase from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { PostgrestError } from "@supabase/supabase-js";
 
 export type AgentRetailer = {
@@ -29,6 +29,8 @@ export async function fetchMyRetailers(agentId: string): Promise<{
   data: AgentRetailer[] | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log("Fetching retailers for agent ID:", agentId);
 
@@ -150,6 +152,8 @@ export async function fetchAgentStatements(
   data: AgentStatement[] | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log(
       `Fetching statements for agent ${agentId} from ${startDate || "all"} to ${
@@ -259,6 +263,8 @@ export async function fetchAgentSummary(agentId: string): Promise<{
   } | null;
   error: PostgrestError | Error | null;
 }> {
+  const supabase = createClient();
+  
   try {
     console.log("Fetching performance summary for agent:", agentId);
 
