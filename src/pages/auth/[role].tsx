@@ -5,6 +5,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getUserRole, signOutUser } from "@/actions/userActions";
+import { AuthErrorBoundary } from "@/components/AuthErrorBoundary";
 import { motion } from "framer-motion";
 
 export default function AuthPage() {
@@ -13,6 +14,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [supabaseClient, setSupabaseClient] = useState<any>(null);
+  const [authKey, setAuthKey] = useState(0); // For forcing re-render
 
   // Ensure component only renders on client-side to prevent hydration issues
   useEffect(() => {
@@ -24,6 +26,12 @@ export default function AuthPage() {
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
     }
+  }, []);
+
+  // Handler for retrying auth component
+  const handleAuthRetry = useCallback(() => {
+    console.log('Retrying auth component...');
+    setAuthKey(prev => prev + 1);
   }, []);
 
   // Helper function to get user's role from profiles table using the action
@@ -273,39 +281,42 @@ export default function AuthPage() {
             {getRoleDisplay()} Portal
           </h2>
 
-          <Auth
-            supabaseClient={supabaseClient}
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: "hsl(var(--primary))",
-                    brandAccent: "hsl(var(--primary))",
+          <AuthErrorBoundary onRetry={handleAuthRetry}>
+            <Auth
+              key={authKey}
+              supabaseClient={supabaseClient}
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: "hsl(var(--primary))",
+                      brandAccent: "hsl(var(--primary))",
+                    },
+                  },
+                  dark: {
+                    colors: {
+                      inputText: "white",
+                      inputBackground: "hsl(var(--card))",
+                      inputBorder: "hsl(var(--border))",
+                      inputLabelText: "hsl(var(--foreground))",
+                      inputPlaceholder: "hsl(var(--muted-foreground))",
+                    },
                   },
                 },
-                dark: {
-                  colors: {
-                    inputText: "white",
-                    inputBackground: "hsl(var(--card))",
-                    inputBorder: "hsl(var(--border))",
-                    inputLabelText: "hsl(var(--foreground))",
-                    inputPlaceholder: "hsl(var(--muted-foreground))",
+                style: {
+                  input: {
+                    color: "var(--foreground)",
                   },
                 },
-              },
-              style: {
-                input: {
-                  color: "var(--foreground)",
-                },
-              },
-            }}
-            providers={[]}
-            redirectTo={role ? `/${role}` : "/"}
-            showLinks={false}
-            view="sign_in"
-            magicLink={false}
-          />
+              }}
+              providers={[]}
+              redirectTo={role ? `/${role}` : "/"}
+              showLinks={false}
+              view="sign_in"
+              magicLink={false}
+            />
+          </AuthErrorBoundary>
         </motion.div>
       </main>
 

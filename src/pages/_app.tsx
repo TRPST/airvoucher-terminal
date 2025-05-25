@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ToastProvider";
 import { Layout } from "@/components/Layout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import type { AppProps } from "next/app";
@@ -63,21 +64,29 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <ThemeProvider attribute="class">
-      <SessionContextProvider 
-        supabaseClient={supabaseClient}
-        initialSession={pageProps.initialSession}
-      >
-        <ToastProvider>
-          {isLandingPage || isAuthPage ? (
-            <Component {...pageProps} />
-          ) : (
-            <Layout role={role}>
-              <Component {...pageProps} />
-            </Layout>
-          )}
-        </ToastProvider>
-      </SessionContextProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider attribute="class">
+        <ErrorBoundary>
+          <SessionContextProvider 
+            supabaseClient={supabaseClient}
+            initialSession={pageProps.initialSession}
+          >
+            <ErrorBoundary>
+              <ToastProvider>
+                <ErrorBoundary>
+                  {isLandingPage || isAuthPage ? (
+                    <Component {...pageProps} />
+                  ) : (
+                    <Layout role={role}>
+                      <Component {...pageProps} />
+                    </Layout>
+                  )}
+                </ErrorBoundary>
+              </ToastProvider>
+            </ErrorBoundary>
+          </SessionContextProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
