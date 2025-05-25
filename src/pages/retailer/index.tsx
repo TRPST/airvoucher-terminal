@@ -27,7 +27,7 @@ import { SaleReceiptDialog } from "@/components/dialogs/SaleReceiptDialog";
 
 export default function RetailerPOS() {
   // Protect this route - only allow retailer role
-  const { isLoading, user } = useRequireRole("retailer");
+  const { isLoading, user, isAuthorized } = useRequireRole("retailer");
 
   // Get the current user ID
   const userId = user?.id;
@@ -72,7 +72,7 @@ export default function RetailerPOS() {
   // Fetch retailer data and voucher types on mount
   React.useEffect(() => {
     const loadData = async () => {
-      if (!userId) return;
+      if (!userId || !isAuthorized) return;
 
       setIsDataLoading(true);
       setDataError(null);
@@ -118,7 +118,7 @@ export default function RetailerPOS() {
     };
 
     loadData();
-  }, [userId]);
+  }, [userId, isAuthorized]);
 
   // Group voucher types by category
   const voucherCategories = React.useMemo(() => {

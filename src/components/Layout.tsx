@@ -38,6 +38,11 @@ interface LayoutProps {
 }
 
 export function Layout({ children, role = "admin" }: LayoutProps) {
+  // Early return for SSR - prevent any hook calls during server-side rendering
+  if (typeof window === 'undefined') {
+    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }}>{children}</div>;
+  }
+
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -231,13 +236,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
 
   const navItems = getNavItems(role);
 
-  // Show loading until mounted and Supabase client is ready
+  // Show loading state until mounted and client ready
   if (!mounted || !supabaseClient) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <div style={{ minHeight: "100vh", backgroundColor: "hsl(var(--background))" }}>{children}</div>;
   }
 
   return (

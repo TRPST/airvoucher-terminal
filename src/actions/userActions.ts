@@ -43,7 +43,7 @@ export async function getUserRole(userId: string): Promise<{
     }
     
     console.log("User profile data:", data);
-    return { data: data?.role || null, error: null };
+    return { data: data?.role as string || null, error: null };
   } catch (err) {
     console.error("Unexpected error fetching user role:", err);
     return {
@@ -84,7 +84,7 @@ export async function getUserProfile(userId: string): Promise<{
       return { data: null, error };
     }
     
-    return { data, error: null };
+    return { data: data as UserProfile, error: null };
   } catch (err) {
     console.error("Unexpected error fetching user profile:", err);
     return {

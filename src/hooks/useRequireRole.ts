@@ -10,6 +10,17 @@ import { getUserRole, signOutUser } from "@/actions/userActions";
  */
 export function useRequireRole(requiredRole: string) {
   const router = useRouter();
+  
+  // Early return for SSR - prevent any hook calls during server-side rendering
+  if (typeof window === 'undefined') {
+    return {
+      session: null,
+      user: null,
+      isAuthorized: false,
+      isLoading: true,
+    };
+  }
+
   const [mounted, setMounted] = useState(false);
   const [supabaseClient, setSupabaseClient] = useState<any>(null);
   const [session, setSession] = useState<any>(null);

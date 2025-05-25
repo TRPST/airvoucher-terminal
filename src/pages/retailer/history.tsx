@@ -21,7 +21,7 @@ type TerminalFilter = "all" | string;
 
 export default function RetailerHistory() {
   // Protect this route - only allow retailer role
-  const { isLoading, user } = useRequireRole("retailer");
+  const { isLoading, user, isAuthorized } = useRequireRole("retailer");
 
   // Get the current user ID
   const userId = user?.id;
@@ -42,7 +42,7 @@ export default function RetailerHistory() {
   // Fetch retailer data and sales history
   React.useEffect(() => {
     const loadData = async () => {
-      if (!userId) return;
+      if (!userId || !isAuthorized) return;
 
       setIsDataLoading(true);
       setDataError(null);
@@ -122,7 +122,7 @@ export default function RetailerHistory() {
     };
 
     loadData();
-  }, [userId, activeTab, activeTerminal]);
+  }, [userId, isAuthorized, activeTab, activeTerminal]);
 
   // Get filtered sales based on all active filters
   const filteredSales = React.useMemo(() => {
