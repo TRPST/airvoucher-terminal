@@ -16,7 +16,6 @@ export function CustomAuth({ role }: CustomAuthProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSignUp, setIsSignUp] = useState(false);
 
   // Helper function to get user's role from profiles table
   const getUserRoleFromProfile = async (userId: string) => {
@@ -85,36 +84,9 @@ export function CustomAuth({ role }: CustomAuthProps) {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      if (data.user) {
-        setError("Please check your email to confirm your account before signing in.");
-      }
-    } catch (error) {
-      console.error("Error during sign up:", error);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="w-full max-w-md space-y-6">
-      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+      <form onSubmit={handleSignIn} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
             Email
@@ -159,26 +131,13 @@ export function CustomAuth({ role }: CustomAuthProps) {
           {isLoading ? (
             <div className="flex items-center justify-center space-x-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              <span>{isSignUp ? "Creating account..." : "Signing in..."}</span>
+              <span>Signing in...</span>
             </div>
           ) : (
-            <span>{isSignUp ? "Create Account" : "Sign In"}</span>
+            <span>Sign In</span>
           )}
         </button>
       </form>
-
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={() => {
-            setIsSignUp(!isSignUp);
-            setError(null);
-          }}
-          className="text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-        </button>
-      </div>
     </div>
   );
 } 
