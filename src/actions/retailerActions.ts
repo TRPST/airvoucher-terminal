@@ -453,8 +453,8 @@ export async function fetchSalesHistory({
     voucher_inventory(
       pin,
       serial_number,
-      voucher_types(name),
-      amount
+      amount,
+      voucher_types(name)
     )
   `);
 
@@ -480,16 +480,16 @@ export async function fetchSalesHistory({
   }
 
   // Transform the data to match the Sale type
-  const sales = data.map((sale) => ({
+  const sales = data.map((sale: any) => ({
     id: sale.id,
     created_at: sale.created_at,
     sale_amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
-    terminal_name: sale.terminals?.[0]?.name || "",
-    voucher_type: sale.voucher_inventory?.[0]?.voucher_types?.[0]?.name || "",
-    voucher_amount: sale.voucher_inventory?.[0]?.amount || 0,
-    pin: sale.voucher_inventory?.[0]?.pin || "",
-    serial_number: sale.voucher_inventory?.[0]?.serial_number,
+    terminal_name: sale.terminals?.name || "",
+    voucher_type: sale.voucher_inventory?.voucher_types?.name || "",
+    voucher_amount: sale.voucher_inventory?.amount || 0,
+    pin: sale.voucher_inventory?.pin || "",
+    serial_number: sale.voucher_inventory?.serial_number,
     ref_number: `REF-${sale.id.slice(0, 8)}` // Generate a reference number based on sale ID
   }));
 

@@ -98,6 +98,7 @@ export default function AdminDashboard() {
   // Table state
   const [searchTerm, setSearchTerm] = useState("");
   const [voucherTypeFilter, setVoucherTypeFilter] = useState<string>("all");
+  const [retailerNameFilter, setRetailerNameFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -111,6 +112,12 @@ export default function AdminDashboard() {
   const voucherTypes = useMemo(() => {
     const types = new Set(salesData30Days.map(sale => sale.voucher_type));
     return Array.from(types).filter(Boolean).sort();
+  }, [salesData30Days]);
+
+  // Get unique retailer names for filter dropdown
+  const retailerNames = useMemo(() => {
+    const names = new Set(salesData30Days.map(sale => sale.retailer_name));
+    return Array.from(names).filter(Boolean).sort();
   }, [salesData30Days]);
 
   // Filter and sort sales data
@@ -131,6 +138,11 @@ export default function AdminDashboard() {
     // Apply voucher type filter
     if (voucherTypeFilter !== "all") {
       filtered = filtered.filter(sale => sale.voucher_type === voucherTypeFilter);
+    }
+
+    // Apply retailer name filter
+    if (retailerNameFilter !== "all") {
+      filtered = filtered.filter(sale => sale.retailer_name === retailerNameFilter);
     }
 
     // Apply sorting
@@ -165,7 +177,7 @@ export default function AdminDashboard() {
     });
 
     return filtered;
-  }, [salesData30Days, searchTerm, voucherTypeFilter, sortField, sortDirection]);
+  }, [salesData30Days, searchTerm, voucherTypeFilter, retailerNameFilter, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedSales.length / itemsPerPage);
@@ -180,6 +192,9 @@ export default function AdminDashboard() {
     return paginatedSales.map((sale) => {
       // Use the profit field directly from the database (calculated by RPC function)
       const airVoucherProfit = sale.profit || 0;
+      
+      // Calculate supplier commission amount
+      const supplierCommissionAmount = sale.amount * (sale.supplier_commission_pct / 100);
       
       return {
         Date: new Date(sale.created_at).toLocaleString("en-ZA", {
@@ -210,6 +225,7 @@ export default function AdminDashboard() {
         ),
         Amount: `R ${sale.amount.toFixed(2)}`,
         Retailer: sale.retailer_name || "Unknown",
+        "Supp. Com.": `R ${supplierCommissionAmount.toFixed(2)}`,
         "Ret. Com.": `R ${sale.retailer_commission.toFixed(2)}`,
         "Agent Com.": `R ${sale.agent_commission.toFixed(2)}`,
         "AV Profit": (
@@ -238,7 +254,7 @@ export default function AdminDashboard() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, voucherTypeFilter]);
+  }, [searchTerm, voucherTypeFilter, retailerNameFilter]);
 
   // Calculate dashboard metrics
   const todaySalesTotal = todaySales.reduce(
@@ -519,6 +535,24 @@ export default function AdminDashboard() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label htmlFor="retailerNameFilter" className="mb-1 block text-sm font-medium">
+                  Retailer
+                </label>
+                <select
+                  id="retailerNameFilter"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={retailerNameFilter}
+                  onChange={(e) => setRetailerNameFilter(e.target.value)}
+                >
+                  <option value="all">All Retailers</option>
+                  {retailerNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </motion.div>
         )}
@@ -590,6 +624,7 @@ export default function AdminDashboard() {
                         )}
                       </button>
                     </th>
+                    <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
                     <th className="whitespace-nowrap px-3 py-3">Ret. Com.</th>
                     <th className="whitespace-nowrap px-3 py-3">Agent Com.</th>
                     <th className="whitespace-nowrap px-3 py-3">AV Profit</th>
@@ -612,6 +647,9 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
                         {row.Retailer}
+                      </td>
+                      <td className="px-3 py-3 text-sm whitespace-nowrap text-orange-600 font-medium">
+                        {row["Supp. Com."]}
                       </td>
                       <td className="px-3 py-3 text-sm whitespace-nowrap text-green-600 font-medium">
                         {row["Ret. Com."]}
