@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,8 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { email, password, userData } = req.body;
 
-    // Create server-side admin client
-    const supabase = createClient(req, res);
+    // Create admin client with service role key
+    const supabase = createAdminClient();
 
     // Create user with admin API
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({

@@ -317,4 +317,182 @@ export async function fetchAgentRetailers(agentId: string): Promise<ResponseType
       error: err instanceof Error ? err : new Error(String(err)),
     };
   }
+}
+
+/**
+ * Create a new agent with profile and authentication
+ */
+export async function createAgent(params: {
+  profileData: {
+    full_name: string;
+    email: string;
+    phone?: string;
+  };
+  password: string;
+}): Promise<ResponseType<{ id: string }>> {
+  const supabase = createClient();
+  
+  try {
+    // Use the API route to create a user (this calls the server-side admin client)
+    const response = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: params.profileData.email,
+        password: params.password,
+        userData: {
+          role: "agent",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { data: null, error: new Error(errorData.error || 'Failed to create user') };
+    }
+
+    const { user } = await response.json();
+
+    if (!user) {
+      return {
+        data: null,
+        error: new Error("Failed to create user in authentication system"),
+      };
+    }
+
+    // Create the profile linked to the new user ID
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id, // Use the UUID from Supabase auth
+        role: "agent",
+        full_name: params.profileData.full_name,
+        email: params.profileData.email,
+        phone: params.profileData.phone,
+      })
+      .select("id")
+      .single();
+
+    if (profileError) {
+      console.error("Error creating agent profile:", profileError);
+      // We can't delete the auth user here as we don't have admin privileges
+      // The user will remain in Auth but without a profile
+      return { data: null, error: profileError };
+    }
+
+    return { data: profileData, error: null };
+  } catch (err) {
+    console.error("Unexpected error in createAgent:", err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Assign a retailer to an agent
+ */
+export async function assignRetailerToAgent(
+  retailerId: string,
+  agentId: string
+): Promise<ResponseType<{ success: boolean }>> {
+  const supabase = createClient();
+  
+  try {
+    const { error } = await supabase
+      .from("retailers")
+      .update({
+        agent_profile_id: agentId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", retailerId);
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    return { data: { success: true }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Remove agent assignment from a retailer
+ */
+export async function unassignRetailerFromAgent(
+  retailerId: string
+): Promise<ResponseType<{ success: boolean }>> {
+  const supabase = createClient();
+  
+  try {
+    const { error } = await supabase
+      .from("retailers")
+      .update({
+        agent_profile_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", retailerId);
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    return { data: { success: true }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Fetch unassigned retailers (not assigned to any agent)
+ */
+export async function fetchUnassignedRetailers(): Promise<ResponseType<any[]>> {
+  const supabase = createClient();
+  try {
+    const { data, error } = await supabase
+      .from("retailers")
+      .select(`
+        id,
+        name,
+        status,
+        balance,
+        location,
+        profiles!retailers_user_profile_id_fkey(full_name, email)
+      `)
+      .is("agent_profile_id", null)
+      .eq("status", "active")
+      .order("name");
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Transform the data to match expected format
+    const retailers = data?.map(retailer => ({
+      id: retailer.id,
+      name: retailer.name,
+      status: retailer.status,
+      balance: retailer.balance || 0,
+      location: retailer.location,
+      contact_name: retailer.profiles?.[0]?.full_name || "",
+      email: retailer.profiles?.[0]?.email || "",
+    })) || [];
+
+    return { data: retailers, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
 } 

@@ -9,16 +9,17 @@ import {
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
-import { useSession } from "@supabase/auth-helpers-react";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import {
   fetchRetailers,
   fetchCommissionGroups,
+  fetchAllAgents,
   createRetailer,
   type AdminRetailer,
   type CommissionGroup,
+  type Agent,
   type ProfileData,
   type RetailerData,
 } from "@/actions";
@@ -30,6 +31,7 @@ export default function AdminRetailers() {
 
   // States for data
   const [retailers, setRetailers] = React.useState<AdminRetailer[]>([]);
+  const [agents, setAgents] = React.useState<Agent[]>([]);
   const [commissionGroups, setCommissionGroups] = React.useState<
     CommissionGroup[]
   >([]);
@@ -92,6 +94,16 @@ export default function AdminRetailers() {
         }
 
         setCommissionGroups(groupsData || []);
+
+        // Fetch agents
+        const { data: agentsData, error: agentsError } = await fetchAllAgents();
+
+        if (agentsError) {
+          setError(`Failed to load agents: ${agentsError.message}`);
+          return;
+        }
+
+        setAgents(agentsData || []);
       } catch (err) {
         setError(
           `Unexpected error: ${
@@ -479,16 +491,11 @@ export default function AdminRetailers() {
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
                       <option value="">Select Agent</option>
-                      {retailers
-                        .filter((r) => r.agent_profile_id) // Only get unique agent IDs
-                        .map((retailer) => (
-                          <option
-                            key={retailer.agent_profile_id}
-                            value={retailer.agent_profile_id}
-                          >
-                            {retailer.agent_name}
-                          </option>
-                        ))}
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.full_name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">

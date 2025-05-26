@@ -21,6 +21,10 @@ export {
   fetchAgentById,
   updateAgent,
   fetchAgentRetailers,
+  createAgent,
+  assignRetailerToAgent,
+  unassignRetailerFromAgent,
+  fetchUnassignedRetailers,
 } from "./admin/agentActions";
 
 // Re-export terminal actions
