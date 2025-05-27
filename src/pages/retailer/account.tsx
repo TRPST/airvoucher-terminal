@@ -271,7 +271,7 @@ export default function RetailerAccount() {
               <p className="font-medium">{bankDetails.accountNumber}</p>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Bank</p>
                 <p className="font-medium">{bankDetails.bankName}</p>
@@ -282,7 +282,7 @@ export default function RetailerAccount() {
               </div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Account Type</p>
                 <p className="font-medium">{bankDetails.accountType}</p>
@@ -307,7 +307,7 @@ export default function RetailerAccount() {
 
         <div className="space-y-6">
           <div className="rounded-lg bg-muted p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-medium">Available for Withdrawal</h3>
                 <p className="text-xl font-bold text-primary">
@@ -315,12 +315,12 @@ export default function RetailerAccount() {
                 </p>
               </div>
               {retailer.commission_balance >= 100 ? (
-                <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
+                <button className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 sm:w-auto">
                   Request Withdrawal
                 </button>
               ) : (
                 <button
-                  className="cursor-not-allowed rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground"
+                  className="w-full cursor-not-allowed rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground sm:w-auto"
                   disabled
                 >
                   Request Withdrawal
