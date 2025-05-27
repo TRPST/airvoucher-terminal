@@ -13,14 +13,8 @@ export default function AuthPage() {
     return role.toString().charAt(0).toUpperCase() + role.toString().slice(1);
   };
 
-  // Don't render anything until we have the role from router
-  if (!role || typeof role !== 'string') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  // Use a default role if not yet loaded from router
+  const currentRole = (role as string) || "admin";
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -63,7 +57,7 @@ export default function AuthPage() {
           </h2>
 
           <AuthGate>
-            <ClientOnlyAuth role={role} />
+            <ClientOnlyAuth role={currentRole} />
           </AuthGate>
         </motion.div>
       </main>

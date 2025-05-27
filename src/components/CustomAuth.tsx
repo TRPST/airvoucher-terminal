@@ -17,18 +17,6 @@ export function CustomAuth({ role }: CustomAuthProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper function to get user's role from profiles table
-  const getUserRoleFromProfile = async (userId: string) => {
-    const { data, error } = await getUserRole(userId);
-    
-    if (error) {
-      console.error("Error fetching user profile:", error);
-      return null;
-    }
-    
-    return data;
-  };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -48,33 +36,34 @@ export function CustomAuth({ role }: CustomAuthProps) {
       if (data.user) {
         console.log("User signed in successfully:", data.user.id);
         
-        // Get user's role from profiles table
-        const userRole = await getUserRoleFromProfile(data.user.id);
-        console.log(`User role from profiles table: ${userRole}`);
+        // Immediately validate role before any redirect
+        const { data: userRole, error: roleError } = await getUserRole(data.user.id);
         
-        if (userRole && role) {
-          if (userRole === role) {
-            // Role matches, redirect to dashboard
-            console.log(`User has correct role (${userRole}), redirecting to dashboard...`);
-            await router.push(`/${role}`);
-          } else {
-            // Role doesn't match, sign them out
-            console.log(`User has role ${userRole} but trying to access ${role} portal. Access denied.`);
-            const { error: signOutError } = await signOutUser();
-            if (signOutError) {
-              console.error("Error signing out:", signOutError);
-            }
-            setError(`Access denied. You don't have permission to access the ${role} portal.`);
-          }
-        } else if (!userRole) {
-          // No role found in profiles table
-          console.log("No role found in user profile. Access denied.");
-          const { error: signOutError } = await signOutUser();
-          if (signOutError) {
-            console.error("Error signing out:", signOutError);
-          }
-          setError("Your account doesn't have access permissions. Please contact an administrator.");
+        if (roleError) {
+          console.error("Error fetching user role:", roleError);
+          setError("Unable to verify your permissions. Please try again.");
+          return;
         }
+
+        if (!userRole) {
+          // No role found - sign out and show error
+          console.log("No role found in user profile. Access denied.");
+          await signOutUser();
+          setError("Your account doesn't have access permissions. Please contact an administrator.");
+          return;
+        }
+
+        if (userRole !== role) {
+          // Role doesn't match - sign out and show error
+          console.log(`User has role ${userRole} but trying to access ${role} portal. Access denied.`);
+          await signOutUser();
+          setError(`Access denied. You don't have permission to access the ${role} portal.`);
+          return;
+        }
+
+        // Role matches - redirect to dashboard
+        console.log(`User has correct role (${userRole}), redirecting to dashboard...`);
+        await router.push(`/${role}`);
       }
     } catch (error) {
       console.error("Error during sign in:", error);
