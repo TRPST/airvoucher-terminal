@@ -3,6 +3,7 @@ import { Activity, DollarSign, Store, Users, AlertCircle, Search, Filter, Chevro
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
+import { StickyStatsHeader } from "@/components/admin/StickyStatsHeader";
 import { SalesOverTimeChart, type SalesDataPoint } from "@/components/admin/charts/SalesOverTimeChart";
 import { SalesByVoucherTypeChart, type VoucherTypeSales } from "@/components/admin/charts/SalesByVoucherTypeChart";
 import useRequireRole from "@/hooks/useRequireRole";
@@ -426,8 +427,17 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Mobile Sticky Stats Header */}
+      <StickyStatsHeader
+        todaySalesTotal={todaySalesTotal}
+        todaysProfit={todaysProfit}
+        activeRetailers={activeRetailers}
+        agentsCount={agentsCount}
+        todaySalesCount={todaySales.length}
+      />
+
+      {/* Desktop Stats Grid */}
+      <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsTile
           label="Today's Sales"
           value={`R ${todaySalesTotal.toFixed(2)}`}
