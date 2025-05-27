@@ -308,7 +308,7 @@ export default function VoucherTypeDetail() {
           </button>
         </Link>
         
-        <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ marginTop: 10 }}>
           <div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
               {typeName} Vouchers
@@ -511,7 +511,7 @@ export default function VoucherTypeDetail() {
           Back to vouchers
         </button>
       </Link>
-      <div className="flex items-center justify-between" style={{ marginTop: 10 }}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ marginTop: 10 }}>
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             {typeName} Vouchers
