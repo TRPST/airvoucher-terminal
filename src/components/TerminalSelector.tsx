@@ -148,7 +148,7 @@ const TerminalSelector: React.FC<TerminalSelectorProps> = ({
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden"
+            className="mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-20"
           >
             {terminals.map((t) => (
               <DropdownMenu.Item
