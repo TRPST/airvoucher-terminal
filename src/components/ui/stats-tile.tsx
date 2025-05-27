@@ -16,7 +16,7 @@ const statsTileVariants = cva(
         primary: "bg-primary/10 text-primary border border-primary/20",
         success: "bg-green-500/10 text-green-500 border border-green-500/20",
         warning: "bg-amber-500/10 text-amber-500 border border-amber-500/20",
-        info: "bg-blue-500/10 text-blue-500 border border-blue-500/20",
+        info: "bg-primary/10 text-primary border border-primary/20",
         danger:
           "bg-destructive/10 text-destructive border border-destructive/20",
       },

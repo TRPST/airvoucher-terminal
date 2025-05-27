@@ -211,7 +211,7 @@ export default function AdminDashboard() {
               className={cn(
                 "h-2 w-2 rounded-full",
                 sale.voucher_type === "Mobile"
-                  ? "bg-blue-500"
+                  ? "bg-primary"
                   : sale.voucher_type === "OTT"
                   ? "bg-purple-500"
                   : sale.voucher_type === "Hollywoodbets"

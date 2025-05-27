@@ -195,7 +195,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                   toast.type === "warning" &&
                     "bg-amber-500/10 border-amber-500/20 text-amber-500",
                   toast.type === "info" &&
-                    "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                    "bg-primary/10 border-primary/20 text-primary"
                 )}
               >
                 <div className="flex-1">

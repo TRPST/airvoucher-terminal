@@ -18,7 +18,7 @@ export function StickyAgentStatsHeader({
   mtdSales,
 }: StickyAgentStatsHeaderProps) {
   return (
-    <div className="block md:hidden sticky top-16 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50">
+    <div className="block md:hidden sticky top-16 z-10 bg-background/95 backdrop-blur-sm border-b border-border/50" style={{marginTop: 0}}>
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-3 pt-3 pb-3 min-w-max">
           <CompactStatsTile

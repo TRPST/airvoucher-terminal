@@ -29,7 +29,7 @@ import {
 
 export default function AgentDashboard() {
   // Protect this route - only allow agent role
-  const { isLoading: isLoadingAuth } = useRequireRole("agent");
+  const { isLoading: isLoadingAuth, user, isAuthorized } = useRequireRole("agent");
   const [retailers, setRetailers] = React.useState<AgentRetailer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -44,9 +44,13 @@ export default function AgentDashboard() {
   React.useEffect(() => {
     async function loadData() {
       try {
-        // In a real app, you would get the agent ID from context/auth
-        // For now, we'll use a placeholder - the backend will resolve the current user
-        const agentId = "current";
+        // Get the actual user ID from auth instead of using "current"
+        if (!user?.id) {
+          console.error("No user ID available");
+          return;
+        }
+
+        const agentId = user.id;
 
         // Fetch retailers
         const { data: retailersData, error: retailersError } =
@@ -80,10 +84,10 @@ export default function AgentDashboard() {
       }
     }
 
-    if (!isLoadingAuth) {
+    if (!isLoadingAuth && isAuthorized && user?.id) {
       loadData();
     }
-  }, [isLoadingAuth]);
+  }, [isLoadingAuth, isAuthorized, user?.id]);
 
   // Show loading state while checking authentication
   if (isLoadingAuth || isLoading) {

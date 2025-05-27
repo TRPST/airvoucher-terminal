@@ -662,7 +662,7 @@ export default function VoucherTypeDetail() {
           <div className="flex gap-8">
             <div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-blue-500" />
+                <div className="h-3 w-3 rounded-full bg-primary" />
                 <span className="font-medium">
                   {vouchers
                     .filter((v) => v.status === "sold")

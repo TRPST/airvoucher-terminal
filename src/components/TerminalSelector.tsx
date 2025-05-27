@@ -95,7 +95,7 @@ const TerminalSelector: React.FC<TerminalSelectorProps> = ({
   // Show loading state
   if (isLoading) {
     return (
-      <div className="inline-flex items-center px-4 py-1 bg-blue-600/30 text-white rounded-full animate-pulse">
+      <div className="inline-flex items-center px-4 py-1 bg-primary/30 text-white rounded-full animate-pulse">
         <span className="truncate">Loading terminals...</span>
       </div>
     );
@@ -124,7 +124,7 @@ const TerminalSelector: React.FC<TerminalSelectorProps> = ({
   // If there's only one terminal, show it but don't make it a dropdown
   if (terminals.length === 1 && selected) {
     return (
-      <div className="inline-flex items-center px-4 py-1 bg-blue-600 text-white rounded-full">
+      <div className="inline-flex items-center px-4 py-1 bg-primary text-primary-foreground rounded-full">
         <Terminal className="w-4 h-4 mr-1" />
         <span className="truncate">{terminals[0].name}</span>
       </div>
@@ -134,7 +134,7 @@ const TerminalSelector: React.FC<TerminalSelectorProps> = ({
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button className="inline-flex items-center px-4 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+        <button className="inline-flex items-center px-4 py-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90">
           <span className="truncate">
             {terminals.find((t) => t.id === selected)?.name}
           </span>

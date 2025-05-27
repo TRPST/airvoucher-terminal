@@ -18,6 +18,7 @@ import { StatsTile } from "@/components/ui/stats-tile";
 import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
+import useRequireRole from "@/hooks/useRequireRole";
 import {
   fetchMyRetailers,
   fetchAgentStatements,
@@ -28,6 +29,9 @@ import {
 export default function RetailerDetail() {
   const router = useRouter();
   const { id } = router.query;
+  
+  // Protect this route - only allow agent role
+  const { isLoading: isLoadingAuth, user, isAuthorized } = useRequireRole("agent");
 
   const [retailer, setRetailer] = React.useState<AgentRetailer | null>(null);
   const [sales, setSales] = React.useState<AgentStatement[]>([]);
@@ -48,9 +52,13 @@ export default function RetailerDetail() {
         setIsLoading(true);
         setError(null);
 
-        // In a real app, you would get the agent ID from context/auth
-        // For now, we'll use a placeholder - the backend will resolve the current user
-        const agentId = "current";
+        // Get the actual user ID from auth instead of using "current"
+        if (!user?.id) {
+          console.error("No user ID available");
+          return;
+        }
+
+        const agentId = user.id;
 
         // Fetch retailer info
         const { data: retailersData, error: retailersError } =
@@ -117,8 +125,10 @@ export default function RetailerDetail() {
       }
     }
 
-    loadRetailerData();
-  }, [id]);
+    if (!isLoadingAuth && isAuthorized && user?.id && id) {
+      loadRetailerData();
+    }
+  }, [id, isLoadingAuth, isAuthorized, user?.id]);
 
   // Format sales data for the table
   const recentActivityData = sales.slice(0, 10).map((sale) => {
@@ -157,7 +167,7 @@ export default function RetailerDetail() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingAuth || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">
