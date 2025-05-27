@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import TerminalSelector from "@/components/TerminalSelector";
 import { StatsTile } from "@/components/ui/stats-tile";
-import { Layout } from "@/components/Layout";
-import { CompactStatsTileProps } from "@/components/ui/compact-stats-tile";
 import {
   fetchMyRetailer,
   fetchAvailableVoucherTypes,
@@ -519,102 +517,75 @@ export default function RetailerPOS() {
     );
   }
 
-  // Calculate available credit
-  const availableCredit = retailer.credit_limit - retailer.credit_used;
-
-  // Prepare stats for sticky header
-  const stats: CompactStatsTileProps[] = [
-    {
-      label: "Balance",
-      value: `R ${retailer.balance.toFixed(2)}`,
-      icon: Wallet,
-      intent: "success"
-    },
-    {
-      label: "Credit",
-      value: `R ${availableCredit.toFixed(2)}`,
-      icon: CreditCard,
-      intent: "warning"
-    },
-    {
-      label: "Commission",
-      value: `R ${retailer.commission_balance.toFixed(2)}`,
-      icon: Percent,
-      intent: "info"
-    }
-  ];
-
   return (
-    <Layout role="retailer" stats={stats}>
-      <div className="space-y-6">
-        {/* Confetti effect on successful sale */}
-        {showConfetti && <ConfettiOverlay />}
+    <div className="space-y-6">
+      {/* Confetti effect on successful sale */}
+      {showConfetti && <ConfettiOverlay />}
 
-        {/* Header */}
-        <div className="relative">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Sell Vouchers
-            </h1>
-            <p className="text-muted-foreground">
-              Select a voucher category and value to make a sale.
-            </p>
-          </div>
-          <div className="absolute top-0 right-0">
-            <TerminalSelector
-              retailerId={retailer.id}
-              onSelect={handleTerminalSelect}
-            />
-          </div>
+      {/* Header */}
+      <div className="relative">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Sell Vouchers
+          </h1>
+          <p className="text-muted-foreground">
+            Select a voucher category and value to make a sale.
+          </p>
         </div>
-
-        {/* Balance Stats */}
-        <RetailerStats retailer={retailer} />
-
-        {/* Voucher Categories Grid or Voucher Values Grid */}
-        {!selectedCategory ? (
-          <VoucherCategoriesGrid 
-            categories={voucherCategories}
-            onCategorySelect={handleCategorySelect}
+        <div className="absolute top-0 right-0">
+          <TerminalSelector
+            retailerId={retailer.id}
+            onSelect={handleTerminalSelect}
           />
-        ) : (
-          <VoucherValuesGrid
-            selectedCategory={selectedCategory}
-            isLoading={isVoucherInventoryLoading}
-            vouchers={getVouchersForCategory(selectedCategory)}
-            onValueSelect={handleValueSelect}
-            onBackToCategories={() => setSelectedCategory(null)}
-          />
-        )}
-
-        {/* Confirm Sale Dialog */}
-        <ConfirmSaleDialog
-          showDialog={showConfirmDialog}
-          selectedCategory={selectedCategory}
-          selectedValue={selectedValue}
-          retailer={retailer}
-          commissionData={commissionData}
-          commissionError={commissionError}
-          onCancel={() => setShowConfirmDialog(false)}
-          onConfirm={handleConfirmSale}
-          isSelling={isSelling}
-          saleError={saleError}
-        />
-
-        {/* Success Toast */}
-        <SuccessToast
-          show={showToast}
-          category={selectedCategory}
-          value={selectedValue}
-        />
-
-        {/* Sale Receipt Dialog */}
-        <SaleReceiptDialog
-          showDialog={showReceiptDialog}
-          onClose={handleReceiptClose}
-          receipt={receiptData}
-        />
+        </div>
       </div>
-    </Layout>
+
+      {/* Balance Stats */}
+      <RetailerStats retailer={retailer} />
+
+      {/* Voucher Categories Grid or Voucher Values Grid */}
+      {!selectedCategory ? (
+        <VoucherCategoriesGrid 
+          categories={voucherCategories}
+          onCategorySelect={handleCategorySelect}
+        />
+      ) : (
+        <VoucherValuesGrid
+          selectedCategory={selectedCategory}
+          isLoading={isVoucherInventoryLoading}
+          vouchers={getVouchersForCategory(selectedCategory)}
+          onValueSelect={handleValueSelect}
+          onBackToCategories={() => setSelectedCategory(null)}
+        />
+      )}
+
+      {/* Confirm Sale Dialog */}
+      <ConfirmSaleDialog
+        showDialog={showConfirmDialog}
+        selectedCategory={selectedCategory}
+        selectedValue={selectedValue}
+        retailer={retailer}
+        commissionData={commissionData}
+        commissionError={commissionError}
+        onCancel={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmSale}
+        isSelling={isSelling}
+        saleError={saleError}
+      />
+
+      {/* Success Toast */}
+      <SuccessToast
+        show={showToast}
+        category={selectedCategory}
+        value={selectedValue}
+      />
+
+      {/* Sale Receipt Dialog */}
+      <SaleReceiptDialog
+        showDialog={showReceiptDialog}
+        onClose={handleReceiptClose}
+        receipt={receiptData}
+      />
+    </div>
   );
 }
