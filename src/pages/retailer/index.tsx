@@ -18,6 +18,7 @@ import useRequireRole from "@/hooks/useRequireRole";
 
 // Import custom components
 import { RetailerStats } from "@/components/retailer/RetailerStats";
+import { StickyRetailerStatsHeader } from "@/components/retailer/StickyRetailerStatsHeader";
 import { VoucherCategoriesGrid } from "@/components/retailer/VoucherCategoriesGrid";
 import { VoucherValuesGrid } from "@/components/retailer/VoucherValuesGrid";
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
@@ -540,7 +541,10 @@ export default function RetailerPOS() {
         </div>
       </div>
 
-      {/* Balance Stats */}
+      {/* Mobile Sticky Stats Header */}
+      <StickyRetailerStatsHeader retailer={retailer} />
+
+      {/* Desktop Balance Stats */}
       <RetailerStats retailer={retailer} />
 
       {/* Voucher Categories Grid or Voucher Values Grid */}
