@@ -3,6 +3,8 @@ import { Activity, DollarSign, Store, Users, AlertCircle, Search, Filter, Chevro
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
+import { Layout } from "@/components/Layout";
+import { CompactStatsTileProps } from "@/components/ui/compact-stats-tile";
 import { SalesOverTimeChart, type SalesDataPoint } from "@/components/admin/charts/SalesOverTimeChart";
 import { SalesByVoucherTypeChart, type VoucherTypeSales } from "@/components/admin/charts/SalesByVoucherTypeChart";
 import useRequireRole from "@/hooks/useRequireRole";
@@ -415,299 +417,329 @@ export default function AdminDashboard() {
     );
   }
 
+  // Prepare stats for sticky header
+  const stats: CompactStatsTileProps[] = [
+    {
+      label: "Today's Sales",
+      value: `R ${todaySalesTotal.toFixed(2)}`,
+      icon: Activity,
+      intent: "primary"
+    },
+    {
+      label: "AV Profit",
+      value: `R ${todaysProfit.toFixed(2)}`,
+      icon: DollarSign,
+      intent: "success"
+    },
+    {
+      label: "Active Retailers",
+      value: activeRetailers.toString(),
+      icon: Store,
+      intent: "info"
+    },
+    {
+      label: "Agents",
+      value: agentsCount.toString(),
+      icon: Users,
+      intent: "warning"
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Welcome to your AirVoucher admin dashboard.
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsTile
-          label="Today's Sales"
-          value={`R ${todaySalesTotal.toFixed(2)}`}
-          icon={Activity}
-          intent="primary"
-          subtitle={`${todaySales.length} transactions`}
-        />
-        <StatsTile
-          label="Airvoucher Profit"
-          value={`R ${todaysProfit.toFixed(2)}`}
-          icon={DollarSign}
-          intent="success"
-          subtitle="From today's sales"
-        />
-        <StatsTile
-          label="Active Retailers"
-          value={activeRetailers}
-          icon={Store}
-          intent="info"
-          subtitle={`${retailers.length} total retailers`}
-        />
-        <StatsTile
-          label="Agents"
-          value={agentsCount}
-          icon={Users}
-          intent="warning"
-          subtitle="Total agents assigned"
-        />
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <SalesOverTimeChart 
-          data={processTimeSeriesData(salesData30Days)} 
-          isLoading={isDataLoading} 
-        />
-        <SalesByVoucherTypeChart 
-          data={processVoucherTypeData(salesData30Days)} 
-          isLoading={isDataLoading}
-        />
-      </div>
-
-      {/* Sales Table Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Recent Sales</h2>
-          <p className="text-sm text-muted-foreground">
-            {filteredAndSortedSales.length} total sales
+    <Layout role="admin" stats={stats}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Welcome to your AirVoucher admin dashboard.
           </p>
         </div>
 
-        {/* Search and Filter Controls */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                placeholder="Search sales..."
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm",
-                showFilters 
-                  ? "bg-primary text-primary-foreground border-primary" 
-                  : "border-input bg-background hover:bg-muted"
-              )}
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </button>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsTile
+            label="Today's Sales"
+            value={`R ${todaySalesTotal.toFixed(2)}`}
+            icon={Activity}
+            intent="primary"
+            subtitle={`${todaySales.length} transactions`}
+          />
+          <StatsTile
+            label="Airvoucher Profit"
+            value={`R ${todaysProfit.toFixed(2)}`}
+            icon={DollarSign}
+            intent="success"
+            subtitle="From today's sales"
+          />
+          <StatsTile
+            label="Active Retailers"
+            value={activeRetailers}
+            icon={Store}
+            intent="info"
+            subtitle={`${retailers.length} total retailers`}
+          />
+          <StatsTile
+            label="Agents"
+            value={agentsCount}
+            icon={Users}
+            intent="warning"
+            subtitle="Total agents assigned"
+          />
         </div>
 
-        {/* Filter Panel */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="rounded-lg border border-border bg-card p-4 shadow-sm"
-          >
-            <h3 className="mb-3 font-medium">Filter Options</h3>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="voucherTypeFilter" className="mb-1 block text-sm font-medium">
-                  Voucher Type
-                </label>
-                <select
-                  id="voucherTypeFilter"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={voucherTypeFilter}
-                  onChange={(e) => setVoucherTypeFilter(e.target.value)}
-                >
-                  <option value="all">All Types</option>
-                  {voucherTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="retailerNameFilter" className="mb-1 block text-sm font-medium">
-                  Retailer
-                </label>
-                <select
-                  id="retailerNameFilter"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={retailerNameFilter}
-                  onChange={(e) => setRetailerNameFilter(e.target.value)}
-                >
-                  <option value="all">All Retailers</option>
-                  {retailerNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <SalesOverTimeChart 
+            data={processTimeSeriesData(salesData30Days)} 
+            isLoading={isDataLoading} 
+          />
+          <SalesByVoucherTypeChart 
+            data={processVoucherTypeData(salesData30Days)} 
+            isLoading={isDataLoading}
+          />
+        </div>
 
-        {/* Sortable Table */}
-        {salesData30Days.length > 0 ? (
-          <div className="rounded-lg border border-border shadow-sm">
-            <div className="overflow-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  <tr className="border-b border-border">
-                    <th className="whitespace-nowrap px-4 py-3">
-                      <button
-                        onClick={() => handleSort("date")}
-                        className="flex items-center gap-1 hover:text-foreground"
-                      >
-                        Date
-                        {sortField === "date" && (
-                          sortDirection === "asc" ? (
-                            <ChevronUp className="h-3 w-3" />
-                          ) : (
-                            <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3">
-                      <button
-                        onClick={() => handleSort("voucher_type")}
-                        className="flex items-center gap-1 hover:text-foreground"
-                      >
-                        Type
-                        {sortField === "voucher_type" && (
-                          sortDirection === "asc" ? (
-                            <ChevronUp className="h-3 w-3" />
-                          ) : (
-                            <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3">
-                      <button
-                        onClick={() => handleSort("amount")}
-                        className="flex items-center gap-1 hover:text-foreground"
-                      >
-                        Amount
-                        {sortField === "amount" && (
-                          sortDirection === "asc" ? (
-                            <ChevronUp className="h-3 w-3" />
-                          ) : (
-                            <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3">
-                      <button
-                        onClick={() => handleSort("retailer_name")}
-                        className="flex items-center gap-1 hover:text-foreground"
-                      >
-                        Retailer
-                        {sortField === "retailer_name" && (
-                          sortDirection === "asc" ? (
-                            <ChevronUp className="h-3 w-3" />
-                          ) : (
-                            <ChevronDown className="h-3 w-3" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
-                    <th className="whitespace-nowrap px-3 py-3">Ret. Com.</th>
-                    <th className="whitespace-nowrap px-3 py-3">Agent Com.</th>
-                    <th className="whitespace-nowrap px-3 py-3">AV Profit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {tableData.map((row, index) => (
-                    <tr
-                      key={`row-${startIndex + index}`}
-                      className="border-b border-border hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Date}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Type}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap font-medium">
-                        {row.Amount}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {row.Retailer}
-                      </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-orange-600 font-medium">
-                        {row["Supp. Com."]}
-                      </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-green-600 font-medium">
-                        {row["Ret. Com."]}
-                      </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap text-blue-600 font-medium">
-                        {row["Agent Com."]}
-                      </td>
-                      <td className="px-3 py-3 text-sm whitespace-nowrap">
-                        {row["AV Profit"]}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of {filteredAndSortedSales.length} results
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
-            <div className="mb-3 rounded-full bg-muted p-3">
-              <Activity className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="mb-1 text-lg font-medium">No sales data</h3>
-            <p className="mb-4 text-muted-foreground">
-              No sales have been recorded in the last 30 days.
+        {/* Sales Table Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Recent Sales</h2>
+            <p className="text-sm text-muted-foreground">
+              {filteredAndSortedSales.length} total sales
             </p>
           </div>
-        )}
+
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="search"
+                  placeholder="Search sales..."
+                  className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  "inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium shadow-sm",
+                  showFilters 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "border-input bg-background hover:bg-muted"
+                )}
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Filter
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="rounded-lg border border-border bg-card p-4 shadow-sm"
+            >
+              <h3 className="mb-3 font-medium">Filter Options</h3>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="voucherTypeFilter" className="mb-1 block text-sm font-medium">
+                    Voucher Type
+                  </label>
+                  <select
+                    id="voucherTypeFilter"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={voucherTypeFilter}
+                    onChange={(e) => setVoucherTypeFilter(e.target.value)}
+                  >
+                    <option value="all">All Types</option>
+                    {voucherTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="retailerNameFilter" className="mb-1 block text-sm font-medium">
+                    Retailer
+                  </label>
+                  <select
+                    id="retailerNameFilter"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={retailerNameFilter}
+                    onChange={(e) => setRetailerNameFilter(e.target.value)}
+                  >
+                    <option value="all">All Retailers</option>
+                    {retailerNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Sortable Table */}
+          {salesData30Days.length > 0 ? (
+            <div className="rounded-lg border border-border shadow-sm">
+              <div className="overflow-auto">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-card text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b border-border">
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort("date")}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          Date
+                          {sortField === "date" && (
+                            sortDirection === "asc" ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )
+                          )}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort("voucher_type")}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          Type
+                          {sortField === "voucher_type" && (
+                            sortDirection === "asc" ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )
+                          )}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort("amount")}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          Amount
+                          {sortField === "amount" && (
+                            sortDirection === "asc" ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )
+                          )}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3">
+                        <button
+                          onClick={() => handleSort("retailer_name")}
+                          className="flex items-center gap-1 hover:text-foreground"
+                        >
+                          Retailer
+                          {sortField === "retailer_name" && (
+                            sortDirection === "asc" ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )
+                          )}
+                        </button>
+                      </th>
+                      <th className="whitespace-nowrap px-3 py-3">Supp. Com.</th>
+                      <th className="whitespace-nowrap px-3 py-3">Ret. Com.</th>
+                      <th className="whitespace-nowrap px-3 py-3">Agent Com.</th>
+                      <th className="whitespace-nowrap px-3 py-3">AV Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {tableData.map((row, index) => (
+                      <tr
+                        key={`row-${startIndex + index}`}
+                        className="border-b border-border hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {row.Date}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {row.Type}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap font-medium">
+                          {row.Amount}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {row.Retailer}
+                        </td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-orange-600 font-medium">
+                          {row["Supp. Com."]}
+                        </td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-green-600 font-medium">
+                          {row["Ret. Com."]}
+                        </td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-blue-600 font-medium">
+                          {row["Agent Com."]}
+                        </td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                          {row["AV Profit"]}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-border px-4 py-3">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of {filteredAndSortedSales.length} results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
+              <div className="mb-3 rounded-full bg-muted p-3">
+                <Activity className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="mb-1 text-lg font-medium">No sales data</h3>
+              <p className="mb-4 text-muted-foreground">
+                No sales have been recorded in the last 30 days.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

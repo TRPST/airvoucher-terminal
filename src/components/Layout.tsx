@@ -29,23 +29,47 @@ import { motion } from "framer-motion";
 
 import { cn } from "@/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { StickyStatsHeader } from "@/components/ui/sticky-stats-header";
+import { CompactStatsTileProps } from "@/components/ui/compact-stats-tile";
 
 type UserRole = "admin" | "retailer" | "agent";
 
 interface LayoutProps {
   children: React.ReactNode;
   role?: UserRole;
+  stats?: CompactStatsTileProps[];
+  onStatsClick?: (index: number) => void;
 }
 
-export function Layout({ children, role = "admin" }: LayoutProps) {
+export function Layout({ children, role = "admin", stats = [], onStatsClick }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [supabaseClient] = React.useState(() => createClient());
+  const [stickyStatsVisible, setStickyStatsVisible] = React.useState(false);
+  
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
+
+  // Scroll detection for sticky stats header
+  React.useEffect(() => {
+    const handleScroll = () => {
+      // Show sticky header when scrolled past ~200px (roughly past the full stat cards)
+      const shouldShow = window.scrollY > 200;
+      setStickyStatsVisible(shouldShow);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Handle stats click - scroll to top to show full stats
+  const handleStatsClick = useCallback((index: number) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onStatsClick?.(index);
+  }, [onStatsClick]);
 
   // Fetch user session on component mount
   React.useEffect(() => {
@@ -330,6 +354,13 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         </div>
         <ThemeToggle />
       </div>
+
+      {/* Sticky Stats Header - Mobile Only */}
+      <StickyStatsHeader 
+        stats={stats} 
+        visible={stickyStatsVisible && stats.length > 0} 
+        onStatClick={handleStatsClick}
+      />
 
       {/* Mobile sidebar (drawer) */}
       {sidebarOpen && (
