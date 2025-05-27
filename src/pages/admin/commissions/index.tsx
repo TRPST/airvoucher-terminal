@@ -107,6 +107,7 @@ export default function AdminCommissions() {
 
     group.rates.forEach((rate) => {
       // Use voucher_type_id as the key instead of name for more reliable editing
+      // Convert to percentage but preserve decimal precision
       editValues[rate.voucher_type_id] = {
         retailerPct: rate.retailer_pct * 100,
         agentPct: rate.agent_pct * 100
@@ -128,10 +129,33 @@ export default function AdminCommissions() {
     value: string,
     rateType: 'retailer' | 'agent'
   ) => {
+    // Use -1 as a special placeholder for empty values during editing
+    if (value === '') {
+      setEditedValues((prev) => {
+        const currentValues = prev[groupId]?.[voucherType] || { retailerPct: 0, agentPct: 0 };
+        
+        return {
+          ...prev,
+          [groupId]: {
+            ...prev[groupId],
+            [voucherType]: {
+              ...currentValues,
+              [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: -1
+            }
+          }
+        };
+      });
+      return;
+    }
+
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
     
-    const clampedValue = Math.min(100, Math.max(0, numValue)); // Clamp between 0-100
+    // Check if input has more than 2 decimal places
+    if (value.includes('.') && value.split('.')[1].length > 2) return;
+    
+    // Clamp between 0-100 - preserve the exact input value within bounds
+    const clampedValue = Math.min(100, Math.max(0, numValue));
 
     setEditedValues((prev) => {
       const currentValues = prev[groupId]?.[voucherType] || { retailerPct: 0, agentPct: 0 };
@@ -159,14 +183,24 @@ export default function AdminCommissions() {
 
       const edits = editedValues[groupId];
 
+      console.log('edits', edits);
+
       // Save each rate
       for (const rate of group.rates) {
         const voucherTypeId = rate.voucher_type_id;
         const voucherTypeName = rate.voucher_type_name || "";
 
         if (edits[voucherTypeId] !== undefined) {
-          const newRetailerPct = edits[voucherTypeId].retailerPct / 100; // Convert back to decimal
-          const newAgentPct = edits[voucherTypeId].agentPct / 100; // Convert back to decimal
+          // Handle empty values (treat -1 as 0)
+          const retailerValue = edits[voucherTypeId].retailerPct === -1 ? 0 : edits[voucherTypeId].retailerPct;
+          const agentValue = edits[voucherTypeId].agentPct === -1 ? 0 : edits[voucherTypeId].agentPct;
+
+          console.log('retailerValue', retailerValue/100);
+          console.log('agentValue', agentValue);
+          
+          // Convert to decimal with precise calculation to avoid floating point errors
+          const newRetailerPct = Number((retailerValue / 100)); // Preserve up to 4 decimal precision
+          const newAgentPct = Number((agentValue / 100)); // Preserve up to 4 decimal precision
 
           // Only update if either value has changed
           if (newRetailerPct !== rate.retailer_pct || newAgentPct !== rate.agent_pct) {
@@ -231,10 +265,32 @@ export default function AdminCommissions() {
   
   // Handle rate input changes in the form
   const handleRateInputChange = (voucherTypeId: string, value: string, rateType: 'retailer' | 'agent') => {
+    // Use -1 as a special placeholder for empty values during editing
+    if (value === '') {
+      setFormData((prev) => {
+        const existingRates = prev.rates[voucherTypeId] || { retailerPct: 5, agentPct: 0 };
+        
+        return {
+          ...prev,
+          rates: {
+            ...prev.rates,
+            [voucherTypeId]: {
+              ...existingRates,
+              [rateType === 'retailer' ? 'retailerPct' : 'agentPct']: -1
+            },
+          },
+        };
+      });
+      return;
+    }
+
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
     
-    // Clamp between 0-100
+    // Check if input has more than 2 decimal places
+    if (value.includes('.') && value.split('.')[1].length > 2) return;
+    
+    // Clamp between 0-100 without any decimal manipulation
     const clampedValue = Math.min(100, Math.max(0, numValue));
     
     setFormData((prev) => {
@@ -296,9 +352,9 @@ export default function AdminCommissions() {
         // Get rates from form data or use defaults
         const rateData = formData.rates[type.id] || { retailerPct: 5, agentPct: 0 };
         
-        // Convert to decimal
-        const retailerPct = rateData.retailerPct / 100;
-        const agentPct = rateData.agentPct / 100;
+        // Handle -1 values (treat as 0) and convert to decimal with precision
+        const retailerPct = rateData.retailerPct === -1 ? 0 : Number((rateData.retailerPct / 100));
+        const agentPct = rateData.agentPct === -1 ? 0 : Number((rateData.agentPct / 100));
         
         return {
           commission_group_id: groupId,

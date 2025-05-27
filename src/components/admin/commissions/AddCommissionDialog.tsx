@@ -116,17 +116,22 @@ export function AddCommissionDialog({
                         <span className="text-sm flex-grow truncate sm:overflow-visible min-w-0" title={type.name}>{type.name}</span>
                         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                           {/* Retailer Commission */}
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col text-right">
                             <span className="text-xs text-muted-foreground mb-1">Retailer</span>
-                            <div className="relative w-16 sm:w-20">
+                            <div className="relative w-20 sm:w-20">
                               <input
                                 type="number"
                                 min="0"
                                 max="100"
-                                step="0.01"
-                                value={(formData.rates[type.id]?.retailerPct) || 5}
+                                step="1"
+                                value={(() => {
+                                  const storedValue = (formData.rates[type.id]?.retailerPct) ?? 5;
+                                  if (storedValue === -1) return '';
+                                  // Allow free-form typing without forcing decimal formatting
+                                  return storedValue.toFixed(0);
+                                })()}
                                 onChange={(e) => handleRateInputChange(type.id, e.target.value, 'retailer')}
-                                className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-1 sm:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                                className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 pl-1 sm:pl-2 pr-4 sm:pr-5 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                               />
                               <div className="pointer-events-none absolute inset-y-0 right-1 sm:right-2 flex items-center text-xs text-muted-foreground">
                                 %
@@ -135,17 +140,22 @@ export function AddCommissionDialog({
                           </div>
                           
                           {/* Agent Commission */}
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col text-right">
                             <span className="text-xs text-muted-foreground mb-1">Agent</span>
                             <div className="relative w-16 sm:w-20">
                               <input
                                 type="number"
                                 min="0"
                                 max="100"
-                                step="0.01"
-                                value={(formData.rates[type.id]?.agentPct) || 0}
+                                step="1"
+                                value={(() => {
+                                  const storedValue = (formData.rates[type.id]?.agentPct) ?? 0;
+                                  if (storedValue === -1) return '';
+                                  // Allow free-form typing without forcing decimal formatting
+                                  return storedValue.toFixed(0);
+                                })()}
                                 onChange={(e) => handleRateInputChange(type.id, e.target.value, 'agent')}
-                                className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-1 sm:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
+                                className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 pl-1 sm:pl-2 pr-4 sm:pr-5 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
                               />
                               <div className="pointer-events-none absolute inset-y-0 right-1 sm:right-2 flex items-center text-xs text-green-500 dark:text-green-400">
                                 %

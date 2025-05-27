@@ -32,7 +32,7 @@ export function CommissionGroupCard({
 }: CommissionGroupCardProps) {
   // Format percentage for display
   const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
+    return `${value.toFixed(0)}%`;
   };
 
   return (
@@ -117,6 +117,7 @@ export function CommissionGroupCard({
                 </h3>
                 <div className="space-y-3">
                   {category.rates.map((rate) => (
+                    console.log('rate', rate.voucher_type_name ,rate.retailer_pct),
                     <div
                       key={rate.id}
                       className="grid grid-cols-[1fr_100px_100px] md:grid-cols-[1fr_100px_100px] sm:grid-cols-[1fr_70px_70px] items-center gap-2"
@@ -152,12 +153,15 @@ export function CommissionGroupCard({
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
-                            value={
-                              editedValues[group.id]?.[
+                            step="1"
+                            value={(() => {
+                              const storedValue = editedValues[group.id]?.[
                                 rate.voucher_type_id
-                              ]?.retailerPct || (rate.retailer_pct * 100)
-                            }
+                              ]?.retailerPct ?? (rate.retailer_pct * 100);
+                              if (storedValue === -1) return '';
+                              // Allow free-form typing without forcing decimal formatting
+                              return storedValue.toFixed(0);
+                            })()}
                             onChange={(e) =>
                               handleRateChange(
                                 group.id,
@@ -166,7 +170,7 @@ export function CommissionGroupCard({
                                 'retailer'
                               )
                             }
-                            className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-1 md:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                            className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 pl-1 md:pl-2 pr-4 md:pr-5 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                           />
                           <div className="pointer-events-none absolute inset-y-0 right-1 md:right-2 flex items-center text-xs text-blue-500 dark:text-blue-400">
                             %
@@ -194,12 +198,15 @@ export function CommissionGroupCard({
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
-                            value={
-                              editedValues[group.id]?.[
+                            step="1"
+                            value={(() => {
+                              const storedValue = editedValues[group.id]?.[
                                 rate.voucher_type_id
-                              ]?.agentPct || (rate.agent_pct * 100)
-                            }
+                              ]?.agentPct ?? (rate.agent_pct * 100);
+                              if (storedValue === -1) return '';
+                              // Allow free-form typing without forcing decimal formatting
+                              return storedValue.toFixed(0);
+                            })()}
                             onChange={(e) =>
                               handleRateChange(
                                 group.id,
@@ -208,7 +215,7 @@ export function CommissionGroupCard({
                                 'agent'
                               )
                             }
-                            className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-1 md:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
+                            className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 pl-1 md:pl-2 pr-4 md:pr-5 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
                           />
                           <div className="pointer-events-none absolute inset-y-0 right-1 md:right-2 flex items-center text-xs text-green-500 dark:text-green-400">
                             %
