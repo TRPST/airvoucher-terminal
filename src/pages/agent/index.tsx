@@ -10,6 +10,7 @@ import {
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
+import { StickyAgentStatsHeader } from "@/components/agent/StickyAgentStatsHeader";
 import { ChartPlaceholder } from "@/components/ui/chart-placeholder";
 import {
   Carousel,
@@ -28,7 +29,7 @@ import {
 
 export default function AgentDashboard() {
   // Protect this route - only allow agent role
-  const { isLoading: isLoadingAuth } = useRequireRole("agent");
+  const { isLoading: isLoadingAuth, user, isAuthorized } = useRequireRole("agent");
   const [retailers, setRetailers] = React.useState<AgentRetailer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,9 +44,13 @@ export default function AgentDashboard() {
   React.useEffect(() => {
     async function loadData() {
       try {
-        // In a real app, you would get the agent ID from context/auth
-        // For now, we'll use a placeholder - the backend will resolve the current user
-        const agentId = "current";
+        // Get the actual user ID from auth instead of using "current"
+        if (!user?.id) {
+          console.error("No user ID available");
+          return;
+        }
+
+        const agentId = user.id;
 
         // Fetch retailers
         const { data: retailersData, error: retailersError } =
@@ -79,10 +84,10 @@ export default function AgentDashboard() {
       }
     }
 
-    if (!isLoadingAuth) {
+    if (!isLoadingAuth && isAuthorized && user?.id) {
       loadData();
     }
-  }, [isLoadingAuth]);
+  }, [isLoadingAuth, isAuthorized, user?.id]);
 
   // Show loading state while checking authentication
   if (isLoadingAuth || isLoading) {
@@ -131,8 +136,16 @@ export default function AgentDashboard() {
         </p>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Mobile Sticky Stats Header */}
+      <StickyAgentStatsHeader
+        retailerCount={summary.retailer_count}
+        mtdCommission={summary.mtd_commission}
+        ytdCommission={summary.ytd_commission}
+        mtdSales={summary.mtd_sales}
+      />
+
+      {/* Desktop Stats Overview */}
+      <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsTile
           label="My Retailers"
           value={summary.retailer_count.toString()}

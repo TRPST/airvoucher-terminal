@@ -163,7 +163,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
             </div>
           </div>
 
-          <div className="w-full p-2 bg-blue-500/10 rounded-md text-sm text-blue-700 dark:text-blue-300 mb-2">
+          <div className="w-full p-2 bg-primary/10 rounded-md text-sm text-primary mb-2">
             <p className="text-center">
               🛈 Please save this receipt. It will not be shown again after closing.
             </p>

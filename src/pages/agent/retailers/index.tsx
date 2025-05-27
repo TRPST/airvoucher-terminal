@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
+import useRequireRole from "@/hooks/useRequireRole";
 import {
   fetchMyRetailers,
   type AgentRetailer,
@@ -11,6 +12,9 @@ import {
 } from "@/actions";
 
 export default function AgentRetailers() {
+  // Protect this route - only allow agent role
+  const { isLoading: isLoadingAuth, user, isAuthorized } = useRequireRole("agent");
+  
   const [searchTerm, setSearchTerm] = React.useState("");
   const [sortBy, setSortBy] = React.useState<string>("name");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
@@ -28,9 +32,13 @@ export default function AgentRetailers() {
   React.useEffect(() => {
     async function loadData() {
       try {
-        // In a real app, you would get the agent ID from context/auth
-        // For now, we'll use a placeholder - the backend will resolve the current user
-        const agentId = "current";
+        // Get the actual user ID from auth instead of using "current"
+        if (!user?.id) {
+          console.error("No user ID available");
+          return;
+        }
+
+        const agentId = user.id;
 
         const { data: retailersData, error: retailersError } =
           await fetchMyRetailers(agentId);
@@ -67,8 +75,10 @@ export default function AgentRetailers() {
       }
     }
 
-    loadData();
-  }, []);
+    if (!isLoadingAuth && isAuthorized && user?.id) {
+      loadData();
+    }
+  }, [isLoadingAuth, isAuthorized, user?.id]);
 
   // Apply filters and sorting
   const filteredRetailers = React.useMemo(() => {
@@ -155,7 +165,7 @@ export default function AgentRetailers() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingAuth || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">

@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { StatsTile } from "@/components/ui/stats-tile";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
+import useRequireRole from "@/hooks/useRequireRole";
 import {
   fetchAgentStatements,
   fetchAgentSummary,
@@ -20,6 +21,9 @@ import {
 } from "@/actions";
 
 export default function AgentCommissions() {
+  // Protect this route - only allow agent role
+  const { isLoading: isLoadingAuth, user, isAuthorized } = useRequireRole("agent");
+  
   const [filter, setFilter] = React.useState<"pending" | "paid">("pending");
   const [dateRange, setDateRange] = React.useState<
     "all" | "mtd" | "past30" | "past90"
@@ -40,9 +44,13 @@ export default function AgentCommissions() {
       try {
         setIsLoading(true);
 
-        // In a real app, you would get the agent ID from context/auth
-        // For now, we'll use a placeholder - the backend will resolve the current user
-        const agentId = "current";
+        // Get the actual user ID from auth instead of using "current"
+        if (!user?.id) {
+          console.error("No user ID available");
+          return;
+        }
+
+        const agentId = user.id;
 
         // Get date range for filtering
         const startDate = getDateRangeStart(dateRange);
@@ -91,8 +99,10 @@ export default function AgentCommissions() {
       }
     }
 
-    loadData();
-  }, [dateRange]);
+    if (!isLoadingAuth && isAuthorized && user?.id) {
+      loadData();
+    }
+  }, [dateRange, isLoadingAuth, isAuthorized, user?.id]);
 
   // Helper function to get start date based on filter
   function getDateRangeStart(
@@ -160,7 +170,7 @@ export default function AgentCommissions() {
   }, [filteredStatements, filter]);
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingAuth || isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center">

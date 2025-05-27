@@ -3,6 +3,7 @@ import { Activity, DollarSign, Store, Users, AlertCircle, Search, Filter, Chevro
 import { motion } from "framer-motion";
 
 import { StatsTile } from "@/components/ui/stats-tile";
+import { StickyStatsHeader } from "@/components/admin/StickyStatsHeader";
 import { SalesOverTimeChart, type SalesDataPoint } from "@/components/admin/charts/SalesOverTimeChart";
 import { SalesByVoucherTypeChart, type VoucherTypeSales } from "@/components/admin/charts/SalesByVoucherTypeChart";
 import useRequireRole from "@/hooks/useRequireRole";
@@ -210,7 +211,7 @@ export default function AdminDashboard() {
               className={cn(
                 "h-2 w-2 rounded-full",
                 sale.voucher_type === "Mobile"
-                  ? "bg-blue-500"
+                  ? "bg-primary"
                   : sale.voucher_type === "OTT"
                   ? "bg-purple-500"
                   : sale.voucher_type === "Hollywoodbets"
@@ -426,8 +427,17 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Mobile Sticky Stats Header */}
+      <StickyStatsHeader
+        todaySalesTotal={todaySalesTotal}
+        todaysProfit={todaysProfit}
+        activeRetailers={activeRetailers}
+        agentsCount={agentsCount}
+        todaySalesCount={todaySales.length}
+      />
+
+      {/* Desktop Stats Grid */}
+      <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsTile
           label="Today's Sales"
           value={`R ${todaySalesTotal.toFixed(2)}`}
@@ -669,9 +679,14 @@ export default function AdminDashboard() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of {filteredAndSortedSales.length} results
+                {/* Results text - condensed on mobile */}
+                <div className="text-sm text-muted-foreground">
+                  <span className="hidden sm:inline">Showing </span>
+                  {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedSales.length)} of {filteredAndSortedSales.length}
+                  <span className="hidden sm:inline"> results</span>
                 </div>
+                
+                {/* Navigation controls */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -679,17 +694,19 @@ export default function AdminDashboard() {
                     className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Previous
+                    <span className="hidden sm:inline ml-1">Previous</span>
                   </button>
-                  <span className="text-sm text-muted-foreground">
+                  
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
                     Page {currentPage} of {totalPages}
                   </span>
+                  
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    <span className="hidden sm:inline mr-1">Next</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>

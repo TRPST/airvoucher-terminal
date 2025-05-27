@@ -18,6 +18,7 @@ import useRequireRole from "@/hooks/useRequireRole";
 
 // Import custom components
 import { RetailerStats } from "@/components/retailer/RetailerStats";
+import { StickyRetailerStatsHeader } from "@/components/retailer/StickyRetailerStatsHeader";
 import { VoucherCategoriesGrid } from "@/components/retailer/VoucherCategoriesGrid";
 import { VoucherValuesGrid } from "@/components/retailer/VoucherValuesGrid";
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
@@ -132,7 +133,7 @@ export default function RetailerPOS() {
             {
               name: "Vodacom",
               icon: <CreditCard className="h-6 w-6" />,
-              color: "bg-blue-500/5 hover:bg-blue-500/10",
+              color: "bg-primary/5 hover:bg-primary/10",
             },
             {
               name: "MTN",
@@ -142,7 +143,7 @@ export default function RetailerPOS() {
             {
               name: "Telkom",
               icon: <CreditCard className="h-6 w-6" />,
-              color: "bg-blue-500/5 hover:bg-blue-500/10",
+              color: "bg-primary/5 hover:bg-primary/10",
             },
             {
               name: "CellC",
@@ -183,11 +184,11 @@ export default function RetailerPOS() {
       )
       .map(name => {
         let icon = <CreditCard className="h-6 w-6" />;
-        let color = "bg-blue-500/5 hover:bg-blue-500/10";
+        let color = "bg-primary/5 hover:bg-primary/10";
         
         // Assign different colors based on network
         if (name?.includes('Vodacom')) {
-          color = "bg-blue-500/5 hover:bg-blue-500/10";
+          color = "bg-primary/5 hover:bg-primary/10";
         } else if (name?.includes('MTN')) {
           color = "bg-yellow-500/5 hover:bg-yellow-500/10";
         } else if (name?.includes('CellC')) {
@@ -212,7 +213,7 @@ export default function RetailerPOS() {
       )
       .map((name, index) => {
         let icon = <CreditCard className="h-6 w-6" />;
-        let color = "bg-blue-500/5 hover:bg-blue-500/10";
+        let color = "bg-primary/5 hover:bg-primary/10";
         
         // Get the first word of the name as the category
         const categoryName = name?.split(' ')[0] || name;
@@ -540,7 +541,10 @@ export default function RetailerPOS() {
         </div>
       </div>
 
-      {/* Balance Stats */}
+      {/* Mobile Sticky Stats Header */}
+      <StickyRetailerStatsHeader retailer={retailer} />
+
+      {/* Desktop Balance Stats */}
       <RetailerStats retailer={retailer} />
 
       {/* Voucher Categories Grid or Voucher Values Grid */}

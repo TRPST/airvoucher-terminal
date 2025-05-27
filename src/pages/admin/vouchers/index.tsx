@@ -207,7 +207,7 @@ function VouchersPageContent() {
           <div className="flex gap-8">
             <div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-blue-500" />
+                <div className="h-3 w-3 rounded-full bg-primary" />
                 <span className="font-medium">
                   {totalSoldVouchers.toLocaleString()} Sold
                 </span>
@@ -277,7 +277,7 @@ const VoucherTypeCard = ({ summary }: { summary: VoucherTypeSummary }) => {
   
   // Define color variants for the icon container
   const colorVariants: Record<string, string> = {
-    blue: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    blue: "bg-primary/10 text-primary border-primary/20",
     green: "bg-green-500/10 text-green-500 border-green-500/20",
     amber: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     purple: "bg-purple-500/10 text-purple-500 border-purple-500/20",

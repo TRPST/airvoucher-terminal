@@ -12,7 +12,7 @@ export const RetailerStats: React.FC<RetailerStatsProps> = ({ retailer }) => {
   const availableCredit = retailer.credit_limit - retailer.credit_used;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-3">
       <StatsTile
         label="Available Balance"
         value={`R ${retailer.balance.toFixed(2)}`}

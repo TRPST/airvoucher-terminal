@@ -19,20 +19,12 @@ export function AuthGate({ children, fallback }: AuthGateProps) {
     setIsClient(true);
   }, []);
 
-  // During SSR and initial hydration, show fallback or loading state
-  if (!isClient) {
-    return (
-      fallback || (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="flex items-center space-x-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-sm text-muted-foreground">Loading...</span>
-          </div>
-        </div>
-      )
-    );
+  // During SSR, return null to prevent hydration mismatches
+  // On client, render children immediately
+  if (typeof window === 'undefined') {
+    return null;
   }
 
-  // Only render children after client hydration
+  // Always render children on client-side
   return <>{children}</>;
 } 

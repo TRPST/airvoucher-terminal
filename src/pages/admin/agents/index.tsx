@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   Plus,
-  Store,
+  Users,
   MoreHorizontal,
   Loader2,
   AlertCircle,
@@ -13,88 +13,51 @@ import Link from "next/link";
 import { TablePlaceholder } from "@/components/ui/table-placeholder";
 import { cn } from "@/utils/cn";
 import {
-  fetchRetailers,
-  fetchCommissionGroups,
   fetchAllAgents,
-  createRetailer,
-  type AdminRetailer,
-  type CommissionGroup,
+  createAgent,
+  fetchUnassignedRetailers,
+  assignRetailerToAgent,
   type Agent,
-  type ProfileData,
-  type RetailerData,
 } from "@/actions";
 import useRequireRole from "@/hooks/useRequireRole";
 
-export default function AdminRetailers() {
+export default function AdminAgents() {
   // Protect this route - only allow admin role
   const { isLoading: isRoleLoading } = useRequireRole("admin");
 
   // States for data
-  const [retailers, setRetailers] = React.useState<AdminRetailer[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
-  const [commissionGroups, setCommissionGroups] = React.useState<
-    CommissionGroup[]
-  >([]);
+  const [unassignedRetailers, setUnassignedRetailers] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
 
-  // Form state for adding a new retailer
+  // Form state for adding a new agent
   const [showAddDialog, setShowAddDialog] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formData, setFormData] = React.useState<{
-    businessName: string;
-    contactName: string;
+    fullName: string;
     email: string;
-    location: string;
-    agentId: string;
-    commissionGroupId: string;
-    initialBalance: string;
-    creditLimit: string;
+    phone: string;
     password: string;
     autoGeneratePassword: boolean;
+    assignedRetailers: string[];
   }>({
-    businessName: "",
-    contactName: "",
+    fullName: "",
     email: "",
-    location: "",
-    agentId: "",
-    commissionGroupId: "",
-    initialBalance: "0",
-    creditLimit: "0",
+    phone: "",
     password: "",
     autoGeneratePassword: false,
+    assignedRetailers: [],
   });
 
-  // Load retailers and commission groups data
+  // Load agents and unassigned retailers data
   React.useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        // Fetch retailers
-        const { data: retailersData, error: retailersError } =
-          await fetchRetailers();
-
-        if (retailersError) {
-          setError(`Failed to load retailers: ${retailersError.message}`);
-          return;
-        }
-
-        setRetailers(retailersData || []);
-
-        // Fetch commission groups
-        const { data: groupsData, error: groupsError } =
-          await fetchCommissionGroups();
-
-        if (groupsError) {
-          setError(`Failed to load commission groups: ${groupsError.message}`);
-          return;
-        }
-
-        setCommissionGroups(groupsData || []);
-
         // Fetch agents
         const { data: agentsData, error: agentsError } = await fetchAllAgents();
 
@@ -104,6 +67,17 @@ export default function AdminRetailers() {
         }
 
         setAgents(agentsData || []);
+
+        // Fetch unassigned retailers
+        const { data: retailersData, error: retailersError } =
+          await fetchUnassignedRetailers();
+
+        if (retailersError) {
+          console.warn("Failed to load unassigned retailers:", retailersError);
+          // Don't fail the whole page for this
+        } else {
+          setUnassignedRetailers(retailersData || []);
+        }
       } catch (err) {
         setError(
           `Unexpected error: ${
@@ -115,8 +89,10 @@ export default function AdminRetailers() {
       }
     };
 
-    loadData();
-  }, []);
+    if (!isRoleLoading) {
+      loadData();
+    }
+  }, [isRoleLoading]);
 
   // Handler for input changes in the form
   const handleInputChange = (
@@ -137,7 +113,17 @@ export default function AdminRetailers() {
     }
   };
 
-  // Generate a random password with letters, numbers, and special characters
+  // Handler for retailer assignment changes
+  const handleRetailerToggle = (retailerId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      assignedRetailers: prev.assignedRetailers.includes(retailerId)
+        ? prev.assignedRetailers.filter((id) => id !== retailerId)
+        : [...prev.assignedRetailers, retailerId],
+    }));
+  };
+
+  // Generate a random password
   const generateRandomPassword = () => {
     const chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
@@ -162,7 +148,7 @@ export default function AdminRetailers() {
       return { isValid: false, error: "Please enter a valid email address" };
     }
 
-    // Check password length - Supabase requires at least 6 characters
+    // Check password length
     if (formData.password.length < 6) {
       return {
         isValid: false,
@@ -185,69 +171,54 @@ export default function AdminRetailers() {
     }
 
     setIsSubmitting(true);
-    setFormError(null); // Clear any previous form errors
-    setError(null); // Clear any previous page errors
+    setFormError(null);
+    setError(null);
 
     try {
-      // Create profile data
-      const profileData: ProfileData = {
-        full_name: formData.contactName,
-        email: formData.email,
-        role: "retailer",
-      };
-
-      // Create retailer data
-      const retailerData: RetailerData = {
-        name: formData.businessName,
-        contact_name: formData.contactName,
-        contact_email: formData.email,
-        location: formData.location,
-        agent_profile_id: formData.agentId || undefined,
-        commission_group_id: formData.commissionGroupId || undefined,
-        initial_balance: parseFloat(formData.initialBalance) || 0,
-        credit_limit: parseFloat(formData.creditLimit) || 0,
-        status: "active",
-      };
-
-      // Call the createRetailer action with the new parameter format
-      const { data, error } = await createRetailer({
-        profileData,
-        retailerData,
+      // Create agent
+      const { data, error } = await createAgent({
+        profileData: {
+          full_name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone || undefined,
+        },
         password: formData.password,
       });
 
       if (error) {
-        setFormError(`Failed to create retailer: ${error.message}`);
+        setFormError(`Failed to create agent: ${error.message}`);
         setIsSubmitting(false);
         return;
       }
 
-      // Add the new retailer to the list and close the dialog
       if (data) {
-        // Refresh the retailer list instead of trying to add incomplete data
-        const { data: refreshedData } = await fetchRetailers();
-        if (refreshedData) {
-          setRetailers(refreshedData);
+        // Assign selected retailers to the new agent
+        for (const retailerId of formData.assignedRetailers) {
+          await assignRetailerToAgent(retailerId, data.id);
         }
+
+        // Refresh the data
+        const { data: refreshedAgents } = await fetchAllAgents();
+        const { data: refreshedRetailers } = await fetchUnassignedRetailers();
+        
+        if (refreshedAgents) setAgents(refreshedAgents);
+        if (refreshedRetailers) setUnassignedRetailers(refreshedRetailers);
+        
         setShowAddDialog(false);
 
         // Reset form data
         setFormData({
-          businessName: "",
-          contactName: "",
+          fullName: "",
           email: "",
-          location: "",
-          agentId: "",
-          commissionGroupId: "",
-          initialBalance: "0",
-          creditLimit: "0",
+          phone: "",
           password: "",
           autoGeneratePassword: false,
+          assignedRetailers: [],
         });
       }
     } catch (err) {
       setError(
-        `Error creating retailer: ${
+        `Error creating agent: ${
           err instanceof Error ? err.message : String(err)
         }`
       );
@@ -256,12 +227,22 @@ export default function AdminRetailers() {
     }
   };
 
-  // Show loading state
-  if (isRoleLoading || isLoading) {
+  // Show loading state while checking authentication
+  if (isRoleLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading retailers...</span>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="ml-2">Loading authentication...</span>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading agents...</span>
       </div>
     );
   }
@@ -269,50 +250,43 @@ export default function AdminRetailers() {
   // Show error state
   if (error) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500">
-          <AlertCircle className="h-6 w-6" />
-        </div>
-        <h2 className="mb-2 text-xl font-semibold">Error Loading Data</h2>
-        <p className="max-w-md text-muted-foreground">{error}</p>
+      <div className="flex h-full w-full flex-col items-center justify-center text-red-500">
+        <AlertCircle className="h-12 w-12 mb-4" />
+        <h2 className="text-xl font-bold">Error Loading Agents</h2>
+        <p>{error}</p>
       </div>
     );
   }
 
   // Format data for the table
-  const tableData = retailers.map((retailer) => {
-    const availableCredit = retailer.credit_limit - (retailer.credit_used || 0);
-    
+  const tableData = agents.map((agent) => {
     const row = {
       Name: (
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Store className="h-4 w-4" />
+            <Users className="h-4 w-4" />
           </div>
           <div>
-            <div className="font-medium">{retailer.name}</div>
+            <div className="font-medium">{agent.full_name}</div>
             <div className="text-xs text-muted-foreground">
-              {retailer.email}
+              {agent.email}
             </div>
           </div>
         </div>
       ),
-      Agent: retailer.agent_name || "None",
-      "Commission Group": retailer.commission_group_name || "None",
-      Balance: `R ${retailer.balance.toFixed(2)}`,
-      "Available Credit": `R ${availableCredit.toFixed(2)}`,
+      Phone: agent.phone || "Not provided",
+      "Retailers": agent.retailer_count,
+      "Current Commission": `R ${agent.total_commission_earned.toFixed(2)}`,
       Status: (
         <div
           className={cn(
             "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-            retailer.status === "active"
+            agent.status === "active"
               ? "bg-green-500/10 text-green-500"
-              : retailer.status === "inactive"
-              ? "bg-amber-500/10 text-amber-500"
-              : "bg-destructive/10 text-destructive"
+              : "bg-amber-500/10 text-amber-500"
           )}
         >
-          {retailer.status.charAt(0).toUpperCase() + retailer.status.slice(1)}
+          {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
         </div>
       ),
     };
@@ -321,7 +295,7 @@ export default function AdminRetailers() {
     return Object.entries(row).reduce((acc, [key, value]) => {
       acc[key] = (
         <Link
-          href={`/admin/retailers/${retailer.id}`}
+          href={`/admin/agents/${agent.id}`}
           className="cursor-pointer"
           style={{ display: "block" }}
         >
@@ -337,10 +311,10 @@ export default function AdminRetailers() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Retailers
+            Sales Agents
           </h1>
           <p className="text-muted-foreground">
-            Manage retailer accounts and settings.
+            Manage sales agents and assign retailers to them.
           </p>
         </div>
         <button
@@ -348,24 +322,51 @@ export default function AdminRetailers() {
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Retailer
+          Add Agent
         </button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="text-muted-foreground">Total Agents</div>
+          <div className="mt-1 text-2xl font-semibold">{agents.length}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="text-muted-foreground">Active Agents</div>
+          <div className="mt-1 text-2xl font-semibold text-green-600">
+            {agents.filter((a) => a.status === "active").length}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="text-muted-foreground">Total Retailers Managed</div>
+          <div className="mt-1 text-2xl font-semibold">
+            {agents.reduce((sum, a) => sum + a.retailer_count, 0)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="text-muted-foreground">Unassigned Retailers</div>
+          <div className="mt-1 text-2xl font-semibold text-amber-600">
+            {unassignedRetailers.length}
+          </div>
+        </div>
+      </div>
+
       <TablePlaceholder
-        columns={["Name", "Agent", "Commission Group", "Balance", "Available Credit", "Status"]}
+        columns={["Name", "Phone", "Retailers", "Current Commission", "Status"]}
         data={tableData}
         rowsClickable={true}
+        emptyMessage="No agents found."
       />
 
-      {/* Add Retailer Dialog */}
+      {/* Add Agent Dialog */}
       <Dialog.Root open={showAddDialog} onOpenChange={setShowAddDialog}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg">
             <div className="flex items-center justify-between">
               <Dialog.Title className="text-lg font-semibold">
-                Add New Retailer
+                Add New Sales Agent
               </Dialog.Title>
               <Dialog.Close className="rounded-full p-2 hover:bg-muted">
                 <X className="h-4 w-4" aria-hidden="true" />
@@ -383,26 +384,14 @@ export default function AdminRetailers() {
               )}
               <form onSubmit={handleSubmit}>
                 <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Retailer Name</label>
+                  <label className="text-sm font-medium">Full Name</label>
                   <input
                     type="text"
-                    name="businessName"
-                    value={formData.businessName}
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleInputChange}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Enter retailer name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Contact Person</label>
-                  <input
-                    type="text"
-                    name="contactName"
-                    value={formData.contactName}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Contact person name"
+                    placeholder="Enter full name"
                     required
                   />
                 </div>
@@ -419,14 +408,14 @@ export default function AdminRetailers() {
                   />
                 </div>
                 <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">Location</label>
+                  <label className="text-sm font-medium">Phone (Optional)</label>
                   <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Business location"
+                    placeholder="Phone number"
                   />
                 </div>
                 <div className="space-y-2 mb-4">
@@ -476,77 +465,50 @@ export default function AdminRetailers() {
                   </div>
                   {formData.autoGeneratePassword && (
                     <p className="text-xs text-muted-foreground">
-                      This password will be used for the retailer's login
-                      account.
+                      This password will be used for the agent's login account.
                     </p>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Agent</label>
-                    <select
-                      name="agentId"
-                      value={formData.agentId}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Select Agent</option>
-                      {agents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.full_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
+                
+                {/* Retailer Assignment Section */}
+                {unassignedRetailers.length > 0 && (
+                  <div className="space-y-2 mb-6">
                     <label className="text-sm font-medium">
-                      Commission Group
+                      Assign Retailers (Optional)
                     </label>
-                    <select
-                      name="commissionGroupId"
-                      value={formData.commissionGroupId}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Select Group</option>
-                      {commissionGroups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
+                    <div className="border border-input rounded-md max-h-40 overflow-y-auto p-2">
+                      {unassignedRetailers.map((retailer) => (
+                        <div
+                          key={retailer.id}
+                          className="flex items-center space-x-2 py-1"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`retailer-${retailer.id}`}
+                            checked={formData.assignedRetailers.includes(
+                              retailer.id
+                            )}
+                            onChange={() => handleRetailerToggle(retailer.id)}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <label
+                            htmlFor={`retailer-${retailer.id}`}
+                            className="text-sm cursor-pointer flex-1"
+                          >
+                            <div className="font-medium">{retailer.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {retailer.location}
+                            </div>
+                          </label>
+                        </div>
                       ))}
-                    </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Select retailers to assign to this agent. You can also assign retailers later.
+                    </p>
                   </div>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <label className="text-sm font-medium">
-                    Initial Available Balance
-                  </label>
-                  <input
-                    type="number"
-                    name="initialBalance"
-                    value={formData.initialBalance}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="space-y-2 mb-6">
-                  <label className="text-sm font-medium">Credit Limit</label>
-                  <input
-                    type="number"
-                    name="creditLimit"
-                    value={formData.creditLimit}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
+                )}
+
                 <div className="pt-2 flex justify-end space-x-2">
                   <Dialog.Close asChild>
                     <button
@@ -564,10 +526,10 @@ export default function AdminRetailers() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
+                        Creating...
                       </>
                     ) : (
-                      "Add Retailer"
+                      "Add Agent"
                     )}
                   </button>
                 </div>
@@ -578,4 +540,4 @@ export default function AdminRetailers() {
       </Dialog.Root>
     </div>
   );
-}
+} 

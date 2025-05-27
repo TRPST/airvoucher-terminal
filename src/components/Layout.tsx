@@ -157,6 +157,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             icon: Store,
           },
           {
+            name: "Agents",
+            href: "/admin/agents",
+            icon: Users,
+          },
+          {
             name: "Vouchers",
             href: "/admin/vouchers",
             icon: CreditCard,
@@ -215,7 +220,99 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
     }
   };
 
+  // Get bottom tab items for mobile (excludes Reports which stays in sidebar)
+  const getBottomTabItems = (role: UserRole) => {
+    switch (role) {
+      case "admin":
+        return [
+          {
+            name: "Retailers",
+            href: "/admin/retailers",
+            icon: Store,
+          },
+          {
+            name: "Agents",
+            href: "/admin/agents",
+            icon: Users,
+          },
+          {
+            name: "Dashboard",
+            href: "/admin",
+            icon: LayoutDashboard,
+          },
+          {
+            name: "Vouchers",
+            href: "/admin/vouchers",
+            icon: CreditCard,
+          },
+          {
+            name: "Commissions",
+            href: "/admin/commissions",
+            icon: Percent,
+          },
+        ];
+      case "retailer":
+        return [
+          {
+            name: "Sell",
+            href: "/retailer",
+            icon: ShoppingCart,
+          },
+          {
+            name: "History",
+            href: "/retailer/history",
+            icon: History,
+          },
+          {
+            name: "Account",
+            href: "/retailer/account",
+            icon: User,
+          },
+        ];
+      case "agent":
+        return [
+          {
+            name: "Retailers",
+            href: "/agent/retailers",
+            icon: Store,
+          },
+          {
+            name: "Dashboard",
+            href: "/agent",
+            icon: LayoutDashboard,
+          },
+          {
+            name: "Commissions",
+            href: "/agent/commissions",
+            icon: Percent,
+          },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  // Get sidebar-only items for mobile (only Reports for admin, empty for others)
+  const getMobileSidebarItems = (role: UserRole) => {
+    switch (role) {
+      case "admin":
+        return [
+          {
+            name: "Reports",
+            href: "/admin/reports",
+            icon: FileText,
+          },
+        ];
+      case "retailer":
+      case "agent":
+      default:
+        return [];
+    }
+  };
+
   const navItems = getNavItems(role);
+  const bottomTabItems = getBottomTabItems(role);
+  const mobileSidebarItems = getMobileSidebarItems(role);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -267,7 +364,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
              
             </div>
             <nav className="mt-8 flex flex-col space-y-1">
-              {navItems.map((item) => (
+              {mobileSidebarItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -525,8 +622,32 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
 
       {/* Main content */}
       <main className="flex-1 md:pl-64">
-        <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8 pb-20 md:pb-4 lg:pb-8">{children}</div>
       </main>
+
+      {/* Mobile bottom tab navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border md:hidden">
+        <nav className="flex items-center justify-around px-2 py-2">
+          {bottomTabItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center justify-center px-3 py-2 rounded-md text-xs transition-colors min-w-0 flex-1",
+                  isActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "")} />
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }
