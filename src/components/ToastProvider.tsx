@@ -161,6 +161,18 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <ToastContext.Provider value={contextValue}>
       {children}
 
+      {/* Custom styles for responsive Sonner positioning */}
+      <style>{`
+        [data-sonner-toaster] {
+          bottom: 80px !important;
+        }
+        @media (min-width: 768px) {
+          [data-sonner-toaster] {
+            bottom: 16px !important;
+          }
+        }
+      `}</style>
+
       {/* Sonner Toaster (simpler API) */}
       <SonnerToaster
         position="bottom-right"
@@ -185,17 +197,17 @@ export function ToastProvider({ children }: ToastProviderProps) {
                 exit={{ opacity: 0, y: -20, scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 className={cn(
-                  "pointer-events-auto fixed bottom-4 right-4 z-50 rounded-md border shadow-lg",
+                  "pointer-events-auto fixed bottom-20 md:bottom-4 right-4 z-50 rounded-md border shadow-lg",
                   "w-[350px] p-4 flex items-start gap-3",
                   toast.type === "default" && "bg-background border-border",
                   toast.type === "success" &&
-                    "bg-green-500/10 border-green-500/20 text-green-500",
+                    "bg-green-500/90 border-green-500/50 text-white",
                   toast.type === "error" &&
-                    "bg-destructive/10 border-destructive/20 text-destructive",
+                    "bg-destructive/90 border-destructive/50 text-white",
                   toast.type === "warning" &&
-                    "bg-amber-500/10 border-amber-500/20 text-amber-500",
+                    "bg-amber-500/90 border-amber-500/50 text-white",
                   toast.type === "info" &&
-                    "bg-primary/10 border-primary/20 text-primary"
+                    "bg-primary/90 border-primary/50 text-white"
                 )}
               >
                 <div className="flex-1">

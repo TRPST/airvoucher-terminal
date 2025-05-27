@@ -51,12 +51,12 @@ export const SalesOverTimeChart: React.FC<SalesOverTimeChartProps> = ({
   }
 
   return (
-    <div className="bg-card p-4 rounded-xl border border-border shadow-md">
-      <h2 className="text-lg font-semibold mb-4 text-foreground">Sales Over Time</h2>
+    <div className="bg-card rounded-xl border border-border shadow-md">
+      <h2 className="text-lg pl-4 pt-4 font-semibold mb-4 text-foreground">Sales Over Time</h2>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart
           data={data}
-          margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+          margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
           <XAxis
