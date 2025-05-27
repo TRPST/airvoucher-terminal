@@ -22,7 +22,7 @@ export function StickyStatsHeader({
   return (
     <div className="block md:hidden sticky top-16 z-10">
       {/* Blurred background layer */}
-      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-b border-border/50" />
+      <div className="absolute inset-0 bg-background/95 backdrop-blur-sm " />
       
       {/* Content layer - positioned above the blur */}
       <div className="relative z-10">

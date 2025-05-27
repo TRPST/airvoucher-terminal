@@ -82,10 +82,10 @@ export function CommissionGroupCard({
       </div>
 
       <div>
-        <div className="mb-2 grid grid-cols-[1fr_100px_100px] gap-2 items-center border-b border-border pb-2 text-sm font-medium">
+        <div className="mb-2 grid grid-cols-[1fr_100px_100px] md:grid-cols-[1fr_100px_100px] sm:grid-cols-[1fr_70px_70px] gap-2 items-center border-b border-border pb-2 text-sm font-medium">
           <span>Voucher Type</span>
-          <span className="text-right bg-blue-100 dark:bg-blue-900/30 rounded-md py-1 px-3">Retailer %</span>
-          <span className="text-right bg-green-100 dark:bg-green-900/30 rounded-md py-1 px-3">Agent %</span>
+          <span className="text-right bg-blue-100 dark:bg-blue-900/30 rounded-md py-1 px-2 md:px-3">Retailer %</span>
+          <span className="text-right bg-green-100 dark:bg-green-900/30 rounded-md py-1 px-2 md:px-3">Agent %</span>
         </div>
         <div className="space-y-4">
           {(() => {
@@ -119,14 +119,14 @@ export function CommissionGroupCard({
                   {category.rates.map((rate) => (
                     <div
                       key={rate.id}
-                      className="grid grid-cols-[1fr_100px_100px] items-center gap-2"
+                      className="grid grid-cols-[1fr_100px_100px] md:grid-cols-[1fr_100px_100px] sm:grid-cols-[1fr_70px_70px] items-center gap-2"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="hidden md:flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
                           <Percent className="h-3.5 w-3.5" />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                          <span className="text-sm truncate sm:truncate md:overflow-visible" title={rate.voucher_type_name || `Type: ${rate.voucher_type_id.substring(0, 6)}`}>
                             {rate.voucher_type_name || `Type: ${rate.voucher_type_id.substring(0, 6)}`}
                           </span>
                           {/* Supplier Commission Tooltip */}
@@ -139,7 +139,7 @@ export function CommissionGroupCard({
                               }
                               side="right"
                             >
-                              <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help" />
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help flex-shrink-0" />
                             </Tooltip>
                           )}
                         </div>
@@ -166,9 +166,9 @@ export function CommissionGroupCard({
                                 'retailer'
                               )
                             }
-                            className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                            className="w-full rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-1 md:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                           />
-                          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-blue-500 dark:text-blue-400">
+                          <div className="pointer-events-none absolute inset-y-0 right-1 md:right-2 flex items-center text-xs text-blue-500 dark:text-blue-400">
                             %
                           </div>
                         </div>
@@ -176,7 +176,7 @@ export function CommissionGroupCard({
                         <div>
                           <div
                             className={cn(
-                              "bg-blue-100 dark:bg-blue-900/30 rounded-md px-3 py-1 text-right text-sm",
+                              "bg-blue-100 dark:bg-blue-900/30 rounded-md px-2 md:px-3 py-1 text-right text-sm",
                               rate.retailer_pct > 0.02
                                 ? "text-blue-700 dark:text-blue-300"
                                 : "text-amber-500"
@@ -208,9 +208,9 @@ export function CommissionGroupCard({
                                 'agent'
                               )
                             }
-                            className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
+                            className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-1 md:px-2 py-1 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
                           />
-                          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-green-500 dark:text-green-400">
+                          <div className="pointer-events-none absolute inset-y-0 right-1 md:right-2 flex items-center text-xs text-green-500 dark:text-green-400">
                             %
                           </div>
                         </div>
@@ -218,7 +218,7 @@ export function CommissionGroupCard({
                         <div>
                           <div
                             className={cn(
-                              "bg-green-100 dark:bg-green-900/30 rounded-md px-3 py-1 text-right text-sm",
+                              "bg-green-100 dark:bg-green-900/30 rounded-md px-2 md:px-3 py-1 text-right text-sm",
                               rate.agent_pct > 0.02
                                 ? "text-green-700 dark:text-green-300"
                                 : "text-amber-500"
