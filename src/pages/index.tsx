@@ -1,7 +1,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Shield, Store, Users } from "lucide-react";
+import { Shield, Store, Users, UserCheck } from "lucide-react";
 import { PortalCard } from "@/components/PortalCard";
 import { cn } from "@/utils/cn";
 
@@ -31,6 +31,14 @@ export default function LandingPage() {
       link: "/auth/agent",
       gradient: "linear-gradient(to bottom right, #f59e0b, #ea580c)",
       textColor: "#fef3c7",
+    },
+    {
+      title: "Cashier",
+      description: "Process voucher sales and manage transactions",
+      icon: UserCheck,
+      link: "/auth/cashier",
+      gradient: "linear-gradient(to bottom right, #8b5cf6, #a855f7)",
+      textColor: "#f3e8ff",
     },
   ];
 
@@ -75,7 +83,7 @@ export default function LandingPage() {
           </div>
 
           {/* Portal Cards Grid */}
-          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
             {portals.map((portal, index) => (
               <PortalCard
                 key={index}

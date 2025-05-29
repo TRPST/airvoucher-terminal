@@ -29,8 +29,9 @@ import { motion } from "framer-motion";
 
 import { cn } from "@/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useTerminal } from "@/contexts/TerminalContext";
 
-type UserRole = "admin" | "retailer" | "agent";
+type UserRole = "admin" | "retailer" | "agent" | "terminal" | "cashier";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,6 +47,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
+  const { terminalName, retailerName } = useTerminal();
 
   // Fetch user session on component mount
   React.useEffect(() => {
@@ -191,6 +193,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             icon: History,
           },
           {
+            name: "Terminals",
+            href: "/retailer/terminals",
+            icon: CreditCard,
+          },
+          {
             name: "Account",
             href: "/retailer/account",
             icon: User,
@@ -215,6 +222,27 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           },
           // Profile removed from sidebar nav
         ];
+      case "terminal":
+        return [
+          {
+            name: "Sell",
+            href: "/terminal",
+            icon: ShoppingCart,
+          },
+          {
+            name: "History",
+            href: "/terminal/history",
+            icon: History,
+          },
+          {
+            name: "Account",
+            href: "/terminal/account",
+            icon: User,
+          },
+        ];
+      case "cashier":
+        // Cashiers have no sidebar navigation
+        return [];
       default:
         return [];
     }
@@ -264,6 +292,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             icon: History,
           },
           {
+            name: "Terminals",
+            href: "/retailer/terminals",
+            icon: CreditCard,
+          },
+          {
             name: "Account",
             href: "/retailer/account",
             icon: User,
@@ -287,6 +320,27 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             icon: Percent,
           },
         ];
+      case "terminal":
+        return [
+          {
+            name: "Sell",
+            href: "/terminal",
+            icon: ShoppingCart,
+          },
+          {
+            name: "History",
+            href: "/terminal/history",
+            icon: History,
+          },
+          {
+            name: "Account",
+            href: "/terminal/account",
+            icon: User,
+          },
+        ];
+      case "cashier":
+        // Cashiers have no bottom tab navigation
+        return [];
       default:
         return [];
     }
@@ -305,6 +359,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         ];
       case "retailer":
       case "agent":
+      case "terminal":
+      case "cashier":
+        return [];
       default:
         return [];
     }
@@ -314,6 +371,63 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const bottomTabItems = getBottomTabItems(role);
   const mobileSidebarItems = getMobileSidebarItems(role);
 
+  // Special handling for cashier role - minimal UI
+  if (role === "cashier") {
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        {/* Simple header for cashiers */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4">
+          <div className="flex items-center">
+            <span className="font-bold">
+              {terminalName && retailerName ? `${terminalName} • ${retailerName}` : 'AirVoucher Terminal'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {user && (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    className="rounded-md p-2 hover:bg-muted transition-colors outline-none"
+                    aria-label="User menu"
+                  >
+                    <Avatar.Root className="w-8 h-8 rounded-full overflow-hidden bg-primary flex items-center justify-center text-primary-foreground">
+                      <Avatar.Fallback>
+                        {user.email ? user.email.charAt(0).toUpperCase() : "C"}
+                      </Avatar.Fallback>
+                    </Avatar.Root>
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    side="bottom"
+                    align="end"
+                    sideOffset={8}
+                    className="z-50 min-w-[200px] bg-background border border-border rounded-md shadow-md overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 p-1"
+                  >
+                    <DropdownMenu.Item
+                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted cursor-pointer outline-none"
+                      onSelect={handleSignOut}
+                    >
+                      <LogOut className="mr-3 h-5 w-5" />
+                      Sign Out
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            )}
+          </div>
+        </div>
+
+        {/* Main content - no sidebar */}
+        <main className="flex-1">
+          <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
+        </main>
+      </div>
+    );
+  }
+
+  // Regular layout for other roles
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Mobile top nav */}

@@ -3,9 +3,11 @@ import * as AdminActions from "./adminActions";
 import * as RetailerActions from "./retailerActions";
 import * as AgentActions from "./agentActions";
 import * as UserActions from "./userActions";
+import * as TerminalActions from "./terminalActions";
+import * as CashierActions from "./cashierActions";
 
 // Export namespaces
-export { AdminActions, RetailerActions, AgentActions, UserActions };
+export { AdminActions, RetailerActions, AgentActions, UserActions, TerminalActions, CashierActions };
 
 // Alternatively, we can selectively re-export specific items
 // Admin exports
@@ -71,6 +73,21 @@ export {
   fetchRetailerCommissionData,
 } from "./retailerActions";
 
+// Terminal exports
+export type {
+  TerminalProfile,
+  VoucherType as TerminalVoucherType,
+} from "./terminalActions";
+
+export {
+  fetchTerminalProfile,
+  fetchAvailableVoucherTypes as fetchTerminalVoucherTypes,
+  fetchVoucherInventoryByType as fetchTerminalVoucherInventoryByType,
+  fetchRetailerCommissionData as fetchTerminalCommissionData,
+  sellVoucher as sellTerminalVoucher,
+  fetchSalesHistory as fetchTerminalSalesHistory,
+} from "./terminalActions";
+
 // Agent exports
 export type { AgentRetailer, AgentStatement } from "./agentActions";
 
@@ -88,3 +105,13 @@ export {
   fetchAgentStatements,
   fetchAgentSummary,
 } from "./agentActions";
+
+// Cashier exports
+export type {
+  CashierTerminalProfile,
+} from "./cashierActions";
+
+export {
+  fetchCashierTerminal,
+  fetchCashierSalesHistory,
+} from "./cashierActions";

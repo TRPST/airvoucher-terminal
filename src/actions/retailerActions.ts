@@ -700,3 +700,58 @@ export async function fetchTerminals(retailerId: string): Promise<{
 
   return { data: terminals, error: null };
 }
+
+/**
+ * Create a new terminal for a retailer with a cashier account
+ */
+export async function createTerminalForRetailer({
+  retailerId,
+  terminalName,
+  cashierEmail,
+  cashierPassword,
+}: {
+  retailerId: string;
+  terminalName: string;
+  cashierEmail: string;
+  cashierPassword: string;
+}): Promise<{
+  data: { terminal: Terminal; cashierId: string } | null;
+  error: PostgrestError | Error | null;
+}> {
+  try {
+    // Use the API route to create a cashier user and terminal
+    const response = await fetch('/api/retailer/create-cashier', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: cashierEmail,
+        password: cashierPassword,
+        terminalName,
+        retailerId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { data: null, error: new Error(errorData.error || 'Failed to create terminal') };
+    }
+
+    const data = await response.json();
+
+    return {
+      data: {
+        terminal: data.terminal,
+        cashierId: data.cashierId,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error("Unexpected error in createTerminalForRetailer:", err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
