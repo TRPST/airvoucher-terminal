@@ -19,7 +19,7 @@ export function StickyBalanceHeader({
   const totalAvailable = balance + availableCredit;
 
   return (
-    <div className="sticky top-16 z-10 bg-background border-b border-border">
+    <div className="sticky top-16 z-10 bg-background">
       {/* Balance Stats */}
       <div className="grid grid-cols-2 gap-2 p-2 md:grid-cols-4 md:gap-3 md:p-3">
         <CompactStatsTile
@@ -40,11 +40,11 @@ export function StickyBalanceHeader({
           icon={Percent}
           intent="info"
         />
-        <CompactStatsTile
+        {/* <CompactStatsTile
           label="Total"
           value={`R ${totalAvailable.toFixed(2)}`}
           icon={TrendingUp}
-        />
+        /> */}
       </div>
     </div>
   );

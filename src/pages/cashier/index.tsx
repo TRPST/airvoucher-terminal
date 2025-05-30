@@ -437,10 +437,6 @@ export default function CashierPOS() {
         {/* Confetti effect on successful sale */}
         {showConfetti && <ConfettiOverlay />}
 
-        {/* Page Title */}
-        <div>
-          <h2 className="text-xl font-semibold">Select Voucher Type</h2>
-        </div>
 
         {/* Voucher Categories Grid or Voucher Values Grid */}
         {!selectedCategory ? (

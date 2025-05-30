@@ -23,7 +23,6 @@ export const VoucherCategoriesGrid: React.FC<VoucherCategoriesGridProps> = ({
 }) => {
   return (
     <div>
-      <h2 className="mb-4 text-lg font-medium">Select Voucher Type</h2>
       {categories.map((categoryGroup) => (
         <div key={categoryGroup.name} className="mb-6">
           <h3 className="mb-3 text-md font-medium text-muted-foreground">
