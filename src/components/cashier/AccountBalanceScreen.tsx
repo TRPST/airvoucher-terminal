@@ -17,7 +17,7 @@ interface AccountBalanceScreenProps {
   retailerBalance: number;
   retailerCreditLimit: number;
   retailerCreditUsed: number;
-  terminalCommission: number;
+  terminalCommission?: number;
   onBackToAdmin: () => void;
 }
 
@@ -27,7 +27,7 @@ export function AccountBalanceScreen({
   retailerBalance,
   retailerCreditLimit,
   retailerCreditUsed,
-  terminalCommission,
+  terminalCommission = 0,
   onBackToAdmin
 }: AccountBalanceScreenProps) {
   // Calculate available credit
@@ -130,7 +130,7 @@ export function AccountBalanceScreen({
           </div>
           
           <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">Credit Utilisation</p>
+            <p className="text-sm text-muted-foreground">Credit Utilization</p>
             <p className={cn(
               "font-medium",
               creditUtilizationPercentage > 90 ? "text-red-500" :
@@ -174,6 +174,9 @@ export function AccountBalanceScreen({
             <p className="text-3xl font-bold">R {terminalCommission.toFixed(2)}</p>
           </div>
         </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Commissions earned through <span className="font-medium">{terminalName}</span> terminal only
+        </p>
       </motion.div>
     </div>
   );

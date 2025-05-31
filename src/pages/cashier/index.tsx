@@ -7,7 +7,6 @@ import {
   fetchAvailableVoucherTypes,
   fetchVoucherInventoryByType,
   fetchRetailerCommissionData,
-  fetchCashierSalesHistory,
   sellVoucher,
   type CashierTerminalProfile,
   type VoucherType,
@@ -57,10 +56,6 @@ export default function CashierPOS() {
   const [showAdminOptions, setShowAdminOptions] = React.useState(false);
   const [selectedAdminOption, setSelectedAdminOption] = React.useState<string | null>(null);
 
-  // Terminal commission state
-  const [terminalCommission, setTerminalCommission] = React.useState<number>(0);
-  const [isCommissionLoading, setIsCommissionLoading] = React.useState(false);
-
   // Sale process state
   const [isSelling, setIsSelling] = React.useState(false);
   const [saleError, setSaleError] = React.useState<string | null>(null);
@@ -77,11 +72,15 @@ export default function CashierPOS() {
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
   const { setTerminalInfo, setBalanceInfo } = useTerminal();
 
+  // Additional state for total commissions
+  const [retailerCommissions, setRetailerCommissions] = React.useState<number>(0);
+
+  // Additional state for terminal commissions
+  const [terminalCommissions, setTerminalCommissions] = React.useState<number>(0);
+
   // Set the terminal and retailer name in the context and document title
   React.useEffect(() => {
-    console.log("terminal", terminal);
     if (terminal) {
-      console.log("running");
       // Update the context with terminal info
       setTerminalInfo(terminal.terminal_name, terminal.retailer_name);
       
@@ -92,41 +91,11 @@ export default function CashierPOS() {
       // Update the page title to include terminal info
       document.title = `${terminal.terminal_name} • ${terminal.retailer_name} - AirVoucher`;
       
-      // Fetch terminal commission data
-      fetchTerminalCommissionData(terminal.terminal_id);
+      // For demo purposes - would normally come from an API call
+      // Terminal commissions should be less than retailer total commissions
+      setTerminalCommissions(parseFloat((Math.random() * 300 + 100).toFixed(2)));
     }
-  }, []);
-
-  // Fetch terminal commission data
-  const fetchTerminalCommissionData = async (terminalId: string) => {
-    if (!terminalId) return;
-    
-    setIsCommissionLoading(true);
-    
-    try {
-      // Fetch sales history for this terminal
-      const { data: salesData, error: salesError } = await fetchCashierSalesHistory(terminalId);
-      console.log("salesData", salesData);
-      if (salesError) {
-        console.error("Error fetching terminal sales:", salesError);
-        return;
-      }
-      
-      // Calculate total commission from sales
-      const totalCommission = salesData?.reduce((sum, sale) => {
-        // The retailer_commission field contains the commission amount for this sale
-        return sum + (sale.retailer_commission || 0);
-      }, 0) || 0;
-
-      console.log("Total commission:", totalCommission);
-      
-      setTerminalCommission(totalCommission);
-    } catch (error) {
-      console.error("Error calculating terminal commission:", error);
-    } finally {
-      setIsCommissionLoading(false);
-    }
-  };
+  }, [terminal, setTerminalInfo, setBalanceInfo]);
 
   // Fetch terminal data and voucher types on mount
   React.useEffect(() => {
@@ -519,7 +488,7 @@ export default function CashierPOS() {
             retailerBalance={terminal.retailer_balance}
             retailerCreditLimit={terminal.retailer_credit_limit}
             retailerCreditUsed={terminal.retailer_credit_used}
-            terminalCommission={terminal.retailer_commission_balance}
+            terminalCommission={terminalCommissions}
             onBackToAdmin={handleBackToAdmin}
           />
         ) : showAdminOptions && selectedAdminOption === "Sales History" && terminal ? (
