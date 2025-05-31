@@ -112,7 +112,13 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         console.error("Error signing out:", error);
         return;
       }
-      router.push("/");
+      
+      // Redirect based on role
+      if (role === "cashier") {
+        router.push("/auth/cashier");
+      } else {
+        router.push("/");
+      }
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -393,7 +399,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         >
           <div className="flex items-center">
             <span className="font-bold">
-              {terminalName && retailerName ? `${terminalName} • ${retailerName}` : 'AirVoucher Terminal'}
+              {terminalName && retailerName ? `${retailerName} • ${terminalName} ` : 'AirVoucher Terminal'}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -435,6 +441,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                     sideOffset={8}
                     className="z-50 min-w-[200px] bg-background border border-border rounded-md shadow-md overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 p-1"
                   >
+                    <div className="border-b border-border px-3 py-2 mb-1">
+                      <p className="text-sm font-medium">{user.email}</p>
+                    </div>
                     <DropdownMenu.Item
                       className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted cursor-pointer outline-none"
                       onSelect={handleSignOut}
