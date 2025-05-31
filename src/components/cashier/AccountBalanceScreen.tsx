@@ -130,7 +130,7 @@ export function AccountBalanceScreen({
           </div>
           
           <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">Credit Utilization</p>
+            <p className="text-sm text-muted-foreground">Credit Utilisation</p>
             <p className={cn(
               "font-medium",
               creditUtilizationPercentage > 90 ? "text-red-500" :
