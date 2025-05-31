@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentPortal, VALID_PORTALS, type PortalType } from '@/utils/subdomain';
-import { DebugInfo } from '@/components/DebugInfo';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -61,8 +60,7 @@ export default function AuthPage() {
           <p>Hostname: {currentHostname}</p>
           <p>Detected Portal: {portalType || 'None'}</p>
         </div>
-      </div>
-      <DebugInfo />
+      </div>      
     </div>
   );
 } 

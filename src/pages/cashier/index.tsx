@@ -163,16 +163,16 @@ export default function CashierPOS() {
         let color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
         
         if (name?.includes('Vodacom')) {
-          icon = <img src="/vouchers/vodacom-logo.png" alt="Vodacom" className="w-full h-full object-cover rounded-lg" />;
+          icon = <img src="/assets/vouchers/vodacom-logo.png" alt="Vodacom" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
         } else if (name?.includes('MTN')) {
-          icon = <img src="/vouchers/mtn-logo.jpg" alt="MTN" className="w-full h-full object-cover rounded-lg" />;
+          icon = <img src="/assets/vouchers/mtn-logo.jpg" alt="MTN" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-yellow-500/5 hover:bg-yellow-500/10 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20";
         } else if (name?.includes('CellC')) {
-          icon = <img src="/vouchers/cellc-logo.png" alt="Cell C" className="w-full h-full object-cover rounded-lg" />;
+          icon = <img src="/assets/vouchers/cellc-logo.png" alt="Cell C" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20";
         } else if (name?.includes('Telkom')) {
-          icon = <img src="/vouchers/telkom-logo.png" alt="Telkom" className="w-full h-full object-cover rounded-lg" />;
+          icon = <img src="/assets/vouchers/telkom-logo.png" alt="Telkom" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20";
         }
         
@@ -200,21 +200,21 @@ export default function CashierPOS() {
           case "ott":
           case "netflix":
           case "showmax":
-            icon = <img src="/vouchers/ott-logo.png" alt="OTT" className="w-full h-full object-cover rounded-lg" />;
+            icon = <img src="/assets/vouchers/ott-logo.png" alt="OTT" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-purple-500/5 hover:bg-purple-500/10 dark:bg-purple-500/10 dark:hover:bg-purple-500/20";
             break;
           case "betting":
           case "hollywoodbets":
           case "betway":
-            icon = <img src="/vouchers/hollywoodbets-logo.jpg" alt="Hollywoodbets" className="w-full h-full object-cover rounded-lg" />;
+            icon = <img src="/assets/vouchers/hollywoodbets-logo.jpg" alt="Hollywoodbets" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
           case "ringa":
-            icon = <img src="/vouchers/ringas-logo.jpg" alt="Ringas" className="w-full h-full object-cover rounded-lg" />;
+            icon = <img src="/assets/vouchers/ringas-logo.jpg" alt="Ringas" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/20";
             break;
           case "easyload":
-            icon = <img src="/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
+            icon = <img src="/assets/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
           default:
@@ -551,13 +551,6 @@ export default function CashierPOS() {
           />
         )}
       </main>
-
-      {/* Quick Action Footer
-      <QuickActionFooter
-        onEnterAmount={handleEnterAmount}
-        onSellVoucher={handleSellVoucher}
-        onViewRecentSales={handleViewRecentSales}
-      /> */}
 
       {/* Dialogs and Feedback */}
       {showConfirmDialog && selectedCategory && selectedValue && (

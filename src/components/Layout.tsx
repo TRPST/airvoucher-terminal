@@ -397,11 +397,13 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4"
           key={`cashier-header-${balanceDisplay}-${creditDisplay}`}
         >
+          
           <div className="flex items-center">
+          <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
             <span className="font-bold">
               {terminalName && retailerName ? `${retailerName} • ${terminalName} ` : 'AirVoucher Terminal'}
             </span>
-          </div>
+          </div>          
           <div className="flex items-center gap-4">
             {/* Balance Display */}
             {isBalanceLoading ? (
@@ -479,9 +481,35 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="font-bold">AirVoucher</span>
+          <div className="flex flex-col">
+            <span className="font-bold">AirVoucher</span>
+            {terminalName && retailerName && (
+              <span className="text-xs text-muted-foreground">
+                {retailerName} • {terminalName}
+              </span>
+            )}
+          </div>
         </div>
         <ThemeToggle />
+      </div>
+
+      {/* Mobile balance display - sticky below navbar */}
+      <div className="sticky top-[57px] z-20 bg-background border-b border-border p-3 flex justify-center items-center md:hidden">
+        {isBalanceLoading ? (
+          <div className="flex items-center gap-2 w-full justify-center">
+            <div className="w-[45%] h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
+            <div className="w-[45%] h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 w-full justify-center">
+            <div className="flex items-center px-3 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium text-sm flex-1 justify-center">
+              Balance: <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium text-sm flex-1 justify-center">
+              Credit: <span className="ml-1 font-bold">R{availableCredit.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile sidebar (drawer) */}
@@ -502,19 +530,12 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               </button>
             </div>
             <div className="mb-4">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">AirVoucher</h1>
-                {/* Logout button removed from top of sidebar */}
-                <div className="w-8 h-5"></div>{" "}
-                {/* Spacer to maintain layout */}
+              <div className="flex items-center justify-center">
+                <h1 className="text-2xl font-bold flex items-center">
+                  <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
+                  AirVoucher
+                </h1>
               </div>
-              <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
-                {role === "retailer" && retailerProfile?.name
-                  ? retailerProfile.name
-                  : `${role.charAt(0).toUpperCase() + role.slice(1)} Portal`}
-              </div>
-              
-             
             </div>
             <nav className="mt-8 flex flex-col space-y-1">
               {mobileSidebarItems.map((item) => (
@@ -555,9 +576,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                         <p className="text-sm font-medium truncate">
                           {user.email}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {role.charAt(0).toUpperCase() + role.slice(1)}
-                        </p>
                       </div>
                     </button>
                   </DropdownMenu.Trigger>
@@ -574,30 +592,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                         borderRadius: "0.375rem",
                       }}
                     >
-                      {/* <DropdownMenu.Item
-                        className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
-                        onSelect={() => {
-                          // Navigate to profile based on role
-                          const profilePath =
-                            role === "retailer"
-                              ? "/retailer/account"
-                              : `/${role}/profile`;
-                          router.push(profilePath);
-                          setSidebarOpen(false); // Close sidebar after navigation
-                        }}
-                      >
-                        <motion.div
-                          className="flex items-center justify-between w-full"
-                          whileHover={{ scale: 1.01 }}
-                          transition={{ duration: 0.1, ease: "easeOut" }}
-                        >
-                          <div className="flex items-center">
-                            <User className="mr-3 h-5 w-5" />
-                            View Profile
-                          </div>
-                          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </motion.div>
-                      </DropdownMenu.Item> */}
                       <DropdownMenu.Item
                         className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
                         onSelect={handleSignOut}
@@ -635,18 +629,13 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
       <div className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-border bg-background p-4 md:block">
         <div className="flex h-full flex-col">
           <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">AirVoucher</h1>
-              {/* Logout button removed from top of sidebar */}
-              <div className="w-8 h-5"></div> {/* Spacer to maintain layout */}
-            </div>
-            <div className="mt-4 rounded-full bg-primary py-1 px-4 text-center text-sm font-medium text-primary-foreground">
-              {role === "retailer" && retailerProfile?.name
-                ? retailerProfile.name
-                : `${role.charAt(0).toUpperCase() + role.slice(1)} Portal`}
+            <div className="flex items-center justify-center">
+              <h1 className="text-2xl font-bold flex items-center">
+                <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
+                AirVoucher
+              </h1>
             </div>
           </div>
-          {/* User info removed from here - moved to bottom */}
 
           <nav className="flex flex-1 flex-col space-y-1">
             {navItems.map((item) => (
@@ -698,9 +687,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                       <p className="text-sm font-medium truncate">
                         {user?.email || "User"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                      </p>
                     </div>
                   </button>
                 </DropdownMenu.Trigger>
@@ -717,29 +703,6 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                       borderRadius: "0.375rem",
                     }}
                   >
-                    {/* <DropdownMenu.Item
-                      className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
-                      onSelect={() => {
-                        // Navigate to profile based on role
-                        const profilePath =
-                          role === "retailer"
-                            ? "/retailer/account"
-                            : `/${role}/profile`;
-                        router.push(profilePath);
-                      }}
-                    >
-                      <motion.div
-                        className="flex items-center justify-between w-full"
-                        whileHover={{ scale: 1.01 }}
-                        transition={{ duration: 0.1, ease: "easeOut" }}
-                      >
-                        <div className="flex items-center">
-                          <User className="mr-3 h-5 w-5" />
-                          View Profile
-                        </div>
-                        <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </motion.div>
-                    </DropdownMenu.Item> */}
                     <DropdownMenu.Item
                       className="flex items-center rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted group outline-none border-0 focus:outline-none focus:border-0 focus:ring-0 data-[highlighted]:outline-none data-[highlighted]:bg-muted data-[highlighted]:border-0 data-[state=open]:outline-none cursor-pointer"
                       onSelect={handleSignOut}

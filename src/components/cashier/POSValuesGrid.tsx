@@ -21,20 +21,27 @@ export function POSValuesGrid({
 }: POSValuesGridProps) {
   return (
     <div className="px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onBackToCategories}
-          className="flex items-center space-x-1"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Back</span>
-        </Button>
-        <h2 className="text-xl font-bold">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onBackToCategories}
+            className="flex items-center space-x-1 self-start"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+          <h2 className="text-xl mt-5 font-bold whitespace-nowrap sm:hidden">
+            {selectedCategory} Vouchers
+          </h2>
+        </div>
+        
+        <h2 className="text-xl font-bold whitespace-nowrap hidden sm:block">
           {selectedCategory} Vouchers
         </h2>
-        <div className="w-20"></div> {/* Spacer for alignment */}
+        
+        <div className="w-20 hidden sm:block"></div> {/* Spacer for alignment on larger screens */}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

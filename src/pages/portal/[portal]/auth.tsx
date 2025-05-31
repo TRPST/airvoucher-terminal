@@ -6,6 +6,7 @@ import { VALID_PORTALS, type PortalType, getCurrentPortal } from "@/utils/subdom
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DebugInfo } from "@/components/DebugInfo";
+import Image from "next/image";
 
 export default function PortalAuthPage() {
   const router = useRouter();
@@ -76,8 +77,7 @@ export default function PortalAuthPage() {
           >
             Return to Home
           </Link>
-        </div>
-        <DebugInfo />
+        </div>      
       </div>
     );
   }
@@ -86,30 +86,10 @@ export default function PortalAuthPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m12 19-7-7 7-7" />
-                <path d="M19 12H5" />
-              </svg>
-              Back to Home
-            </Link>
-          </div>
-          <span className="text-sm font-medium">{getPortalDisplay()} Portal</span>
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center">
+          
+           <Image src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" width={100} height={100} />
+          
         </div>
       </header>
 
@@ -137,8 +117,6 @@ export default function PortalAuthPage() {
           </div>
         </div>
       </footer>
-      
-      <DebugInfo />
     </div>
   );
 } 

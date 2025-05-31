@@ -191,7 +191,7 @@ export function SalesHistoryScreen({
 
   return (
     <div className="space-y-6 px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex-col sm:flex-row items-center justify-between">
         <Button
           variant="outline"
           size="sm"
@@ -201,7 +201,7 @@ export function SalesHistoryScreen({
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </Button>
-        <h2 className="text-xl font-bold">Terminal Sales History</h2>
+        <h2 className="text-xl font-bold mt-2">Terminal Sales History</h2>
         <div className="w-20"></div> {/* Spacer for alignment */}
       </div>
 
