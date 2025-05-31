@@ -46,13 +46,25 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   // State to manage user and session
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
-  const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
-  const { terminalName, retailerName, balance, availableCredit, isBalanceLoading } = useTerminal();
+  const [retailerProfile, setRetailerProfile] =
+    React.useState<RetailerProfile | null>(null);
+  const {
+    terminalName,
+    retailerName,
+    balance,
+    availableCredit,
+    isBalanceLoading,
+  } = useTerminal();
 
   // Debug balance changes
   React.useEffect(() => {
     if (role === "cashier") {
-      console.log("Balance updated in Layout:", balance.toFixed(2), "Credit:", availableCredit.toFixed(2));
+      console.log(
+        "Balance updated in Layout:",
+        balance.toFixed(2),
+        "Credit:",
+        availableCredit.toFixed(2)
+      );
     }
   }, [balance, availableCredit, role]);
 
@@ -112,7 +124,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         console.error("Error signing out:", error);
         return;
       }
-      
+
       // Redirect based on role
       if (role === "cashier") {
         router.push("/auth/cashier");
@@ -128,33 +140,38 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const getUserRoleFromProfile = async (userId: string) => {
     // Use the getUserRole action instead of directly querying supabase
     const { data, error } = await getUserRole(userId);
-    
+
     if (error) {
       console.error("Error fetching user profile:", error);
       return null;
     }
-    
+
     return data;
   };
 
   // Handle cross-portal navigation
-  const handlePortalNavigation = useCallback(async (targetRole: UserRole) => {
-    if (role !== targetRole) {
-      try {
-        console.log(`Switching from ${role} portal to ${targetRole} portal. Signing out first.`);
-        // Sign out the current user using the action
-        const { error: signOutError } = await signOutUser();
-        if (signOutError) {
-          console.error("Error signing out:", signOutError);
-          return;
+  const handlePortalNavigation = useCallback(
+    async (targetRole: UserRole) => {
+      if (role !== targetRole) {
+        try {
+          console.log(
+            `Switching from ${role} portal to ${targetRole} portal. Signing out first.`
+          );
+          // Sign out the current user using the action
+          const { error: signOutError } = await signOutUser();
+          if (signOutError) {
+            console.error("Error signing out:", signOutError);
+            return;
+          }
+          // Redirect to the auth page for the target role
+          router.push(`/auth/${targetRole}`);
+        } catch (error) {
+          console.error("Error during portal navigation:", error);
         }
-        // Redirect to the auth page for the target role
-        router.push(`/auth/${targetRole}`);
-      } catch (error) {
-        console.error("Error during portal navigation:", error);
       }
-    }
-  }, [role, router]);
+    },
+    [role, router]
+  );
 
   // Generate navigation items based on user role
   const getNavItems = (role: UserRole) => {
@@ -393,19 +410,24 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         {/* Simple header for cashiers with key for re-render */}
-        <div 
+        <div
           className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4"
           key={`cashier-header-${balanceDisplay}-${creditDisplay}`}
         >
-          
           <div className="flex items-center">
-          <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
+            <img
+              src="/assets/airvoucher-logo.png"
+              alt="AirVoucher Logo"
+              className="h-8 mr-2"
+            />
             <span className="font-bold">
-              {terminalName && retailerName ? `${retailerName} • ${terminalName} ` : 'AirVoucher Terminal'}
+              {terminalName && retailerName
+                ? `${retailerName} ${window.innerWidth < 640 ? '' : ' • '}${terminalName}`
+                : "AirVoucher Terminal"}
             </span>
-          </div>          
-          <div className="flex items-center gap-4">
-            {/* Balance Display */}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Balance Display for Desktop */}
             {isBalanceLoading ? (
               <div className="hidden sm:flex items-center gap-2">
                 <div className="w-36 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
@@ -414,10 +436,12 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             ) : (
               <div className="hidden sm:flex items-center gap-2">
                 <div className="flex items-center px-4 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium">
-                  Balance: <span className="ml-1 font-bold">R{balanceDisplay}</span>
+                  Balance:{" "}
+                  <span className="ml-1 font-bold">R{balanceDisplay}</span>
                 </div>
                 <div className="flex items-center px-4 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium">
-                  Credit: <span className="ml-1 font-bold">R{creditDisplay}</span>
+                  Credit:{" "}
+                  <span className="ml-1 font-bold">R{creditDisplay}</span>
                 </div>
               </div>
             )}
@@ -458,6 +482,25 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               </DropdownMenu.Root>
             )}
           </div>
+        </div>
+
+        {/* Full-width balance row for mobile */}
+        <div className="sticky top-[57px] z-20 w-full border-b border-border bg-background p-3 sm:hidden">
+          {isBalanceLoading ? (
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
+              <div className="flex-1 h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 items-center px-3 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium text-sm flex justify-center">
+                Balance: <span className="ml-1 font-bold">R{balanceDisplay}</span>
+              </div>
+              <div className="flex-1 items-center px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium text-sm flex justify-center">
+                Credit: <span className="ml-1 font-bold">R{creditDisplay}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Main content - no sidebar */}
@@ -503,10 +546,14 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         ) : (
           <div className="flex items-center gap-2 w-full justify-center">
             <div className="flex items-center px-3 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium text-sm flex-1 justify-center">
-              Balance: <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
+              Balance:{" "}
+              <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
             </div>
             <div className="flex items-center px-3 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium text-sm flex-1 justify-center">
-              Credit: <span className="ml-1 font-bold">R{availableCredit.toFixed(2)}</span>
+              Credit:{" "}
+              <span className="ml-1 font-bold">
+                R{availableCredit.toFixed(2)}
+              </span>
             </div>
           </div>
         )}
@@ -532,7 +579,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
             <div className="mb-4">
               <div className="flex items-center justify-center">
                 <h1 className="text-2xl font-bold flex items-center">
-                  <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
+                  <img
+                    src="/assets/airvoucher-logo.png"
+                    alt="AirVoucher Logo"
+                    className="h-8 mr-2"
+                  />
                   AirVoucher
                 </h1>
               </div>
@@ -631,7 +682,11 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           <div className="mb-4">
             <div className="flex items-center justify-center">
               <h1 className="text-2xl font-bold flex items-center">
-                <img src="/assets/airvoucher-logo.png" alt="AirVoucher Logo" className="h-8 mr-2" />
+                <img
+                  src="/assets/airvoucher-logo.png"
+                  alt="AirVoucher Logo"
+                  className="h-8 mr-2"
+                />
                 AirVoucher
               </h1>
             </div>
@@ -738,7 +793,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
 
       {/* Main content */}
       <main className="flex-1 md:pl-64">
-        <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8 pb-20 md:pb-4 lg:pb-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8 pb-20 md:pb-4 lg:pb-8">
+          {children}
+        </div>
       </main>
 
       {/* Mobile bottom tab navigation */}
@@ -757,7 +814,9 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "")} />
+                <item.icon
+                  className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "")}
+                />
                 <span className="truncate">{item.name}</span>
               </Link>
             );
