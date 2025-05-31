@@ -2,47 +2,28 @@ import * as React from "react";
 import { Printer, X, Receipt, Clock, Hash } from "lucide-react";
 
 interface SaleReceiptDialogProps {
-  showDialog: boolean;
+  receiptData: any;
   onClose: () => void;
-  receipt: {
-    sale_id: string;
-    voucher_code: string;
-    serial_number: string;
-    ref_number: string;
-    retailer_name: string;
-    terminal_name: string;
-    sale_amount: number;
-    retailer_commission: number;
-    agent_commission: number;
-    timestamp: string;
-    product_name: string;
-    terminal_id: string;
-    instructions: string;
-  } | null;
+  terminalName: string;
+  retailerName: string;
 }
 
 export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
-  showDialog,
+  receiptData,
   onClose,
-  receipt,
-}) => {
-
-  
+  terminalName,
+  retailerName,
+}) => {  
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
-    if (showDialog) {
-      // Disable scrolling on body when modal is open
-      document.body.style.overflow = "hidden";
-    } else {
-      // Re-enable scrolling when modal is closed
-      document.body.style.overflow = "auto";
-    }
+    // Disable scrolling on body when modal is open
+    document.body.style.overflow = "hidden";
 
     // Cleanup function to ensure scrolling is re-enabled when component unmounts
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [showDialog]);
+  }, []);
 
   // Format amount with Rand symbol
   const formatAmount = (amount: number) => {
@@ -75,7 +56,15 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
     window.print();
   };
 
-  if (!showDialog || !receipt) return null;
+  if (!receiptData) return null;
+
+  const saleDate = receiptData.timestamp || new Date().toISOString();
+  const voucherAmount = receiptData.amount || 0;
+  const pin = receiptData.voucher_code || receiptData.pin || "";
+  const serialNumber = receiptData.serial_number || "";
+  const refNumber = receiptData.ref_number || `REF-${Date.now()}`;
+  const instructions = receiptData.instructions || "Use the voucher code to recharge your account";
+  const voucherType = receiptData.voucherType || receiptData.product_name || "Voucher";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
@@ -100,22 +89,22 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium">Retailer:</span>
-                <span className="text-right">{receipt.retailer_name}</span>
+                <span className="text-right">{retailerName}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-medium whitespace-nowrap">Terminal:</span>
-                <span className="text-right">{receipt.terminal_name}</span>
+                <span className="text-right">{terminalName}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-medium">Voucher:</span>
-                <span className="text-right">{receipt.product_name} R {receipt.sale_amount.toFixed(2)}</span>
+                <span className="text-right">{voucherType} {formatAmount(voucherAmount)}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-medium">Amount Paid:</span>
-                <span className="text-right">{formatAmount(receipt.sale_amount)}</span>
+                <span className="text-right">{formatAmount(voucherAmount)}</span>
               </div>
 
               <div className="border-t border-border pt-2">
@@ -124,7 +113,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                 </div>
                 <div className="mt-1 flex items-center justify-center bg-background/50 p-2 rounded">
                   <code className="text-lg font-bold tracking-wider text-primary">
-                    {formatVoucherCode(receipt.voucher_code)}
+                    {formatVoucherCode(pin)}
                   </code>
                 </div>
               </div>
@@ -134,14 +123,14 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                   <span className="font-medium">Instructions:</span>
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {receipt.instructions}
+                  {instructions}
                 </div>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2 items-center">
                 <span className="font-medium">Serial Number:</span>
                 <code className="font-mono text-xs bg-background/50 p-1 rounded text-right">
-                  {receipt.serial_number}
+                  {serialNumber}
                 </code>
               </div>
 
@@ -150,7 +139,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Date & Time:</span>
                 </div>
-                <span className="text-right">{formatDate(receipt.timestamp)}</span>
+                <span className="text-right">{formatDate(saleDate)}</span>
               </div>
 
               <div className="flex justify-between border-t border-border pt-2 items-center">
@@ -158,7 +147,7 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
                   <Hash className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Ref Number:</span>
                 </div>
-                <span className="text-sm text-right">{receipt.ref_number}</span>
+                <span className="text-sm text-right">{refNumber}</span>
               </div>
             </div>
           </div>

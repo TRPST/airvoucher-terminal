@@ -2,15 +2,31 @@ import * as React from "react";
 
 type SuccessToastProps = {
   show: boolean;
-  category: string | null;
-  value: number | null;
+  voucherType: string;
+  amount: number;
+  pin: string;
+  onClose: () => void;
+  onViewReceipt: () => void;
 };
 
 export const SuccessToast: React.FC<SuccessToastProps> = ({
   show,
-  category,
-  value,
+  voucherType,
+  amount,
+  pin,
+  onClose,
+  onViewReceipt,
 }) => {
+  // Auto-close the toast after 5 seconds
+  React.useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
   if (!show) return null;
 
   return (
@@ -31,12 +47,18 @@ export const SuccessToast: React.FC<SuccessToastProps> = ({
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
-        <div>
+        <div className="flex-1">
           <h4 className="font-medium">Sale Successful!</h4>
           <p className="text-sm">
-            {category} voucher for R {value?.toFixed(2)} sold successfully.
+            {voucherType} voucher for R {amount.toFixed(2)} sold successfully.
           </p>
         </div>
+        <button 
+          onClick={onViewReceipt}
+          className="ml-2 px-3 py-1 text-xs rounded-md border border-green-500/30 hover:bg-green-500/20"
+        >
+          View Receipt
+        </button>
       </div>
     </div>
   );

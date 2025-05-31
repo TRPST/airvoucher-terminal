@@ -1,128 +1,129 @@
-# Database Tables Overview
+# Database Summary
 
-## 1. **Commission Group Rates**
-- **Table Name:** `commission_group_rates`
-- **Description:** Stores commission rates for different groups and voucher types.
+## Tables
+
+### 1. commission_group_rates
 - **Fields:**
-  - `id` (uuid): Unique identifier for each record.
-  - `commission_group_id` (uuid): Foreign key referencing `commission_groups(id)`.
-  - `voucher_type_id` (uuid): Foreign key referencing `voucher_types(id)`.
-  - `retailer_pct` (numeric(5,2)): Percentage for retailers.
-  - `agent_pct` (numeric(5,2)): Percentage for agents.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
+  - `id` (uuid, Primary Key)
+  - `commission_group_id` (uuid, Foreign Key)
+  - `voucher_type_id` (uuid, Foreign Key)
+  - `retailer_pct` (numeric(5,2))
+  - `agent_pct` (numeric(5,2))
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)
+- **Relationships:**
+  - Foreign Key to `commission_groups(id)`
+  - Foreign Key to `voucher_types(id)`
 
-## 2. **Commission Groups**
-- **Table Name:** `commission_groups`
-- **Description:** Contains different commission groups.
+### 2. commission_groups
 - **Fields:**
-  - `id` (uuid): Unique identifier for each group.
-  - `name` (text): Name of the commission group.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
-  - `description` (text): Optional description of the group.
+  - `id` (uuid, Primary Key)
+  - `name` (text)
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)
+  - `description` (text, Nullable)
 
-## 3. **Profiles**
-- **Table Name:** `profiles`
-- **Description:** Stores user profiles linked to the authentication system.
+### 3. profiles
 - **Fields:**
-  - `id` (uuid): Unique identifier for each profile.
-  - `role` (text): Role of the user (admin, retailer, agent).
-  - `full_name` (text): Full name of the user.
-  - `email` (text): Email address of the user.
-  - `phone` (text): Optional phone number.
-  - `avatar_url` (text): Optional URL for the user's avatar.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
+  - `id` (uuid, Primary Key, Foreign Key)
+  - `role` (text)
+  - `full_name` (text)
+  - `email` (text)
+  - `phone` (text, Nullable)
+  - `avatar_url` (text, Nullable)
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)
+- **Relationships:**
+  - Foreign Key to `auth.users(id)`
 
-## 4. **Retailers**
-- **Table Name:** `retailers`
-- **Description:** Contains information about retailers.
+### 4. retailers
 - **Fields:**
-  - `id` (uuid): Unique identifier for each retailer.
-  - `user_profile_id` (uuid): Foreign key referencing `profiles(id)`.
-  - `name` (text): Name of the retailer.
-  - `contact_name` (text): Optional contact person's name.
-  - `contact_email` (text): Optional contact email.
-  - `location` (text): Optional location of the retailer.
-  - `agent_profile_id` (uuid): Foreign key referencing `profiles(id)`.
-  - `commission_group_id` (uuid): Foreign key referencing `commission_groups(id)`.
-  - `balance` (numeric(12,2)): Current balance of the retailer.
-  - `credit_limit` (numeric(12,2)): Credit limit for the retailer.
-  - `credit_used` (numeric(12,2)): Amount of credit used.
-  - `commission_balance` (numeric(12,2)): Balance of commissions.
-  - `status` (text): Current status of the retailer (active, suspended, inactive).
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
+  - `id` (uuid, Primary Key)
+  - `user_profile_id` (uuid, Foreign Key)
+  - `name` (text)
+  - `contact_name` (text, Nullable)
+  - `contact_email` (text, Nullable)
+  - `location` (text, Nullable)
+  - `agent_profile_id` (uuid, Foreign Key, Nullable)
+  - `commission_group_id` (uuid, Foreign Key, Nullable)
+  - `balance` (numeric(12,2))
+  - `credit_limit` (numeric(12,2))
+  - `credit_used` (numeric(12,2))
+  - `commission_balance` (numeric(12,2))
+  - `status` (text)
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)
+- **Relationships:**
+  - Foreign Key to `profiles(id)`
+  - Foreign Key to `commission_groups(id)`
+  - Foreign Key to `profiles(id)` (for `agent_profile_id`)
 
-## 5. **Sales**
-- **Table Name:** `sales`
-- **Description:** Records details of completed sales transactions.
+### 5. sales
 - **Fields:**
-  - `id` (uuid): Unique identifier for each sale.
-  - `terminal_id` (uuid): Foreign key referencing `terminals(id)`.
-  - `voucher_inventory_id` (uuid): Foreign key referencing `voucher_inventory(id)`.
-  - `sale_amount` (numeric(12,2)): Amount of the sale.
-  - `retailer_commission` (numeric(12,2)): Commission for the retailer.
-  - `agent_commission` (numeric(12,2)): Commission for the agent.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `profit` (numeric): Profit from the sale.
+  - `id` (uuid, Primary Key)
+  - `terminal_id` (uuid, Foreign Key, Nullable)
+  - `voucher_inventory_id` (uuid, Foreign Key)
+  - `sale_amount` (numeric(12,2))
+  - `retailer_commission` (numeric(12,2))
+  - `agent_commission` (numeric(12,2))
+  - `created_at` (timestamp with time zone)
+  - `profit` (numeric, Nullable)
+  - `ref_number` (text)
+  - `supplier_commission` (numeric)
+- **Relationships:**
+  - Foreign Key to `terminals(id)`
+  - Foreign Key to `voucher_inventory(id)`
 
-## 6. **Terminals**
-- **Table Name:** `terminals`
-- **Description:** Contains information about sales terminals.
+### 6. terminals
 - **Fields:**
-  - `id` (uuid): Unique identifier for each terminal.
-  - `retailer_id` (uuid): Foreign key referencing `retailers(id)`.
-  - `name` (text): Name of the terminal.
-  - `last_active` (timestamp with time zone): Timestamp of last activity.
-  - `status` (text): Current status of the terminal (active, inactive).
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
+  - `id` (uuid, Primary Key)
+  - `retailer_id` (uuid, Foreign Key)
+  - `name` (text)
+  - `last_active` (timestamp with time zone, Nullable)
+  - `status` (text)
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)
+  - `auth_user_id` (uuid, Foreign Key, Nullable)
+  - `cashier_profile_id` (uuid, Foreign Key, Nullable)
+- **Relationships:**
+  - Foreign Key to `retailers(id)`
+  - Foreign Key to `profiles(id)` (for `auth_user_id`)
+  - Foreign Key to `profiles(id)` (for `cashier_profile_id`)
 
-## 7. **Transactions**
-- **Table Name:** `transactions`
-- **Description:** Logs all financial transactions related to sales and retailer balances.
+### 7. transactions
 - **Fields:**
-  - `id` (uuid): Unique identifier for each transaction.
-  - `type` (text): Type of transaction (deposit, withdrawal, sale, etc.).
-  - `amount` (numeric(12,2)): Amount involved in the transaction.
-  - `balance_after` (numeric(12,2)): Balance after the transaction.
-  - `retailer_id` (uuid): Foreign key referencing `retailers(id)`.
-  - `agent_profile_id` (uuid): Foreign key referencing `profiles(id)`.
-  - `sale_id` (uuid): Foreign key referencing `sales(id)`.
-  - `notes` (text): Optional notes about the transaction.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
+  - `id` (uuid, Primary Key)
+  - `type` (text)
+  - `amount` (numeric(12,2))
+  - `balance_after` (numeric(12,2))
+  - `retailer_id` (uuid, Foreign Key, Nullable)
+  - `agent_profile_id` (uuid, Foreign Key, Nullable)
+  - `sale_id` (uuid, Foreign Key, Nullable)
+  - `notes` (text, Nullable)
+  - `created_at` (timestamp with time zone)
+- **Relationships:**
+  - Foreign Key to `retailers(id)`
+  - Foreign Key to `profiles(id)` (for `agent_profile_id`)
+  - Foreign Key to `sales(id)`
 
-## 8. **Voucher Inventory**
-- **Table Name:** `voucher_inventory`
-- **Description:** Manages the available vouchers for sale.
+### 8. voucher_inventory
 - **Fields:**
-  - `id` (uuid): Unique identifier for each voucher.
-  - `voucher_type_id` (uuid): Foreign key referencing `voucher_types(id)`.
-  - `amount` (numeric(12,2)): Amount associated with the voucher.
-  - `pin` (text): Unique pin for the voucher.
-  - `serial_number` (text): Optional serial number.
-  - `expiry_date` (date): Optional expiry date of the voucher.
-  - `status` (text): Current status of the voucher (available, sold, disabled).
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `sold_at` (timestamp with time zone): Timestamp of when the voucher was sold.
+  - `id` (uuid, Primary Key)
+  - `voucher_type_id` (uuid, Foreign Key)
+  - `amount` (numeric(12,2))
+  - `pin` (text)
+  - `serial_number` (text, Nullable)
+  - `expiry_date` (date, Nullable)
+  - `status` (text)
+  - `created_at` (timestamp with time zone)
+  - `sold_at` (timestamp with time zone, Nullable)
+- **Relationships:**
+  - Foreign Key to `voucher_types(id)`
 
-## 9. **Voucher Types**
-- **Table Name:** `voucher_types`
-- **Description:** Defines different types of vouchers available for sale.
+### 9. voucher_types
 - **Fields:**
-  - `id` (uuid): Unique identifier for each voucher type.
-  - `name` (text): Name of the voucher type.
-  - `supplier_commission_pct` (numeric(5,2)): Commission percentage for suppliers.
-  - `created_at` (timestamp with time zone): Timestamp of record creation.
-  - `updated_at` (timestamp with time zone): Timestamp of last update.
-
-## Relationships
-- **Profiles** are linked to **Retailers** through `user_profile_id`.
-- **Retailers** can have multiple **Terminals** and are linked to **Sales** through `retailer_id`.
-- **Sales** are linked to **Voucher Inventory** through `voucher_inventory_id`.
-- **Transactions** can reference **Sales**, **Retailers**, and **Profiles** for agents.
-- **Commission Group Rates** are linked to **Commission Groups** and **Voucher Types**.
-
-This overview provides
+  - `id` (uuid, Primary Key)
+  - `name` (text)
+  - `supplier_commission_pct` (numeric(5,2))
+  - `created_at` (timestamp with time zone)
+  - `updated_at` (timestamp with time zone)

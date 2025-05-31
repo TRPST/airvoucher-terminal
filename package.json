@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "echo '🚀 Starting development server. Access portals at:\n- Admin: http://admin.localhost:3000/auth\n- Retailer: http://retailer.localhost:3000/auth\n- Cashier: http://cashier.localhost:3000/auth\n- Agent: http://agent.localhost:3000/auth\n\nSee SUBDOMAIN_SETUP.md for more details.\n' && next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
