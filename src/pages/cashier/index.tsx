@@ -42,6 +42,7 @@ export default function CashierPOS() {
   const [isDataLoading, setIsDataLoading] = React.useState(true);
   const [isVoucherInventoryLoading, setIsVoucherInventoryLoading] = React.useState(false);
   const [dataError, setDataError] = React.useState<string | null>(null);
+  const [isBalanceLoading, setIsBalanceLoading] = React.useState(false);
 
   // Sale UI state
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
@@ -70,7 +71,7 @@ export default function CashierPOS() {
     groupName: string;
   } | null>(null);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
-  const { setTerminalInfo, setBalanceInfo } = useTerminal();
+  const { setTerminalInfo, setBalanceInfo, setBalanceLoading, updateBalanceAfterSale } = useTerminal();
 
   // Additional state for total commissions
   const [retailerCommissions, setRetailerCommissions] = React.useState<number>(0);
@@ -104,6 +105,7 @@ export default function CashierPOS() {
 
       setIsDataLoading(true);
       setDataError(null);
+      setIsBalanceLoading(true);
 
       try {
         // Fetch cashier's terminal profile
@@ -136,6 +138,7 @@ export default function CashierPOS() {
         );
       } finally {
         setIsDataLoading(false);
+        setIsBalanceLoading(false);
       }
     };
 
@@ -392,12 +395,43 @@ export default function CashierPOS() {
           serial_number: data.voucher.serial_number,
         });
         
+        const commissionAmount = commissionData?.amount || 0;
+        const saleAmount = selectedValue;
+        
         setReceiptData({
           ...data.receipt,
           voucherType: selectedCategory,
-          amount: selectedValue,
-          commissionAmount: commissionData?.amount || 0,
+          amount: saleAmount,
+          commissionAmount: commissionAmount,
           commissionRate: commissionData?.rate || 0,
+        });
+        
+        // Update balance in context immediately after successful sale
+        updateBalanceAfterSale(saleAmount, commissionAmount);
+        
+        // Also update the terminal object to reflect the new balance and credit
+        setTerminal(prev => {
+          if (!prev) return prev;
+          
+          // Calculate new balance and credit - mirroring the logic in TerminalContext
+          let newBalance = prev.retailer_balance;
+          let newCreditUsed = prev.retailer_credit_used;
+          
+          if (prev.retailer_balance >= saleAmount) {
+            // If balance covers the full amount
+            newBalance = prev.retailer_balance - saleAmount + commissionAmount;
+          } else {
+            // If balance doesn't cover it, use credit for the remainder
+            const amountFromCredit = saleAmount - prev.retailer_balance;
+            newBalance = 0 + commissionAmount;
+            newCreditUsed = prev.retailer_credit_used + amountFromCredit;
+          }
+          
+          return {
+            ...prev,
+            retailer_balance: newBalance,
+            retailer_credit_used: newCreditUsed
+          };
         });
         
         // Show success feedback
@@ -419,7 +453,7 @@ export default function CashierPOS() {
       setIsSelling(false);
       setShowConfirmDialog(false);
     }
-  }, [selectedCategory, selectedValue, voucherInventory, terminal, commissionData]);
+  }, [selectedCategory, selectedValue, voucherInventory, terminal, commissionData, updateBalanceAfterSale]);
 
   // Handle back to Admin options
   const handleBackToAdmin = React.useCallback(() => {

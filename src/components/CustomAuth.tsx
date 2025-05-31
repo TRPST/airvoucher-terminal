@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/router";
 import { getUserRole, signOutUser } from "@/actions/userActions";
+import { getCurrentPortal, type PortalType } from "@/utils/subdomain";
 
 interface CustomAuthProps {
   role: string;
@@ -16,6 +17,15 @@ export function CustomAuth({ role }: CustomAuthProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPortal, setCurrentPortal] = useState<PortalType | null>(null);
+
+  // Detect current portal from hostname on client-side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const portal = getCurrentPortal(window.location.hostname);
+      setCurrentPortal(portal);
+    }
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +71,16 @@ export function CustomAuth({ role }: CustomAuthProps) {
           return;
         }
 
-        // Role matches - redirect to dashboard
+        // Role matches - redirect to dashboard within the same subdomain context
         console.log(`User has correct role (${userRole}), redirecting to dashboard...`);
-        await router.push(`/${role}`);
+        
+        // If we're on a portal subdomain, stay on that subdomain
+        if (currentPortal) {
+          await router.push(`/${userRole}`);
+        } else {
+          // If we're on the main domain, redirect to the subdomain
+          await router.push(`/${role}`);
+        }
       }
     } catch (error) {
       console.error("Error during sign in:", error);

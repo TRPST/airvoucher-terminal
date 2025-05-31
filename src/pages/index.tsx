@@ -1,9 +1,9 @@
 import * as React from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { Shield, Store, Users, UserCheck } from "lucide-react";
 import { PortalCard } from "@/components/PortalCard";
 import { cn } from "@/utils/cn";
+import { getPortalUrl, type PortalType } from "@/utils/subdomain";
 
 export default function LandingPage() {
   // Portal options with their details
@@ -12,7 +12,7 @@ export default function LandingPage() {
       title: "Admin",
       description: "Manage retailers, vouchers, and platform settings",
       icon: Shield,
-      link: "/auth/admin",
+      portalType: "admin" as PortalType,
       gradient: "linear-gradient(to bottom right, #3b82f6, #4f46e5)",
       textColor: "#e0f2fe",
     },
@@ -20,7 +20,7 @@ export default function LandingPage() {
       title: "Retailer",
       description: "Sell vouchers and manage your inventory",
       icon: Store,
-      link: "/auth/retailer",
+      portalType: "retailer" as PortalType,
       gradient: "linear-gradient(to bottom right, #10b981, #16a34a)",
       textColor: "#d1fae5",
     },
@@ -28,7 +28,7 @@ export default function LandingPage() {
       title: "Agent",
       description: "Manage your retailer network and track commissions",
       icon: Users,
-      link: "/auth/agent",
+      portalType: "agent" as PortalType,
       gradient: "linear-gradient(to bottom right, #f59e0b, #ea580c)",
       textColor: "#fef3c7",
     },
@@ -36,11 +36,16 @@ export default function LandingPage() {
       title: "Cashier",
       description: "Process voucher sales and manage transactions",
       icon: UserCheck,
-      link: "/auth/cashier",
+      portalType: "cashier" as PortalType,
       gradient: "linear-gradient(to bottom right, #8b5cf6, #a855f7)",
       textColor: "#f3e8ff",
     },
   ];
+
+  // Generate the portal URL for each portal type
+  const getAuthUrl = (portalType: PortalType) => {
+    return getPortalUrl(portalType, '/auth');
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -90,7 +95,7 @@ export default function LandingPage() {
                 title={portal.title}
                 description={portal.description}
                 icon={portal.icon}
-                link={portal.link}
+                link={getAuthUrl(portal.portalType)}
                 gradient={portal.gradient}
                 textColor={portal.textColor}
               />
@@ -107,15 +112,15 @@ export default function LandingPage() {
               &copy; 2025 AirVoucher. All rights reserved.
             </p>
             <div className="flex gap-4 text-sm text-muted-foreground">
-              <Link href="#" className="text-muted-foreground">
+              <a href="#" className="text-muted-foreground">
                 Terms
-              </Link>
-              <Link href="#" className="text-muted-foreground">
+              </a>
+              <a href="#" className="text-muted-foreground">
                 Privacy
-              </Link>
-              <Link href="#" className="text-muted-foreground">
+              </a>
+              <a href="#" className="text-muted-foreground">
                 Security
-              </Link>
+              </a>
             </div>
           </div>
         </div>

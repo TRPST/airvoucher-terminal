@@ -6,8 +6,11 @@ interface TerminalContextType {
   retailerName: string;
   balance: number;
   availableCredit: number;
+  isBalanceLoading: boolean;
   setTerminalInfo: (terminalName: string, retailerName: string) => void;
   setBalanceInfo: (balance: number, availableCredit: number) => void;
+  setBalanceLoading: (isLoading: boolean) => void;
+  updateBalanceAfterSale: (saleAmount: number, commissionAmount: number) => void;
 }
 
 const defaultContext: TerminalContextType = {
@@ -15,8 +18,11 @@ const defaultContext: TerminalContextType = {
   retailerName: "",
   balance: 0,
   availableCredit: 0,
+  isBalanceLoading: true,
   setTerminalInfo: () => {},
   setBalanceInfo: () => {},
+  setBalanceLoading: () => {},
+  updateBalanceAfterSale: () => {},
 };
 
 const TerminalContext = createContext<TerminalContextType>(defaultContext);
@@ -28,6 +34,7 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [retailerName, setRetailerName] = useState("");
   const [balance, setBalance] = useState(0);
   const [availableCredit, setAvailableCredit] = useState(0);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
 
   const setTerminalInfo = (terminalName: string, retailerName: string) => {
     setTerminalName(terminalName);
@@ -37,6 +44,36 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setBalanceInfo = (balance: number, availableCredit: number) => {
     setBalance(balance);
     setAvailableCredit(availableCredit);
+    setIsBalanceLoading(false);
+  };
+
+  const setBalanceLoading = (isLoading: boolean) => {
+    setIsBalanceLoading(isLoading);
+  };
+
+  // This function updates the balance after a sale
+  const updateBalanceAfterSale = (saleAmount: number, commissionAmount: number) => {
+    // Calculate new balance after sale and commission
+    let newBalance = balance;
+    let newCredit = availableCredit;
+    
+    // First, deduct the sale amount from balance if possible
+    if (balance >= saleAmount) {
+      // If balance covers the full amount
+      newBalance = balance - saleAmount + commissionAmount;
+    } else {
+      // If balance doesn't cover it, use credit for the remainder
+      const amountFromCredit = saleAmount - balance;
+      newBalance = 0 + commissionAmount; // Balance becomes 0 plus any commission
+      newCredit = availableCredit - amountFromCredit; // Reduce available credit
+    }
+    
+    // Update both values in state
+    setBalance(newBalance);
+    setAvailableCredit(newCredit);
+    
+    // Call setBalanceInfo to ensure context subscribers are notified
+    setBalanceInfo(newBalance, newCredit);
   };
 
   return (
@@ -46,8 +83,11 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         retailerName,
         balance,
         availableCredit,
+        isBalanceLoading,
         setTerminalInfo,
         setBalanceInfo,
+        setBalanceLoading,
+        updateBalanceAfterSale,
       }}
     >
       {children}

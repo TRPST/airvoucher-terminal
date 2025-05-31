@@ -47,7 +47,14 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
-  const { terminalName, retailerName, balance, availableCredit } = useTerminal();
+  const { terminalName, retailerName, balance, availableCredit, isBalanceLoading } = useTerminal();
+
+  // Debug balance changes
+  React.useEffect(() => {
+    if (role === "cashier") {
+      console.log("Balance updated in Layout:", balance.toFixed(2), "Credit:", availableCredit.toFixed(2));
+    }
+  }, [balance, availableCredit, role]);
 
   // Fetch user session on component mount
   React.useEffect(() => {
@@ -373,10 +380,17 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
 
   // Special handling for cashier role - minimal UI
   if (role === "cashier") {
+    // Calculate values for display
+    const balanceDisplay = balance.toFixed(2);
+    const creditDisplay = availableCredit.toFixed(2);
+
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
-        {/* Simple header for cashiers */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4">
+        {/* Simple header for cashiers with key for re-render */}
+        <div 
+          className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4"
+          key={`cashier-header-${balanceDisplay}-${creditDisplay}`}
+        >
           <div className="flex items-center">
             <span className="font-bold">
               {terminalName && retailerName ? `${terminalName} • ${retailerName}` : 'AirVoucher Terminal'}
@@ -384,14 +398,21 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
           </div>
           <div className="flex items-center gap-4">
             {/* Balance Display */}
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="flex items-center px-4 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium">
-                Balance: <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
+            {isBalanceLoading ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-36 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
+                <div className="w-36 h-10 bg-amber-100/50 dark:bg-amber-950/20 animate-pulse rounded-md"></div>
               </div>
-              <div className="flex items-center px-4 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium">
-                Credit: <span className="ml-1 font-bold">R{availableCredit.toFixed(2)}</span>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="flex items-center px-4 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium">
+                  Balance: <span className="ml-1 font-bold">R{balanceDisplay}</span>
+                </div>
+                <div className="flex items-center px-4 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium">
+                  Credit: <span className="ml-1 font-bold">R{creditDisplay}</span>
+                </div>
               </div>
-            </div>
+            )}
             <ThemeToggle />
             {user && (
               <DropdownMenu.Root>
