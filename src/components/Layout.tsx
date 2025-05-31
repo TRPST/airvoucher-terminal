@@ -47,7 +47,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
   const [user, setUser] = React.useState<any>(null);
   const [session, setSession] = React.useState<any>(null);
   const [retailerProfile, setRetailerProfile] = React.useState<RetailerProfile | null>(null);
-  const { terminalName, retailerName } = useTerminal();
+  const { terminalName, retailerName, balance, availableCredit } = useTerminal();
 
   // Fetch user session on component mount
   React.useEffect(() => {
@@ -382,7 +382,16 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
               {terminalName && retailerName ? `${terminalName} • ${retailerName}` : 'AirVoucher Terminal'}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Balance Display */}
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center px-4 py-2 rounded-md bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-500 font-medium">
+                Balance: <span className="ml-1 font-bold">R{balance.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center px-4 py-2 rounded-md bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500 font-medium">
+                Credit: <span className="ml-1 font-bold">R{availableCredit.toFixed(2)}</span>
+              </div>
+            </div>
             <ThemeToggle />
             {user && (
               <DropdownMenu.Root>

@@ -2,7 +2,6 @@ import * as React from "react";
 import { CreditCard, Wallet, Percent, Tags } from "lucide-react";
 
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
-import { StickyBalanceHeader } from "@/components/cashier/StickyBalanceHeader";
 import {
   fetchCashierTerminal,
   fetchAvailableVoucherTypes,
@@ -14,9 +13,13 @@ import {
 } from "@/actions";
 import useRequireRole from "@/hooks/useRequireRole";
 
-// Import custom components
-import { VoucherCategoriesGrid } from "@/components/retailer/VoucherCategoriesGrid";
-import { VoucherValuesGrid } from "@/components/retailer/VoucherValuesGrid";
+// Import new POS-style components
+import { TopNavBar } from "@/components/cashier/TopNavBar";
+import { POSGrid } from "@/components/cashier/POSGrid";
+import { POSValuesGrid } from "@/components/cashier/POSValuesGrid";
+import { QuickActionFooter } from "@/components/cashier/QuickActionFooter";
+
+// Import existing components
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
 import { SuccessToast } from "@/components/retailer/SuccessToast";
 import { SaleReceiptDialog } from "@/components/dialogs/SaleReceiptDialog";
@@ -60,17 +63,22 @@ export default function CashierPOS() {
     groupName: string;
   } | null>(null);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
-  const { setTerminalInfo } = useTerminal();
+  const { setTerminalInfo, setBalanceInfo } = useTerminal();
 
   // Set the terminal and retailer name in the context and document title
   React.useEffect(() => {
     if (terminal) {
       // Update the context with terminal info
       setTerminalInfo(terminal.terminal_name, terminal.retailer_name);
+      
+      // Update balance info in the context
+      const availableCredit = terminal.retailer_credit_limit - terminal.retailer_credit_used;
+      setBalanceInfo(terminal.retailer_balance, availableCredit);
+      
       // Update the page title to include terminal info
       document.title = `${terminal.terminal_name} • ${terminal.retailer_name} - AirVoucher`;
     }
-  }, [terminal, setTerminalInfo]);
+  }, [terminal, setTerminalInfo, setBalanceInfo]);
 
   // Fetch terminal data and voucher types on mount
   React.useEffect(() => {
@@ -135,12 +143,16 @@ export default function CashierPOS() {
         let color = "bg-primary/5 hover:bg-primary/10";
         
         if (name?.includes('Vodacom')) {
+          icon = <img src="/vouchers/vodacom-logo.png" alt="Vodacom" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-primary/5 hover:bg-primary/10";
         } else if (name?.includes('MTN')) {
+          icon = <img src="/vouchers/mtn-logo.jpg" alt="MTN" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-yellow-500/5 hover:bg-yellow-500/10";
         } else if (name?.includes('CellC')) {
+          icon = <img src="/vouchers/cellc-logo.png" alt="Cell C" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-indigo-500/5 hover:bg-indigo-500/10";
         } else if (name?.includes('Telkom')) {
+          icon = <img src="/vouchers/telkom-logo.png" alt="Telkom" className="w-full h-full object-cover rounded-lg" />;
           color = "bg-teal-500/5 hover:bg-teal-500/10";
         }
         
@@ -168,21 +180,21 @@ export default function CashierPOS() {
           case "ott":
           case "netflix":
           case "showmax":
-            icon = <Tags className="h-6 w-6" />;
+            icon = <img src="/vouchers/ott-logo.png" alt="OTT" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-purple-500/5 hover:bg-purple-500/10";
             break;
           case "betting":
           case "hollywoodbets":
           case "betway":
-            icon = <Wallet className="h-6 w-6" />;
+            icon = <img src="/vouchers/hollywoodbets-logo.jpg" alt="Hollywoodbets" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10";
             break;
           case "ringa":
-            icon = <Percent className="h-6 w-6" />;
+            icon = <img src="/vouchers/ringas-logo.jpg" alt="Ringas" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-amber-500/5 hover:bg-amber-500/10";
             break;
           case "easyload":
-            icon = <CreditCard className="h-6 w-6" />;
+            icon = <img src="/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10";
             break;
           default:
@@ -249,239 +261,234 @@ export default function CashierPOS() {
       const { data: inventoryData, error } = await fetchVoucherInventoryByType(category);
       
       if (error) {
-        console.error(`Error fetching inventory for ${category}:`, error);
-        setIsVoucherInventoryLoading(false);
+        console.error("Error fetching inventory:", error);
         return;
       }
       
-      if (inventoryData && inventoryData.length > 0) {
-        setVoucherInventory(inventoryData);
-      } else {
-        setVoucherInventory([]);
-      }
-    } catch (err) {
-      console.error(`Unexpected error loading voucher inventory for ${category}:`, err);
-      setVoucherInventory([]);
+      setVoucherInventory(inventoryData || []);
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
     } finally {
       setIsVoucherInventoryLoading(false);
     }
   }, []);
 
-  // Handle voucher value selection
-  const handleValueSelect = React.useCallback((value: number) => {
+  // Handle value selection
+  const handleValueSelect = React.useCallback(async (value: number) => {
     setSelectedValue(value);
-    setCommissionData(null);
-    setCommissionError(null);
+    
+    // Open confirmation dialog
     setShowConfirmDialog(true);
     
-    const selectedVoucher = voucherInventory.find(
-      (vt) =>
-        vt.name && 
-        vt.name.toLowerCase().includes(selectedCategory?.toLowerCase() || '') && 
-        vt.amount === value
-    );
-
-    if (selectedVoucher && terminal) {
-      fetchRetailerCommissionData({
-        retailerId: terminal.retailer_id,
-        voucherTypeId: selectedVoucher.id,
-        voucherValue: value,
-      }).then((result) => {
-        const { data, error } = result;
-        if (data && !error) {
-          setCommissionData(data);
-        } else {
-          setCommissionError(`Error: ${error?.message || 'Failed to get commission data'}`);
+    // Fetch commission data for selected voucher
+    try {
+      if (selectedCategory && terminal) {
+        const selectedVoucher = voucherInventory.find(
+          (vt) => vt.name && vt.name.toLowerCase().includes(selectedCategory.toLowerCase()) && vt.amount === value
+        );
+        
+        if (selectedVoucher) {
+          const { data, error } = await fetchRetailerCommissionData({
+            retailerId: terminal.retailer_id,
+            voucherTypeId: selectedVoucher.id,
+            voucherValue: value,
+          });
+          
+          if (error) {
+            setCommissionError(error.message);
+            return;
+          }
+          
+          setCommissionData({
+            rate: data?.rate || 0,
+            amount: data?.amount || 0,
+            groupName: data?.groupName || '',
+          });
         }
-      }).catch((err: unknown) => {
-        console.error("Error fetching commission data:", err);
-        setCommissionError(`Error: ${err instanceof Error ? err.message : 'Failed to get commission data'}`);
-      });
-    } else {
-      setCommissionError('Missing voucher or terminal information');
+      }
+    } catch (error) {
+      setCommissionError(
+        `Failed to fetch commission data: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }, [selectedCategory, voucherInventory, terminal]);
 
-  // Handle confirm sale
+  // Handle sale confirmation
   const handleConfirmSale = React.useCallback(async () => {
-    if (!terminal || !selectedValue || !selectedCategory) {
-      setSaleError("Missing sale information");
+    if (!selectedCategory || !selectedValue || !terminal) {
       return;
     }
-
+    
     const selectedVoucher = voucherInventory.find(
-      (vt) =>
-        vt.name && 
-        vt.name.toLowerCase().includes(selectedCategory.toLowerCase()) && 
-        vt.amount === selectedValue
+      (vt) => vt.name && vt.name.toLowerCase().includes(selectedCategory.toLowerCase()) && vt.amount === selectedValue
     );
-
+    
     if (!selectedVoucher) {
       setSaleError("Selected voucher not found");
       return;
     }
-
+    
     setIsSelling(true);
     setSaleError(null);
-
+    
     try {
       const { data, error } = await sellVoucher({
         terminalId: terminal.terminal_id,
         voucherTypeId: selectedVoucher.id,
         amount: selectedValue,
       });
-
+      
       if (error) {
-        setSaleError(`Sale failed: ${error.message}`);
+        setSaleError(error.message);
         return;
       }
-
-      setShowConfirmDialog(false);
-
-      if (data && data.receipt) {
-        setReceiptData(data.receipt);
+      
+      if (data) {
+        setSaleInfo({
+          pin: data.voucher.pin,
+          serial_number: data.voucher.serial_number,
+        });
+        
+        setReceiptData({
+          ...data.receipt,
+          voucherType: selectedCategory,
+          amount: selectedValue,
+          commissionAmount: commissionData?.amount || 0,
+          commissionRate: commissionData?.rate || 0,
+        });
+        
+        // Show success feedback
+        setSaleComplete(true);
+        setShowConfetti(true);
+        setShowToast(true);
         setShowReceiptDialog(true);
-        setSaleInfo(data.voucher);
+        
+        // Auto-hide confetti after 3 seconds
+        setTimeout(() => {
+          setShowConfetti(false);
+        }, 3000);
       }
-
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-
-      setSaleComplete(true);
-      setShowToast(true);
-
-      // Refresh terminal data
-      if (userId) {
-        const { data: refreshedTerminal } = await fetchCashierTerminal(userId);
-        if (refreshedTerminal) {
-          setTerminal(refreshedTerminal);
-        }
-      }
-    } catch (err) {
+    } catch (error) {
       setSaleError(
-        `Unexpected error: ${err instanceof Error ? err.message : String(err)}`
+        `Failed to process sale: ${error instanceof Error ? error.message : String(error)}`
       );
     } finally {
       setIsSelling(false);
+      setShowConfirmDialog(false);
     }
-  }, [terminal, selectedValue, selectedCategory, voucherInventory, userId]);
+  }, [selectedCategory, selectedValue, voucherInventory, terminal, commissionData]);
 
-  // Handle receipt dialog close
-  const handleReceiptClose = React.useCallback(() => {
-    setShowReceiptDialog(false);
-    setReceiptData(null);
+  // Handle back to categories
+  const handleBackToCategories = React.useCallback(() => {
     setSelectedCategory(null);
     setSelectedValue(null);
-    setSaleComplete(false);
-    setShowToast(false);
-    setSaleInfo(null);
   }, []);
 
-  // Show loading state
-  if (isLoading || isDataLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="ml-2">Loading...</span>
-      </div>
-    );
-  }
+  // Handle closing receipt
+  const handleCloseReceipt = React.useCallback(() => {
+    setShowReceiptDialog(false);
+    setSaleComplete(false);
+    setSelectedCategory(null);
+    setSelectedValue(null);
+  }, []);
 
-  // Show error state
-  if (dataError) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-destructive mb-2">Error</h2>
-          <p className="text-muted-foreground">{dataError}</p>
-        </div>
-      </div>
-    );
-  }
+  // Handle enter amount
+  const handleEnterAmount = React.useCallback(() => {
+    // Placeholder for future implementation
+    console.log("Enter amount clicked");
+  }, []);
 
-  if (!terminal) {
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Terminal Not Found</h2>
-          <p className="text-muted-foreground">Unable to load terminal information.</p>
-        </div>
-      </div>
-    );
-  }
+  // Handle sell voucher
+  const handleSellVoucher = React.useCallback(() => {
+    // Placeholder for future implementation
+    console.log("Sell voucher clicked");
+  }, []);
 
-  // Create a retailer-like object for the components that expect it
-  const retailerForComponents = {
-    id: terminal.retailer_id,
-    name: terminal.retailer_name,
-    balance: terminal.retailer_balance,
-    credit_limit: terminal.retailer_credit_limit,
-    credit_used: terminal.retailer_credit_used,
-    commission_balance: terminal.retailer_commission_balance,
-    status: "active" as const,
-    user_profile_id: "",
-  };
+  // Handle recent sales
+  const handleViewRecentSales = React.useCallback(() => {
+    // Placeholder for future implementation
+    console.log("View recent sales clicked");
+  }, []);
+
+  // Calculate the available credit
+  const availableCredit = terminal ? (terminal.retailer_credit_limit - terminal.retailer_credit_used) : 0;
 
   return (
-    <div className="flex flex-col">
-      {/* Sticky Balance Header */}
-      <StickyBalanceHeader
-        balance={terminal.retailer_balance}
-        creditLimit={terminal.retailer_credit_limit}
-        creditUsed={terminal.retailer_credit_used}
-        commissionBalance={terminal.retailer_commission_balance}
-      />
+    <>
 
-      {/* Main Content */}
-      <div className="space-y-6 p-4">
-        {/* Confetti effect on successful sale */}
-        {showConfetti && <ConfettiOverlay />}
-
-
-        {/* Voucher Categories Grid or Voucher Values Grid */}
-        {!selectedCategory ? (
-          <VoucherCategoriesGrid 
-            categories={voucherCategories}
-            onCategorySelect={handleCategorySelect}
-          />
-        ) : (
-          <VoucherValuesGrid
+      {/* Main Content Area */}
+      <main className="flex-1">
+        {isDataLoading ? (
+          <div className="flex h-96 flex-col items-center justify-center">
+            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-lg font-medium">Loading Cashier Terminal...</p>
+          </div>
+        ) : dataError ? (
+          <div className="flex h-96 flex-col items-center justify-center p-6 text-center">
+            <div className="mb-4 rounded-full bg-destructive/10 p-3 text-destructive">
+              <CreditCard className="h-8 w-8" />
+            </div>
+            <h2 className="mb-2 text-xl font-bold">Terminal Error</h2>
+            <p className="mb-4 text-muted-foreground">{dataError}</p>
+          </div>
+        ) : selectedCategory ? (
+          <POSValuesGrid
             selectedCategory={selectedCategory}
             isLoading={isVoucherInventoryLoading}
             vouchers={getVouchersForCategory(selectedCategory)}
             onValueSelect={handleValueSelect}
-            onBackToCategories={() => setSelectedCategory(null)}
+            onBackToCategories={handleBackToCategories}
+          />
+        ) : (
+          <POSGrid
+            categories={voucherCategories}
+            onCategorySelect={handleCategorySelect}
           />
         )}
+      </main>
 
-        {/* Confirm Sale Dialog */}
+      {/* Quick Action Footer
+      <QuickActionFooter
+        onEnterAmount={handleEnterAmount}
+        onSellVoucher={handleSellVoucher}
+        onViewRecentSales={handleViewRecentSales}
+      /> */}
+
+      {/* Dialogs and Feedback */}
+      {showConfirmDialog && selectedCategory && selectedValue && (
         <ConfirmSaleDialog
-          showDialog={showConfirmDialog}
-          selectedCategory={selectedCategory}
-          selectedValue={selectedValue}
-          retailer={retailerForComponents}
-          commissionData={commissionData}
-          commissionError={commissionError}
-          onCancel={() => setShowConfirmDialog(false)}
+          voucherType={selectedCategory}
+          amount={selectedValue}
+          commissionRate={commissionData?.rate || 0}
+          commissionAmount={commissionData?.amount || 0}
+          isLoading={isSelling}
+          error={saleError || commissionError}
           onConfirm={handleConfirmSale}
-          isSelling={isSelling}
-          saleError={saleError}
+          onCancel={() => setShowConfirmDialog(false)}
         />
+      )}
 
-        {/* Success Toast */}
+      {saleComplete && saleInfo && (
         <SuccessToast
           show={showToast}
-          category={selectedCategory}
-          value={selectedValue}
+          onClose={() => setShowToast(false)}
+          onViewReceipt={() => setShowReceiptDialog(true)}
+          voucherType={selectedCategory || ''}
+          amount={selectedValue || 0}
+          pin={saleInfo.pin}
         />
+      )}
 
-        {/* Receipt Dialog */}
+      {showReceiptDialog && receiptData && (
         <SaleReceiptDialog
-          showDialog={showReceiptDialog}
-          onClose={handleReceiptClose}
-          receipt={receiptData}
+          receiptData={receiptData}
+          onClose={handleCloseReceipt}
+          terminalName={terminal?.terminal_name || ''}
+          retailerName={terminal?.retailer_name || ''}
         />
-      </div>
-    </div>
+      )}
+
+      {showConfetti && <ConfettiOverlay />}
+    </>
   );
 }

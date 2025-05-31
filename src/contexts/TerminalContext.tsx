@@ -1,37 +1,56 @@
 import * as React from "react";
+import { createContext, useContext, useState } from "react";
 
 interface TerminalContextType {
-  terminalName: string | null;
-  retailerName: string | null;
+  terminalName: string;
+  retailerName: string;
+  balance: number;
+  availableCredit: number;
   setTerminalInfo: (terminalName: string, retailerName: string) => void;
+  setBalanceInfo: (balance: number, availableCredit: number) => void;
 }
 
-const TerminalContext = React.createContext<TerminalContextType>({
-  terminalName: null,
-  retailerName: null,
+const defaultContext: TerminalContextType = {
+  terminalName: "",
+  retailerName: "",
+  balance: 0,
+  availableCredit: 0,
   setTerminalInfo: () => {},
-});
+  setBalanceInfo: () => {},
+};
 
-export function TerminalProvider({ children }: { children: React.ReactNode }) {
-  const [terminalName, setTerminalName] = React.useState<string | null>(null);
-  const [retailerName, setRetailerName] = React.useState<string | null>(null);
+const TerminalContext = createContext<TerminalContextType>(defaultContext);
 
-  const setTerminalInfo = React.useCallback((terminal: string, retailer: string) => {
-    setTerminalName(terminal);
-    setRetailerName(retailer);
-  }, []);
+export const useTerminal = () => useContext(TerminalContext);
+
+export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [terminalName, setTerminalName] = useState("");
+  const [retailerName, setRetailerName] = useState("");
+  const [balance, setBalance] = useState(0);
+  const [availableCredit, setAvailableCredit] = useState(0);
+
+  const setTerminalInfo = (terminalName: string, retailerName: string) => {
+    setTerminalName(terminalName);
+    setRetailerName(retailerName);
+  };
+
+  const setBalanceInfo = (balance: number, availableCredit: number) => {
+    setBalance(balance);
+    setAvailableCredit(availableCredit);
+  };
 
   return (
-    <TerminalContext.Provider value={{ terminalName, retailerName, setTerminalInfo }}>
+    <TerminalContext.Provider
+      value={{
+        terminalName,
+        retailerName,
+        balance,
+        availableCredit,
+        setTerminalInfo,
+        setBalanceInfo,
+      }}
+    >
       {children}
     </TerminalContext.Provider>
   );
-}
-
-export function useTerminal() {
-  const context = React.useContext(TerminalContext);
-  if (!context) {
-    throw new Error("useTerminal must be used within a TerminalProvider");
-  }
-  return context;
-}
+};
