@@ -47,14 +47,17 @@ interface POSButtonProps {
 }
 
 function POSButton({ name, icon, color, onClick }: POSButtonProps) {
+  const isAdmin = name === "Admin";
+  
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      className="h-32 w-full max-w-[180px] mx-auto flex items-center justify-center cursor-pointer border rounded-lg"
+      className={`h-32 w-full max-w-[180px] mx-auto flex ${isAdmin ? 'flex-col' : ''} items-center justify-center cursor-pointer border rounded-lg ${color}`}
     >
       {icon}
+      {isAdmin && <span className="mt-2 font-medium">Admin</span>}
     </motion.div>
   );
 } 

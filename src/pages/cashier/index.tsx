@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CreditCard, Wallet, Percent, Tags } from "lucide-react";
+import { CreditCard, Wallet, Percent, Tags, Settings } from "lucide-react";
 
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import {
@@ -17,6 +17,7 @@ import useRequireRole from "@/hooks/useRequireRole";
 import { TopNavBar } from "@/components/cashier/TopNavBar";
 import { POSGrid } from "@/components/cashier/POSGrid";
 import { POSValuesGrid } from "@/components/cashier/POSValuesGrid";
+import { AdminOptionsGrid } from "@/components/cashier/AdminOptionsGrid";
 import { QuickActionFooter } from "@/components/cashier/QuickActionFooter";
 
 // Import existing components
@@ -48,6 +49,10 @@ export default function CashierPOS() {
   const [showToast, setShowToast] = React.useState(false);
   const [saleComplete, setSaleComplete] = React.useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = React.useState(false);
+
+  // Admin state
+  const [showAdminOptions, setShowAdminOptions] = React.useState(false);
+  const [selectedAdminOption, setSelectedAdminOption] = React.useState<string | null>(null);
 
   // Sale process state
   const [isSelling, setIsSelling] = React.useState(false);
@@ -140,20 +145,20 @@ export default function CashierPOS() {
       )
       .map(name => {
         let icon = <CreditCard className="h-6 w-6" />;
-        let color = "bg-primary/5 hover:bg-primary/10";
+        let color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
         
         if (name?.includes('Vodacom')) {
           icon = <img src="/vouchers/vodacom-logo.png" alt="Vodacom" className="w-full h-full object-cover rounded-lg" />;
-          color = "bg-primary/5 hover:bg-primary/10";
+          color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
         } else if (name?.includes('MTN')) {
           icon = <img src="/vouchers/mtn-logo.jpg" alt="MTN" className="w-full h-full object-cover rounded-lg" />;
-          color = "bg-yellow-500/5 hover:bg-yellow-500/10";
+          color = "bg-yellow-500/5 hover:bg-yellow-500/10 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20";
         } else if (name?.includes('CellC')) {
           icon = <img src="/vouchers/cellc-logo.png" alt="Cell C" className="w-full h-full object-cover rounded-lg" />;
-          color = "bg-indigo-500/5 hover:bg-indigo-500/10";
+          color = "bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20";
         } else if (name?.includes('Telkom')) {
           icon = <img src="/vouchers/telkom-logo.png" alt="Telkom" className="w-full h-full object-cover rounded-lg" />;
-          color = "bg-teal-500/5 hover:bg-teal-500/10";
+          color = "bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20";
         }
         
         return {
@@ -171,7 +176,7 @@ export default function CashierPOS() {
       )
       .map((name, index) => {
         let icon = <CreditCard className="h-6 w-6" />;
-        let color = "bg-primary/5 hover:bg-primary/10";
+        let color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
         
         const categoryName = name?.split(' ')[0] || name;
         
@@ -181,29 +186,29 @@ export default function CashierPOS() {
           case "netflix":
           case "showmax":
             icon = <img src="/vouchers/ott-logo.png" alt="OTT" className="w-full h-full object-cover rounded-lg" />;
-            color = "bg-purple-500/5 hover:bg-purple-500/10";
+            color = "bg-purple-500/5 hover:bg-purple-500/10 dark:bg-purple-500/10 dark:hover:bg-purple-500/20";
             break;
           case "betting":
           case "hollywoodbets":
           case "betway":
             icon = <img src="/vouchers/hollywoodbets-logo.jpg" alt="Hollywoodbets" className="w-full h-full object-cover rounded-lg" />;
-            color = "bg-green-500/5 hover:bg-green-500/10";
+            color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
           case "ringa":
             icon = <img src="/vouchers/ringas-logo.jpg" alt="Ringas" className="w-full h-full object-cover rounded-lg" />;
-            color = "bg-amber-500/5 hover:bg-amber-500/10";
+            color = "bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/20";
             break;
           case "easyload":
             icon = <img src="/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
-            color = "bg-green-500/5 hover:bg-green-500/10";
+            color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
           default:
             const colors = [
-              "bg-amber-500/5 hover:bg-amber-500/10",
-              "bg-pink-500/5 hover:bg-pink-500/10",
-              "bg-teal-500/5 hover:bg-teal-500/10",
-              "bg-indigo-500/5 hover:bg-indigo-500/10",
-              "bg-red-500/5 hover:bg-red-500/10",
+              "bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/20",
+              "bg-pink-500/5 hover:bg-pink-500/10 dark:bg-pink-500/10 dark:hover:bg-pink-500/20",
+              "bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20",
+              "bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20",
+              "bg-red-500/5 hover:bg-red-500/10 dark:bg-red-500/10 dark:hover:bg-red-500/20",
             ];
             color = colors[index % colors.length];
             break;
@@ -215,6 +220,13 @@ export default function CashierPOS() {
           color
         };
       });
+    
+    // Add Admin button
+    const adminButton = {
+      name: "Admin",
+      icon: <Settings className="h-8 w-8 text-gray-700 dark:text-gray-300" />,
+      color: "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border-border"
+    };
     
     const categories = [];
     
@@ -231,6 +243,12 @@ export default function CashierPOS() {
         items: otherServices
       });
     }
+    
+    // Add Admin as a separate category
+    categories.push({
+      name: 'Administration',
+      items: [adminButton]
+    });
     
     return categories;
   }, [voucherTypeNames]);
@@ -253,24 +271,37 @@ export default function CashierPOS() {
 
   // Handle category selection
   const handleCategorySelect = React.useCallback(async (category: string) => {
-    setSelectedCategory(category);
-    setSelectedValue(null);
-    setIsVoucherInventoryLoading(true);
-    
-    try {
-      const { data: inventoryData, error } = await fetchVoucherInventoryByType(category);
+    if (category === "Admin") {
+      setShowAdminOptions(true);
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(category);
+      setShowAdminOptions(false);
+      setSelectedValue(null);
+      setIsVoucherInventoryLoading(true);
       
-      if (error) {
+      try {
+        const { data: inventoryData, error } = await fetchVoucherInventoryByType(category);
+        
+        if (error) {
+          console.error("Error fetching inventory:", error);
+          return;
+        }
+        
+        setVoucherInventory(inventoryData || []);
+      } catch (error) {
         console.error("Error fetching inventory:", error);
-        return;
+      } finally {
+        setIsVoucherInventoryLoading(false);
       }
-      
-      setVoucherInventory(inventoryData || []);
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-    } finally {
-      setIsVoucherInventoryLoading(false);
     }
+  }, []);
+
+  // Handle Admin option selection
+  const handleAdminOptionSelect = React.useCallback((option: string) => {
+    setSelectedAdminOption(option);
+    console.log(`Selected admin option: ${option}`);
+    // Here you would implement the specific functionality for each admin option
   }, []);
 
   // Handle value selection
@@ -382,6 +413,8 @@ export default function CashierPOS() {
   const handleBackToCategories = React.useCallback(() => {
     setSelectedCategory(null);
     setSelectedValue(null);
+    setShowAdminOptions(false);
+    setSelectedAdminOption(null);
   }, []);
 
   // Handle closing receipt
@@ -431,6 +464,11 @@ export default function CashierPOS() {
             <h2 className="mb-2 text-xl font-bold">Terminal Error</h2>
             <p className="mb-4 text-muted-foreground">{dataError}</p>
           </div>
+        ) : showAdminOptions ? (
+          <AdminOptionsGrid
+            onOptionSelect={handleAdminOptionSelect}
+            onBackToCategories={handleBackToCategories}
+          />
         ) : selectedCategory ? (
           <POSValuesGrid
             selectedCategory={selectedCategory}
