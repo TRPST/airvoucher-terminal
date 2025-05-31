@@ -522,7 +522,7 @@ export default function CashierPOS() {
             retailerBalance={terminal.retailer_balance}
             retailerCreditLimit={terminal.retailer_credit_limit}
             retailerCreditUsed={terminal.retailer_credit_used}
-            terminalCommission={terminalCommissions}
+            terminalCommission={terminal.retailer_commission_balance}
             onBackToAdmin={handleBackToAdmin}
           />
         ) : showAdminOptions && selectedAdminOption === "Sales History" && terminal ? (
