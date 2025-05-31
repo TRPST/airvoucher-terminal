@@ -19,6 +19,7 @@ import { POSGrid } from "@/components/cashier/POSGrid";
 import { POSValuesGrid } from "@/components/cashier/POSValuesGrid";
 import { AdminOptionsGrid } from "@/components/cashier/AdminOptionsGrid";
 import { QuickActionFooter } from "@/components/cashier/QuickActionFooter";
+import { SalesHistoryScreen } from "@/components/cashier/SalesHistoryScreen";
 
 // Import existing components
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
@@ -409,6 +410,11 @@ export default function CashierPOS() {
     }
   }, [selectedCategory, selectedValue, voucherInventory, terminal, commissionData]);
 
+  // Handle back to Admin options
+  const handleBackToAdmin = React.useCallback(() => {
+    setSelectedAdminOption(null);
+  }, []);
+
   // Handle back to categories
   const handleBackToCategories = React.useCallback(() => {
     setSelectedCategory(null);
@@ -464,6 +470,12 @@ export default function CashierPOS() {
             <h2 className="mb-2 text-xl font-bold">Terminal Error</h2>
             <p className="mb-4 text-muted-foreground">{dataError}</p>
           </div>
+        ) : showAdminOptions && selectedAdminOption === "Sales History" && terminal ? (
+          <SalesHistoryScreen 
+            terminalId={terminal.terminal_id}
+            terminalName={terminal.terminal_name}
+            onBackToAdmin={handleBackToAdmin}
+          />
         ) : showAdminOptions ? (
           <AdminOptionsGrid
             onOptionSelect={handleAdminOptionSelect}
