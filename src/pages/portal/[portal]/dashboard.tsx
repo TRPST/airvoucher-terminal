@@ -1,99 +1,28 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { VALID_PORTALS, type PortalType } from "@/utils/subdomain";
+import { useEffect } from "react";
 import Link from "next/link";
-import { Shield, Store, Users, UserCheck } from "lucide-react";
+import { UserCheck } from "lucide-react";
 
-export default function PortalDashboard() {
+export default function CashierDashboard() {
   const router = useRouter();
   const { portal } = router.query;
-  const [portalType, setPortalType] = useState<string | null>(null);
   
-  // Set portal type once router is ready
+  // Redirect to Cashier portal if not already there
   useEffect(() => {
-    if (router.isReady && typeof portal === 'string') {
-      setPortalType(portal);
+    if (router.isReady && portal !== 'cashier') {
+      router.replace('/portal/cashier/dashboard');
     }
-  }, [router.isReady, portal]);
+  }, [router, portal]);
 
-  // Validate that the portal is one of our valid portal types
-  const isValidPortal = portalType && VALID_PORTALS.includes(portalType as PortalType);
-
-  // Redirect to home if portal is invalid
-  useEffect(() => {
-    if (router.isReady && !isValidPortal && portalType !== null) {
-      router.push('/');
-    }
-  }, [router, isValidPortal, portalType]);
-
-  // Redirect to portal-specific pages based on portal type
-  useEffect(() => {
-    if (router.isReady && portalType) {
-      if (portalType === 'cashier') {
-        router.push('/cashier');
-      }
-      // Add more redirects for other portal types if needed
-    }
-  }, [router, portalType]);
-
-  // If portal is not valid or not yet loaded, show loading
-  if (!isValidPortal) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
-
-  // Get portal-specific configuration
-  const getPortalConfig = () => {
-    switch(portalType) {
-      case 'admin':
-        return {
-          title: 'Admin',
-          icon: Shield,
-          color: 'text-blue-500',
-          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-          description: 'Manage retailers, vouchers, and platform settings',
-          features: ['User Management', 'Platform Settings', 'System Reports', 'Retailer Approval']
-        };
-      case 'retailer':
-        return {
-          title: 'Retailer',
-          icon: Store,
-          color: 'text-green-500',
-          bgColor: 'bg-green-50 dark:bg-green-900/20',
-          description: 'Sell vouchers and manage your inventory',
-          features: ['Inventory Management', 'Sales Reports', 'Customer Management', 'Voucher Sales']
-        };
-      case 'agent':
-        return {
-          title: 'Agent',
-          icon: Users,
-          color: 'text-orange-500',
-          bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-          description: 'Manage your retailer network and track commissions',
-          features: ['Retailer Network', 'Commission Reports', 'Performance Tracking', 'Recruitment']
-        };
-      case 'cashier':
-        return {
-          title: 'Cashier',
-          icon: UserCheck,
-          color: 'text-purple-500',
-          bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-          description: 'Process voucher sales and manage transactions',
-          features: ['Point of Sale', 'Transaction History', 'Daily Summary', 'Customer Service']
-        };
-      default:
-        return {
-          title: 'Dashboard',
-          icon: Shield,
-          color: 'text-gray-500',
-          bgColor: 'bg-gray-50 dark:bg-gray-900/20',
-          description: 'Access your portal features',
-          features: ['Dashboard Features']
-        };
-    }
+  // Portal configuration
+  const portalConfig = {
+    title: 'Cashier',
+    icon: UserCheck,
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    description: 'Process voucher sales and manage transactions',
+    features: ['Point of Sale', 'Transaction History', 'Daily Summary', 'Customer Service']
   };
-
-  const portalConfig = getPortalConfig();
-  const Icon = portalConfig.icon;
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -105,17 +34,11 @@ export default function PortalDashboard() {
             </span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link 
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Home
-            </Link>
             <button
               className="text-sm text-muted-foreground hover:text-foreground"
               onClick={() => {
                 // Sign out functionality would go here
-                router.push('/auth');
+                router.push('/portal/cashier/auth');
               }}
             >
               Sign Out
@@ -128,10 +51,10 @@ export default function PortalDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
             <div className={`p-3 rounded-full ${portalConfig.bgColor} ${portalConfig.color}`}>
-              <Icon size={24} />
+              <UserCheck size={24} />
             </div>
             <h1 className="text-3xl font-bold">
-              Welcome to the {portalConfig.title} Dashboard
+              Welcome to the Cashier Dashboard
             </h1>
           </div>
           
@@ -140,13 +63,6 @@ export default function PortalDashboard() {
             <p className="text-muted-foreground mb-4">
               {portalConfig.description}
             </p>
-            
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-medium">Current domain:</span>
-              <code className="px-2 py-1 rounded bg-muted">
-                {portalType}.baseUrl
-              </code>
-            </div>
           </div>
 
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
