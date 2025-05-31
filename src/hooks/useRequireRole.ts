@@ -32,7 +32,7 @@ export function useRequireRole(requiredRole: string) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log(`useRequireRole: Checking auth for ${requiredRole}`);
+      //console.log(`useRequireRole: Checking auth for ${requiredRole}`);
       
       // Get current session
       const { data } = await supabaseClient.auth.getSession();
@@ -61,7 +61,7 @@ export function useRequireRole(requiredRole: string) {
 
       // First get user's role from the profiles table rather than relying on app_metadata
       const userRole = await getUserRoleFromProfile(user.id);
-      console.log(`User role from profiles table: ${userRole}`);
+      //console.log(`User role from profiles table: ${userRole}`);
 
       // If user doesn't have the required role, sign them out and redirect to auth page for the required role
       if (userRole && userRole !== requiredRole) {
@@ -91,7 +91,7 @@ export function useRequireRole(requiredRole: string) {
         return;
       }
 
-      console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
+      //console.log(`useRequireRole: User ${user.email} authorized as ${requiredRole}`);
       setIsAuthorized(true);
       setIsLoading(false);
     };
@@ -106,7 +106,7 @@ export function useRequireRole(requiredRole: string) {
     isLoading,
   };
   
-  console.log(`useRequireRole result for ${requiredRole}:`, result);
+  //console.log(`useRequireRole result for ${requiredRole}:`, result);
   
   return result;
 }

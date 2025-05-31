@@ -7,6 +7,7 @@ import {
   fetchAvailableVoucherTypes,
   fetchVoucherInventoryByType,
   fetchRetailerCommissionData,
+  fetchCashierSalesHistory,
   sellVoucher,
   type CashierTerminalProfile,
   type VoucherType,
@@ -20,6 +21,7 @@ import { POSValuesGrid } from "@/components/cashier/POSValuesGrid";
 import { AdminOptionsGrid } from "@/components/cashier/AdminOptionsGrid";
 import { QuickActionFooter } from "@/components/cashier/QuickActionFooter";
 import { SalesHistoryScreen } from "@/components/cashier/SalesHistoryScreen";
+import { AccountBalanceScreen } from "@/components/cashier/AccountBalanceScreen";
 
 // Import existing components
 import { ConfirmSaleDialog } from "@/components/retailer/ConfirmSaleDialog";
@@ -55,6 +57,10 @@ export default function CashierPOS() {
   const [showAdminOptions, setShowAdminOptions] = React.useState(false);
   const [selectedAdminOption, setSelectedAdminOption] = React.useState<string | null>(null);
 
+  // Terminal commission state
+  const [terminalCommission, setTerminalCommission] = React.useState<number>(0);
+  const [isCommissionLoading, setIsCommissionLoading] = React.useState(false);
+
   // Sale process state
   const [isSelling, setIsSelling] = React.useState(false);
   const [saleError, setSaleError] = React.useState<string | null>(null);
@@ -73,7 +79,9 @@ export default function CashierPOS() {
 
   // Set the terminal and retailer name in the context and document title
   React.useEffect(() => {
+    console.log("terminal", terminal);
     if (terminal) {
+      console.log("running");
       // Update the context with terminal info
       setTerminalInfo(terminal.terminal_name, terminal.retailer_name);
       
@@ -83,8 +91,42 @@ export default function CashierPOS() {
       
       // Update the page title to include terminal info
       document.title = `${terminal.terminal_name} • ${terminal.retailer_name} - AirVoucher`;
+      
+      // Fetch terminal commission data
+      fetchTerminalCommissionData(terminal.terminal_id);
     }
-  }, [terminal, setTerminalInfo, setBalanceInfo]);
+  }, []);
+
+  // Fetch terminal commission data
+  const fetchTerminalCommissionData = async (terminalId: string) => {
+    if (!terminalId) return;
+    
+    setIsCommissionLoading(true);
+    
+    try {
+      // Fetch sales history for this terminal
+      const { data: salesData, error: salesError } = await fetchCashierSalesHistory(terminalId);
+      console.log("salesData", salesData);
+      if (salesError) {
+        console.error("Error fetching terminal sales:", salesError);
+        return;
+      }
+      
+      // Calculate total commission from sales
+      const totalCommission = salesData?.reduce((sum, sale) => {
+        // The retailer_commission field contains the commission amount for this sale
+        return sum + (sale.retailer_commission || 0);
+      }, 0) || 0;
+
+      console.log("Total commission:", totalCommission);
+      
+      setTerminalCommission(totalCommission);
+    } catch (error) {
+      console.error("Error calculating terminal commission:", error);
+    } finally {
+      setIsCommissionLoading(false);
+    }
+  };
 
   // Fetch terminal data and voucher types on mount
   React.useEffect(() => {
@@ -470,6 +512,16 @@ export default function CashierPOS() {
             <h2 className="mb-2 text-xl font-bold">Terminal Error</h2>
             <p className="mb-4 text-muted-foreground">{dataError}</p>
           </div>
+        ) : showAdminOptions && selectedAdminOption === "Account Balance" && terminal ? (
+          <AccountBalanceScreen
+            retailerName={terminal.retailer_name}
+            terminalName={terminal.terminal_name}
+            retailerBalance={terminal.retailer_balance}
+            retailerCreditLimit={terminal.retailer_credit_limit}
+            retailerCreditUsed={terminal.retailer_credit_used}
+            terminalCommission={terminal.retailer_commission_balance}
+            onBackToAdmin={handleBackToAdmin}
+          />
         ) : showAdminOptions && selectedAdminOption === "Sales History" && terminal ? (
           <SalesHistoryScreen 
             terminalId={terminal.terminal_id}
