@@ -411,7 +411,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         {/* Simple header for cashiers with key for re-render */}
         <div
-          className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background p-4"
+          className="sticky top-0 z-20 flex items-center justify-between bg-background pt-4 pl-4 pr-4 pb-2 sm:border-b sm:border-border"
           key={`cashier-header-${balanceDisplay}-${creditDisplay}`}
         >
           <div className="flex items-center">
@@ -485,7 +485,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         </div>
 
         {/* Full-width balance row for mobile */}
-        <div className="sticky top-[80px] z-20 w-full border-b bg-background p-3 sm:hidden">
+        <div className="sticky top-[70px] z-20 w-full border-b bg-background p-3 sm:hidden">
           {isBalanceLoading ? (
             <div className="flex items-center gap-2 w-full">
               <div className="flex-1 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
