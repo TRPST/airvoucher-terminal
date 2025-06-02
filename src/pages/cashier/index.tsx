@@ -217,6 +217,22 @@ export default function CashierPOS() {
             icon = <img src="/assets/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
+          case "dstv":
+            icon = <img src="/assets/vouchers/dstv-logo.png" alt="DSTV" className="w-full h-full object-cover rounded-lg" />;
+            color = "bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20";
+            break;
+          case "hellopaisa":
+            icon = <img src="/assets/vouchers/hellopaisa-logo.png" alt="Hello Pesa" className="w-full h-full object-cover rounded-lg" />;
+            color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
+            break;
+          case "eskom":
+            icon = <img src="/assets/vouchers/eskom-logo.jpg" alt="Eskom" className="w-full h-full object-cover rounded-lg" />;
+            color = "bg-red-500/5 hover:bg-red-500/10 dark:bg-red-500/10 dark:hover:bg-red-500/20";
+            break;
+          case "unipin":
+            icon = <img src="/assets/vouchers/unipin-logo.png" alt="Unipin" className="w-full h-full object-cover rounded-lg" />;
+            color = "bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20";
+            break;
           default:
             const colors = [
               "bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/20",
