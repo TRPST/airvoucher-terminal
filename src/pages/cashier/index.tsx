@@ -1,5 +1,6 @@
 import * as React from "react";
-import { CreditCard, Wallet, Percent, Tags, Settings } from "lucide-react";
+import { CreditCard, Wallet, Percent, Tags, Settings, FileText } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { ConfettiOverlay } from "@/components/ConfettiOverlay";
 import {
@@ -18,6 +19,7 @@ import { TopNavBar } from "@/components/cashier/TopNavBar";
 import { POSGrid } from "@/components/cashier/POSGrid";
 import { POSValuesGrid } from "@/components/cashier/POSValuesGrid";
 import { AdminOptionsGrid } from "@/components/cashier/AdminOptionsGrid";
+import { BillPaymentsGrid } from "@/components/cashier/BillPaymentsGrid";
 import { QuickActionFooter } from "@/components/cashier/QuickActionFooter";
 import { SalesHistoryScreen } from "@/components/cashier/SalesHistoryScreen";
 import { AccountBalanceScreen } from "@/components/cashier/AccountBalanceScreen";
@@ -78,6 +80,10 @@ export default function CashierPOS() {
 
   // Additional state for terminal commissions
   const [terminalCommissions, setTerminalCommissions] = React.useState<number>(0);
+
+  // Bill Payments state
+  const [showBillPayments, setShowBillPayments] = React.useState(false);
+  const [selectedBillPayment, setSelectedBillPayment] = React.useState<string | null>(null);
 
   // Set the terminal and retailer name in the context and document title
   React.useEffect(() => {
@@ -151,8 +157,17 @@ export default function CashierPOS() {
       return [];
     }
 
+    // Debug check - log the voucher type names
+    console.log("Voucher Type Names:", voucherTypeNames);
+
+    // Filter out any empty or undefined names
+    const validVoucherTypeNames = voucherTypeNames.filter(name => name && name.trim() !== '');
+
+    // Debug - log valid names after filtering
+    console.log("Valid Voucher Type Names:", validVoucherTypeNames);
+
     // Categorize voucher types into Mobile Networks and Other Services
-    const mobileNetworks = voucherTypeNames
+    const mobileNetworks = validVoucherTypeNames
       .filter(name => 
         ['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
           network => name && name.includes(network)
@@ -183,12 +198,26 @@ export default function CashierPOS() {
         };
       });
     
-    const otherServices = voucherTypeNames
-      .filter(name => 
-        !['Vodacom', 'MTN', 'CellC', 'Telkom'].some(
-          network => name && name.includes(network)
-        )
-      )
+    // Filter otherServices to exclude any bill payment options, including empty ones
+    const otherServices = validVoucherTypeNames
+      .filter(name => {
+        // Skip mobile networks (already handled)
+        if (['Vodacom', 'MTN', 'CellC', 'Telkom'].some(network => name && name.includes(network))) {
+          return false;
+        }
+        
+        // Skip bill payment options
+        if (['MangaungMunicipality', 'Mukuru', 'Ecocash'].some(option => name && name.includes(option))) {
+          return false;
+        }
+        
+        // Also skip any empty or null items
+        if (!name || name.trim() === '') {
+          return false;
+        }
+        
+        return true;
+      })
       .map((name, index) => {
         let icon = <CreditCard className="h-6 w-6" />;
         let color = "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20";
@@ -252,6 +281,13 @@ export default function CashierPOS() {
         };
       });
     
+    // Add Bill Payments button
+    const billPaymentsButton = {
+      name: "Bill Payments",
+      icon: <FileText className="h-8 w-8 text-blue-700 dark:text-blue-300" />,
+      color: "bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
+    };
+    
     // Add Admin button
     const adminButton = {
       name: "Admin",
@@ -275,10 +311,10 @@ export default function CashierPOS() {
       });
     }
     
-    // Add Admin as a separate category
+    // Add Bill Payments and Admin as a separate category
     categories.push({
-      name: 'Administration',
-      items: [adminButton]
+      name: 'Services',
+      items: [billPaymentsButton, adminButton]
     });
     
     return categories;
@@ -304,10 +340,16 @@ export default function CashierPOS() {
   const handleCategorySelect = React.useCallback(async (category: string) => {
     if (category === "Admin") {
       setShowAdminOptions(true);
+      setShowBillPayments(false);
+      setSelectedCategory(null);
+    } else if (category === "Bill Payments") {
+      setShowBillPayments(true);
+      setShowAdminOptions(false);
       setSelectedCategory(null);
     } else {
       setSelectedCategory(category);
       setShowAdminOptions(false);
+      setShowBillPayments(false);
       setSelectedValue(null);
       setIsVoucherInventoryLoading(true);
       
@@ -333,6 +375,13 @@ export default function CashierPOS() {
     setSelectedAdminOption(option);
     console.log(`Selected admin option: ${option}`);
     // Here you would implement the specific functionality for each admin option
+  }, []);
+
+  // Handle Bill Payment option selection
+  const handleBillPaymentOptionSelect = React.useCallback((option: string) => {
+    setSelectedBillPayment(option);
+    console.log(`Selected bill payment option: ${option}`);
+    // Here you would implement the specific functionality for each bill payment option
   }, []);
 
   // Handle value selection
@@ -481,7 +530,9 @@ export default function CashierPOS() {
     setSelectedCategory(null);
     setSelectedValue(null);
     setShowAdminOptions(false);
+    setShowBillPayments(false);
     setSelectedAdminOption(null);
+    setSelectedBillPayment(null);
   }, []);
 
   // Handle closing receipt
@@ -550,6 +601,11 @@ export default function CashierPOS() {
         ) : showAdminOptions ? (
           <AdminOptionsGrid
             onOptionSelect={handleAdminOptionSelect}
+            onBackToCategories={handleBackToCategories}
+          />
+        ) : showBillPayments ? (
+          <BillPaymentsGrid
+            onOptionSelect={handleBillPaymentOptionSelect}
             onBackToCategories={handleBackToCategories}
           />
         ) : selectedCategory ? (
