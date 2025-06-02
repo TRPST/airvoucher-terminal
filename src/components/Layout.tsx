@@ -485,7 +485,7 @@ export function Layout({ children, role = "admin" }: LayoutProps) {
         </div>
 
         {/* Full-width balance row for mobile */}
-        <div className="sticky top-[57px] z-20 w-full border-b border-border bg-background p-3 sm:hidden">
+        <div className="sticky top-[80px] z-20 w-full border-b bg-background p-3 sm:hidden">
           {isBalanceLoading ? (
             <div className="flex items-center gap-2 w-full">
               <div className="flex-1 h-10 bg-green-100/50 dark:bg-green-950/20 animate-pulse rounded-md"></div>
