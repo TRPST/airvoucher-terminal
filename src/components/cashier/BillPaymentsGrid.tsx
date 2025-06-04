@@ -35,6 +35,16 @@ export function BillPaymentsGrid({
       // Using a temporary icon until the actual logo is available
       icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
       color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
+    },
+    {
+      name: "HelloPaisa",
+      icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
+      color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
+    },
+    {
+      name: "DSTV",
+      icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
+      color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
     }
   ];
   

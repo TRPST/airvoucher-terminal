@@ -207,7 +207,7 @@ export default function CashierPOS() {
         }
         
         // Skip bill payment options
-        if (['MangaungMunicipality', 'Mukuru', 'Ecocash'].some(option => name && name.includes(option))) {
+        if (['MangaungMunicipality', 'Mukuru', 'Ecocash', 'HelloPaisa', 'DSTV'].some(option => name && name.includes(option))) {
           return false;
         }
         
@@ -281,6 +281,21 @@ export default function CashierPOS() {
         };
       });
     
+    console.log("Other Services:", otherServices);
+    
+    // Replace the sort with a more explicit reordering approach
+    const reorderedServices = [...otherServices].filter(
+      item => item.name.toLowerCase() !== 'unipin' && item.name.toLowerCase() !== 'eskom'
+    );
+    
+    // Find Unipin and Eskom items
+    const unipinItem = otherServices.find(item => item.name.toLowerCase() === 'unipin');
+    const eskomItem = otherServices.find(item => item.name.toLowerCase() === 'eskom');
+    
+    // Add Unipin and Eskom to the end in the correct order
+    if (unipinItem) reorderedServices.push(unipinItem);
+    if (eskomItem) reorderedServices.push(eskomItem);
+    
     // Add Bill Payments button
     const billPaymentsButton = {
       name: "Bill Payments",
@@ -304,10 +319,10 @@ export default function CashierPOS() {
       });
     }
     
-    if (otherServices.length > 0) {
+    if (reorderedServices.length > 0) {
       categories.push({
         name: 'Other Services',
-        items: otherServices
+        items: reorderedServices
       });
     }
     
