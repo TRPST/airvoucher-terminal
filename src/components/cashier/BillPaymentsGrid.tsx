@@ -20,31 +20,28 @@ export function BillPaymentsGrid({
   const billPaymentOptions = [
     {
       name: "MangaungMunicipality",
-      // Using a temporary icon until the actual logo is available
-      icon: <Building2 className="h-10 w-10 text-blue-600 dark:text-blue-400" />,
-      color: "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 border-border"
+      icon: <img src="/assets/vouchers/mangaung-logo.jpg" alt="Mangaung Municipality" className="w-full h-full object-cover rounded-lg" />,
+      color: "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border-border"
     },
     {
       name: "Mukuru",
-      // Using a temporary icon until the actual logo is available
-      icon: <ArrowRightLeft className="h-10 w-10 text-green-600 dark:text-green-400" />,
-      color: "bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-900/40 border-border"
+      icon: <img src="/assets/vouchers/mukuru-logo.jpg" alt="Mukuru" className="w-full h-full object-cover rounded-lg" />,
+      color: "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border-border"
     },
     {
       name: "Ecocash",
-      // Using a temporary icon until the actual logo is available
-      icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
-      color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
+      icon: <img src="/assets/vouchers/ecocash-logo.png" alt="Ecocash" className="w-full h-full object-cover rounded-lg" />,
+      color: "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border-border"
     },
     {
       name: "HelloPaisa",
-      icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
-      color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
+      icon: <img src="/assets/vouchers/hellopaisa-logo.png" alt="Hello Paisa" className="w-full h-full object-cover rounded-lg" />,
+      color: "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20"
     },
     {
       name: "DSTV",
-      icon: <Banknote className="h-10 w-10 text-purple-600 dark:text-purple-400" />,
-      color: "bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 border-border"
+      icon: <img src="/assets/vouchers/dstv-logo.png" alt="DSTV" className="w-full h-full object-cover rounded-lg" />,
+      color: "bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
     }
   ];
   
@@ -64,15 +61,15 @@ export function BillPaymentsGrid({
         <div className="w-20"></div> {/* Spacer for alignment */}
       </div>
       
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-3 max-w-4xl mx-auto">
+      <div className="grid grid-cols-2 gap-6 md:grid-cols-4 max-w-4xl mx-auto">
         {billPaymentOptions.map((option) => (
-          <BillPaymentButton
-            key={option.name}
-            name={option.name}
-            icon={option.icon}
-            color={option.color}
-            onClick={() => onOptionSelect(option.name)}
-          />
+           <POSButton
+           key={option.name}
+           name={option.name}
+           icon={option.icon}
+           color={option.color}
+           onClick={() => onOptionSelect(option.name)}           
+         />
         ))}
       </div>
     </div>
@@ -86,7 +83,7 @@ interface BillPaymentButtonProps {
   onClick: () => void;
 }
 
-function BillPaymentButton({ name, icon, color, onClick }: BillPaymentButtonProps) {
+function BillPaymentButton({ name, icon, onClick, color }: BillPaymentButtonProps) {
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
@@ -96,6 +93,29 @@ function BillPaymentButton({ name, icon, color, onClick }: BillPaymentButtonProp
     >
       <div className="mb-2 h-16 w-16 flex items-center justify-center">{icon}</div>
       <span className="text-center font-medium">{name}</span>
+    </motion.div>
+  );
+} 
+
+interface POSButtonProps {
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+}
+
+function POSButton({ name, icon, color, onClick }: POSButtonProps) {
+  const isSpecialButton = name === "Admin" || name === "Bill Payments";
+  
+  return (
+    <motion.div
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      onClick={onClick}
+      className={`h-32 w-full max-w-[180px] mx-auto flex ${isSpecialButton ? 'flex-col' : ''} items-center justify-center cursor-pointer border rounded-lg ${color}`}
+    >
+      {icon}
+      {isSpecialButton && <span className="mt-2 font-medium">{name}</span>}
     </motion.div>
   );
 } 
