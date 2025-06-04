@@ -246,6 +246,10 @@ export default function CashierPOS() {
             icon = <img src="/assets/vouchers/easyload-logo.png" alt="Easyload" className="h-24 w-auto max-w-full object-contain rounded-lg" />;
             color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
             break;
+          case "globalairtime":
+            icon = <img src="/assets/vouchers/global-airtime-logo.jpg" alt="Global Airtime" className="w-full h-full object-cover rounded-lg" />;
+            color = "bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20";
+            break;
           case "dstv":
             icon = <img src="/assets/vouchers/dstv-logo.png" alt="DSTV" className="w-full h-full object-cover rounded-lg" />;
             color = "bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/20";
@@ -283,16 +287,38 @@ export default function CashierPOS() {
     
     console.log("Other Services:", otherServices);
     
-    // Replace the sort with a more explicit reordering approach
-    const reorderedServices = [...otherServices].filter(
-      item => item.name.toLowerCase() !== 'unipin' && item.name.toLowerCase() !== 'eskom'
+    // Enhanced reordering approach for multiple items
+    // First, get all items except the ones we want to explicitly position
+    const baseServices = [...otherServices].filter(
+      item => !['unipin', 'eskom', 'easyload', 'ringa', 'ringas'].includes(item.name.toLowerCase())
     );
     
-    // Find Unipin and Eskom items
-    const unipinItem = otherServices.find(item => item.name.toLowerCase() === 'unipin');
-    const eskomItem = otherServices.find(item => item.name.toLowerCase() === 'eskom');
+    // Find the items we want to position specifically
+    const easyloadItem = otherServices.find(item => 
+      item.name.toLowerCase() === 'easyload'
+    );
     
-    // Add Unipin and Eskom to the end in the correct order
+    const ringasItem = otherServices.find(item => 
+      item.name.toLowerCase() === 'ringa' || item.name.toLowerCase() === 'ringas'
+    );
+    
+    const unipinItem = otherServices.find(item => 
+      item.name.toLowerCase() === 'unipin'
+    );
+    
+    const eskomItem = otherServices.find(item => 
+      item.name.toLowerCase() === 'eskom'
+    );
+    
+    // Build the reordered array with items in the specific positions
+    const reorderedServices = [...baseServices];
+    
+    // Add Easyload and Ringas at the start
+    if (easyloadItem) reorderedServices.unshift(easyloadItem);
+    if (ringasItem && easyloadItem) reorderedServices.splice(1, 0, ringasItem);
+    else if (ringasItem) reorderedServices.unshift(ringasItem);
+    
+    // Add Unipin and Eskom to the end in that order
     if (unipinItem) reorderedServices.push(unipinItem);
     if (eskomItem) reorderedServices.push(eskomItem);
     
