@@ -6,7 +6,8 @@
     "dev": "echo '🚀 Starting development server. Access portals at:\n- Admin: http://admin.localhost:3000/auth\n- Retailer: http://retailer.localhost:3000/auth\n- Cashier: http://cashier.localhost:3000/auth\n- Agent: http://agent.localhost:3000/auth\n\nSee SUBDOMAIN_SETUP.md for more details.\n' && next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.11",
@@ -49,6 +50,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.12",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
   }

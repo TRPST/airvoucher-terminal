@@ -1,12 +1,12 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 export default function LandingPage() {
   const router = useRouter();
-  
+
   useEffect(() => {
     // Redirect to cashier auth page
-    router.push("/portal/cashier/auth");
+    router.push('/auth');
   }, [router]);
 
   // Show a simple loading state while redirecting
@@ -14,7 +14,7 @@ export default function LandingPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="text-muted-foreground">Loading Cashier Portal...</p>
+        <p className="text-muted-foreground">Loading Terminal...</p>
       </div>
     </div>
   );
