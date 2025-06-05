@@ -10,7 +10,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
   --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
+  --primary-foreground: 210 100% 98%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
@@ -23,7 +23,7 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
   --radius: 0.75rem;
-  
+
   /* Chart specific variables */
   --tooltip-bg: rgba(255, 255, 255, 0.95);
   --tooltip-text: #333;
@@ -37,8 +37,8 @@
   --card-foreground: 210 40% 98%;
   --popover: 240 10% 3.9%;
   --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 230 100% 59.8%;
+  --primary-foreground: 210 100% 98%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
@@ -50,7 +50,7 @@
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 48%;
-  
+
   /* Chart specific variables */
   --tooltip-bg: rgba(22, 22, 22, 0.95);
   --tooltip-text: #fff;
@@ -65,13 +65,17 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   min-height: 100vh;
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings:
+    'rlig' 1,
+    'calt' 1;
 }
 
 /* Focus styles */
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px white;
+  box-shadow:
+    0 0 0 2px hsl(var(--ring)),
+    0 0 0 4px white;
 }
 
 /* Transitions */

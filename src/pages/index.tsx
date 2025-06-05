@@ -1,12 +1,12 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 export default function LandingPage() {
   const router = useRouter();
-  
+
   useEffect(() => {
     // Redirect to cashier auth page
-    router.push("/auth");
+    router.push('/auth');
   }, [router]);
 
   // Show a simple loading state while redirecting
