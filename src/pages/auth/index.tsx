@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function CashierAuthPage() {
+export default function TerminalAuthPage() {
   const router = useRouter();
   
   return (
@@ -24,11 +24,11 @@ export default function CashierAuthPage() {
           className="w-full max-w-md rounded-xl shadow-lg p-8 bg-card border border-border"
         >
           <h2 className="text-2xl font-bold mb-6 text-center">
-            Cashier Portal Login
+            Terminal Login
           </h2>
 
           <AuthGate>
-            <ClientOnlyAuth role="cashier" />
+            <ClientOnlyAuth role="terminal" />
           </AuthGate>
         </motion.div>
       </main>
