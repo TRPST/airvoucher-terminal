@@ -378,35 +378,32 @@ export default function TerminalPOS() {
 
     console.log('Other Services:', otherServices);
 
-    // Enhanced reordering approach for multiple items
-    // First, get all items except the ones we want to explicitly position
-    const baseServices = [...otherServices].filter(
-      (item) =>
-        !['unipin', 'eskom', 'easyload', 'ringa', 'ringas'].includes(item.name.toLowerCase())
-    );
+    // Define the order (use lowercase for matching)
+    const serviceOrder = [
+      'easyload',
+      'ringa',
+      'hollywoodbets',
+      'ott',
+      'globalairtime',
+      'unipin',
+      'eskom',
+    ];
 
-    // Find the items we want to position specifically
-    const easyloadItem = otherServices.find((item) => item.name.toLowerCase() === 'easyload');
+    // Reorder otherServices based on serviceOrder
+    const reorderedServices: typeof otherServices = [];
+    serviceOrder.forEach((serviceName) => {
+      const service = otherServices.find((item) => item.name.toLowerCase() === serviceName);
+      if (service) {
+        reorderedServices.push(service);
+      }
+    });
 
-    const ringasItem = otherServices.find(
-      (item) => item.name.toLowerCase() === 'ringa' || item.name.toLowerCase() === 'ringas'
-    );
-
-    const unipinItem = otherServices.find((item) => item.name.toLowerCase() === 'unipin');
-
-    const eskomItem = otherServices.find((item) => item.name.toLowerCase() === 'eskom');
-
-    // Build the reordered array with items in the specific positions
-    const reorderedServices = [...baseServices];
-
-    // Add Easyload and Ringas at the start
-    if (easyloadItem) reorderedServices.unshift(easyloadItem);
-    if (ringasItem && easyloadItem) reorderedServices.splice(1, 0, ringasItem);
-    else if (ringasItem) reorderedServices.unshift(ringasItem);
-
-    // Add Unipin and Eskom to the end in that order
-    if (unipinItem) reorderedServices.push(unipinItem);
-    if (eskomItem) reorderedServices.push(eskomItem);
+    // Add any remaining services not in the order array
+    otherServices.forEach((service) => {
+      if (!reorderedServices.includes(service)) {
+        reorderedServices.push(service);
+      }
+    });
 
     // Add Bill Payments button
     const billPaymentsButton = {
