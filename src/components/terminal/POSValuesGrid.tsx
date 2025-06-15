@@ -166,10 +166,7 @@ export function POSValuesGrid({
               whileTap={{ scale: 0.97 }}
               onClick={() => onValueSelect(voucher.amount)}
               className="flex h-32 flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
-              className="flex h-32 flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
             >
-              <div className="mb-2 text-sm text-muted-foreground">{voucher.name}</div>
-              <div className="text-2xl font-bold">R {voucher.amount.toFixed(0)}</div>
               <div className="mb-2 text-sm text-muted-foreground">{voucher.name}</div>
               <div className="text-2xl font-bold">R {voucher.amount.toFixed(0)}</div>
             </motion.button>
