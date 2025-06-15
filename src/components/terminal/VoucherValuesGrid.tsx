@@ -19,7 +19,7 @@ export const VoucherValuesGrid: React.FC<VoucherValuesGridProps> = ({
   onBackToCategories,
 }) => {
   // Debug: Log vouchers before rendering
-  console.log('VoucherValuesGrid vouchers:', vouchers);
+  // console.log('VoucherValuesGrid vouchers:', vouchers);
 
   return (
     <div>
