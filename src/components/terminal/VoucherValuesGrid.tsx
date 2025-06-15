@@ -18,19 +18,20 @@ export const VoucherValuesGrid: React.FC<VoucherValuesGridProps> = ({
   onValueSelect,
   onBackToCategories,
 }) => {
+  // Debug: Log vouchers before rendering
+  // console.log('VoucherValuesGrid vouchers:', vouchers);
+
   return (
     <div>
       <div className="mb-4 space-y-3">
         <button
           onClick={onBackToCategories}
-          className="inline-flex items-center text-sm font-medium hover:text-primary transition-colors group"
+          className="group inline-flex items-center text-sm font-medium transition-colors hover:text-primary"
         >
-          <ChevronLeft className="mr-2 h-5 w-5 transition-transform duration-200 transform group-hover:-translate-x-1" />
+          <ChevronLeft className="mr-2 h-5 w-5 transform transition-transform duration-200 group-hover:-translate-x-1" />
           Back to Categories
         </button>
-        <h2 className="text-lg font-medium">
-          Select {selectedCategory} Voucher Value
-        </h2>
+        <h2 className="text-lg font-medium">Select {selectedCategory} Voucher Value</h2>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
@@ -51,12 +52,8 @@ export const VoucherValuesGrid: React.FC<VoucherValuesGridProps> = ({
               onClick={() => onValueSelect(voucher.amount)}
               className="flex flex-col items-center justify-center rounded-lg border border-border p-6 text-center shadow-sm hover:border-primary/20 hover:shadow-md"
             >
-              <div className="mb-2 text-sm text-muted-foreground">
-                {voucher.name}
-              </div>
-              <div className="text-2xl font-bold">
-                R {voucher.amount.toFixed(2)}
-              </div>
+              <div className="mb-2 text-sm text-muted-foreground">{voucher.name}</div>
+              <div className="text-2xl font-bold">R {voucher.amount.toFixed(2)}</div>
             </motion.button>
           ))
         ) : (
