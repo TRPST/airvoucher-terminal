@@ -3,12 +3,10 @@ import axios from 'axios';
 import crypto from 'crypto-js';
 
 // OTT API Configuration
-const OTT_CONFIG = {
-  BASE_URL: 'https://test-api.ott-mobile.com/api', // Test API URL from next.config.js
-  username: 'AIRVOUCHER',
-  password: 'v95Hp_#kc+',
-  apiKey: 'b39abd74-534c-44dc-a8ba-62a89dc8d31c',
-};
+const BASE_URL = process.env.OTT_API_BASE_URL!;
+const username = process.env.OTT_API_USERNAME!;
+const password = process.env.OTT_API_PASSWORD!;
+const apiKey = process.env.OTT_API_KEY!;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const hash = crypto
       .SHA256(
         [
-          OTT_CONFIG.apiKey,
+          apiKey,
           ...Object.keys(params)
             .sort()
             .map((key) => params[key as keyof typeof params]),
@@ -33,11 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Make request to actual OTT API
     const response = await axios.post(
-      `${OTT_CONFIG.BASE_URL}/reseller/v1/GetBalance`,
+      `${BASE_URL}/reseller/v1/GetBalance`,
       new URLSearchParams({ uniqueReference, hash }),
       {
         headers: {
-          Authorization: `Basic ${Buffer.from(`${OTT_CONFIG.username}:${OTT_CONFIG.password}`).toString('base64')}`,
+          Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       }

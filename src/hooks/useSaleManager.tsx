@@ -8,10 +8,10 @@ import { createClient } from '@/utils/supabase/client';
 
 // OTT API Configuration
 const OTT_CONFIG = {
-  BASE_URL: '/api/ott',
-  username: 'AIRVOUCHER',
-  password: 'v95Hp_#kc+',
-  apiKey: 'b39abd74-534c-44dc-a8ba-62a89dc8d31c',
+  BASE_URL: '/api/ott/reseller/v1',
+  username: process.env.NEXT_PUBLIC_OTT_API_USERNAME!,
+  password: process.env.NEXT_PUBLIC_OTT_API_PASSWORD!,
+  apiKey: process.env.NEXT_PUBLIC_OTT_API_KEY!,
 };
 
 type SaleInfo = {
@@ -105,7 +105,7 @@ export function useSaleManager(
           const hash = generateHash(params);
 
           const response = await axios.post(
-            `${OTT_CONFIG.BASE_URL}/reseller/v1/GetVoucher`,
+            '/api/ott/reseller/v1/GetVoucher',
             new URLSearchParams(
               Object.entries({ ...params, hash }).reduce(
                 (acc, [key, value]) => {

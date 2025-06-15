@@ -1,9 +1,10 @@
-import * as React from "react";
-import { motion } from "framer-motion";
+import * as React from 'react';
+import { motion } from 'framer-motion';
 import { CreditCard, ChevronLeft } from 'lucide-react';
 import { VoucherType } from '@/actions';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
+import crypto from 'crypto-js';
 import { toast } from 'sonner';
 
 interface POSValuesGridProps {
@@ -16,7 +17,10 @@ interface POSValuesGridProps {
 
 // OTT API Configuration
 const OTT_CONFIG = {
-  BASE_URL: '/api/ott/reseller/v1',
+  BASE_URL: '/api/ott', // Use local API routes
+  username: process.env.NEXT_PUBLIC_OTT_API_USERNAME,
+  password: process.env.NEXT_PUBLIC_OTT_API_PASSWORD,
+  apiKey: process.env.NEXT_PUBLIC_OTT_API_KEY,
 };
 
 export function POSValuesGrid({
@@ -29,11 +33,34 @@ export function POSValuesGrid({
   const [ottAmounts] = React.useState([10, 20, 50, 100, 200, 1000, 2000]);
   const [isOttLoading, setIsOttLoading] = React.useState(false);
 
+  // OTT API Helper Functions
+  const generateHash = (params: { [key: string]: any }) => {
+    // Sort parameters alphabetically by key
+    const sortedKeys = Object.keys(params).sort();
+
+    // Create string with API key first, followed by parameter values in alphabetical order
+    const stringToHash = OTT_CONFIG.apiKey + sortedKeys.map((key) => params[key]).join('');
+
+    // Generate SHA256 hash
+    return crypto.SHA256(stringToHash).toString();
+  };
+
+  const getAuthHeaders = () => {
+    const authString = `${OTT_CONFIG.username}:${OTT_CONFIG.password}`;
+    console.log('Auth string before base64:', authString);
+    const token = btoa(authString);
+    console.log('Base64 token:', token);
+    return { Authorization: `Basic ${token}` };
+  };
+
+  const generateUniqueReference = () =>
+    `ref-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+
   // Issue OTT Voucher
   const issueOttVoucher = async (amount: number) => {
     setIsOttLoading(true);
     try {
-      const uniqueReference = `ref-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+      const uniqueReference = generateUniqueReference();
       const params = {
         branch: 'DEFAULT_BRANCH',
         cashier: 'SYSTEM',
@@ -44,28 +71,27 @@ export function POSValuesGrid({
         vendorCode: '11',
       };
 
-      // Convert params to URLSearchParams
-      const formData = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        formData.append(key, String(value));
-      });
-
-      const response = await axios.post(`${OTT_CONFIG.BASE_URL}/GetVoucher`, formData, {
+      // Call our backend API route instead of OTT directly
+      const response = await axios.post('/api/ott/reseller/v1/GetVoucher', params, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
       });
 
       if (response.data.success === 'true') {
-        const voucherData = JSON.parse(response.data.voucher);
         onValueSelect(amount);
         toast.success('OTT voucher issued successfully');
       } else {
         throw new Error(response.data.message || 'Failed to issue voucher');
       }
-    } catch (error) {
-      console.error('Error issuing OTT voucher:', error);
-      toast.error('Failed to issue OTT voucher');
+    } catch (error: any) {
+      console.error('Error issuing OTT voucher:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error(error.response?.data?.message || 'Failed to issue OTT voucher');
     } finally {
       setIsOttLoading(false);
     }
@@ -91,7 +117,7 @@ export function POSValuesGrid({
       <h2 className="hidden whitespace-nowrap text-xl font-bold sm:block">
         {selectedCategory} Vouchers
       </h2>
-      <div className="hidden w-20 sm:block"></div>
+      <div className="hidden w-20 sm:block"></div> {/* Spacer for alignment on larger screens */}
     </div>
   );
 
@@ -177,4 +203,4 @@ export function POSValuesGrid({
       </div>
     </div>
   );
-} 
+}
