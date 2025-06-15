@@ -80,8 +80,14 @@ export default function TerminalPOS() {
     handleAdminOptionSelect,
     handleBillPaymentOptionSelect,
     handleBackToAdmin,
-    handleBackToCategories,
+    handleBackToCategories: adminHandleBackToCategories,
   } = adminOptions;
+
+  // Wrapper function to handle back to categories
+  const handleBackToCategories = React.useCallback(() => {
+    adminHandleBackToCategories();
+    setSelectedCategory(null);
+  }, [adminHandleBackToCategories, setSelectedCategory]);
 
   // Process voucher categories
   const voucherCategories = useVoucherCategories(voucherTypeNames);

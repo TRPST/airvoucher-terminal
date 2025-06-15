@@ -8,7 +8,7 @@ export function useAdminOptions() {
   // Bill Payments state
   const [showBillPayments, setShowBillPayments] = React.useState(false);
   const [selectedBillPayment, setSelectedBillPayment] = React.useState<string | null>(null);
-
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
   // Handle category selection
   const handleCategorySelect = React.useCallback((category: string) => {
     if (category === 'Admin') {
@@ -48,6 +48,7 @@ export function useAdminOptions() {
     setShowBillPayments(false);
     setSelectedAdminOption(null);
     setSelectedBillPayment(null);
+    setSelectedCategory(null);
   }, []);
 
   return {
