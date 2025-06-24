@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CreditCard, Wallet, Percent, Tags, Settings, FileText } from 'lucide-react';
+import { CreditCard, Wallet, Percent, Tags, Settings, FileText, Zap } from 'lucide-react';
 
 type VoucherCategory = {
   name: string;
@@ -108,7 +108,7 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
         let icon = <CreditCard className="h-6 w-6" />;
         let color = 'bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20';
 
-        const categoryName = name?.split(' ')[0] || name;
+        let categoryName = name?.split(' ')[0] || name;
 
         // Assign different icons and colors based on name
         switch (categoryName?.toLowerCase()) {
@@ -194,14 +194,16 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
               'bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/20';
             break;
           case 'eskom':
+          case 'electricity':
             icon = (
-              <img
-                src="/assets/vouchers/eskom-logo.jpg"
-                alt="Eskom"
-                className="h-full w-full rounded-lg object-cover"
-              />
+              <div className="text-center">
+                <Zap className="mx-auto mb-1 h-6 w-6 text-yellow-500" />
+                <div className="text-xs font-medium text-yellow-600">ELECTRICITY</div>
+              </div>
             );
-            color = 'bg-red-500/5 hover:bg-red-500/10 dark:bg-red-500/10 dark:hover:bg-red-500/20';
+            color =
+              'bg-yellow-500/5 hover:bg-yellow-500/10 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20';
+            categoryName = 'Electricity';
             break;
           case 'unipin':
             icon = (
@@ -241,7 +243,7 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
       'ott',
       'globalairtime',
       'unipin',
-      'eskom',
+      'electricity',
     ];
 
     // Reorder otherServices based on serviceOrder

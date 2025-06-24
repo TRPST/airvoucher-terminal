@@ -22,6 +22,7 @@ import { AccountBalanceScreen } from '@/components/terminal/AccountBalanceScreen
 import { ConfirmSaleDialog } from '@/components/terminal/ConfirmSaleDialog';
 import { SuccessToast } from '@/components/terminal/SuccessToast';
 import { SaleReceiptDialog } from '@/components/dialogs/SaleReceiptDialog';
+import { ElectricityBillPayment } from '@/components/terminal/ElectricityBillPayment';
 
 export default function TerminalPOS() {
   // Protect this route - only allow cashier role
@@ -83,10 +84,14 @@ export default function TerminalPOS() {
     handleBackToCategories: adminHandleBackToCategories,
   } = adminOptions;
 
+  // Electricity payment state
+  const [showElectricityPayment, setShowElectricityPayment] = React.useState(false);
+
   // Wrapper function to handle back to categories
   const handleBackToCategories = React.useCallback(() => {
     adminHandleBackToCategories();
     setSelectedCategory(null);
+    setShowElectricityPayment(false);
   }, [adminHandleBackToCategories, setSelectedCategory]);
 
   // Process voucher categories
@@ -99,6 +104,10 @@ export default function TerminalPOS() {
         adminOptions.handleCategorySelect(category);
       } else if (category === 'Bill Payments') {
         adminOptions.handleCategorySelect(category);
+      } else if (category === 'Electricity') {
+        setShowElectricityPayment(true);
+        adminOptions.setShowAdminOptions(false);
+        adminOptions.setShowBillPayments(false);
       } else {
         setSelectedCategory(category);
         adminOptions.setShowAdminOptions(false);
@@ -142,6 +151,13 @@ export default function TerminalPOS() {
     handleConfirmSale(selectedVoucher, commissionData);
   }, [selectedCategory, selectedValue, findVoucher, handleConfirmSale, commissionData]);
 
+  // Handle electricity payment completion
+  const handleElectricityPaymentComplete = React.useCallback((paymentData: any) => {
+    console.log('Electricity payment completed:', paymentData);
+    // Here you can add logic to record the payment in your database
+    // and show success feedback
+  }, []);
+
   return (
     <>
       {/* Main Content Area */}
@@ -159,6 +175,11 @@ export default function TerminalPOS() {
             <h2 className="mb-2 text-xl font-bold">Terminal Error</h2>
             <p className="mb-4 text-muted-foreground">{dataError}</p>
           </div>
+        ) : showElectricityPayment ? (
+          <ElectricityBillPayment
+            onPaymentComplete={handleElectricityPaymentComplete}
+            onBackToCategories={handleBackToCategories}
+          />
         ) : showAdminOptions && selectedAdminOption === 'Account Balance' && terminal ? (
           <AccountBalanceScreen
             retailerName={terminal.retailer_name}
