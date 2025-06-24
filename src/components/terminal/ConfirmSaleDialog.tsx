@@ -1,11 +1,12 @@
-import * as React from "react";
-import { CreditCard, AlertCircle } from "lucide-react";
+import * as React from 'react';
+import { CreditCard, AlertCircle, Settings } from 'lucide-react';
 
 type ConfirmSaleDialogProps = {
   voucherType: string;
   amount: number;
   commissionRate: number;
   commissionAmount: number;
+  isOverride?: boolean;
   isLoading: boolean;
   error: string | null;
   onCancel: () => void;
@@ -17,6 +18,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
   amount,
   commissionRate,
   commissionAmount,
+  isOverride = false,
   isLoading,
   error,
   onCancel,
@@ -26,7 +28,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
   React.useEffect(() => {
     // Disable scrolling on body when modal is open
     document.body.style.overflow = 'hidden';
-    
+
     // Cleanup function to ensure scrolling is re-enabled when component unmounts
     return () => {
       document.body.style.overflow = 'auto';
@@ -35,7 +37,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-      <div 
+      <div
         className="fixed inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onCancel}
         aria-hidden="true"
@@ -57,27 +59,9 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
             </div>
             <div className="flex justify-between border-t border-border py-2">
               <span className="text-sm text-muted-foreground">Value:</span>
-              <span className="font-medium">
-                R {amount.toFixed(2)}
-              </span>
+              <span className="font-medium">R {amount.toFixed(2)}</span>
             </div>
-            {/* <div className="flex justify-between border-t border-border py-2">
-              <span className="text-sm text-muted-foreground">
-                Commission Rate:
-              </span>
-              <span className="font-medium text-blue-500">
-                {commissionRate}%
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-border py-2">
-              <span className="text-sm text-muted-foreground">
-                Your Commission:
-              </span>
-              <span className="font-medium text-green-500">
-                R {commissionAmount.toFixed(2)}
-              </span>
-            </div> */}
-          </div>          
+          </div>
 
           {error && (
             <div className="mb-4 w-full rounded-md bg-red-50 p-3 text-red-500 dark:bg-red-900/20">
@@ -85,13 +69,11 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
                 <AlertCircle className="h-4 w-4" />
                 <p className="text-sm font-medium">Error</p>
               </div>
-              <p className="text-xs mt-1">
-                {error}
-              </p>
+              <p className="mt-1 text-xs">{error}</p>
             </div>
           )}
 
-          <div className="flex w-full justify-end space-x-2 mt-4">
+          <div className="mt-4 flex w-full justify-end space-x-2">
             <button
               onClick={onCancel}
               className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
@@ -101,7 +83,7 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
             <button
               onClick={onConfirm}
               disabled={isLoading || error !== null}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? 'Processing...' : 'Complete Sale'}
             </button>

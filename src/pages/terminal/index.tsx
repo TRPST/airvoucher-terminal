@@ -205,6 +205,7 @@ export default function TerminalPOS() {
           amount={selectedValue}
           commissionRate={commissionData?.rate || 0}
           commissionAmount={commissionData?.amount || 0}
+          isOverride={commissionData?.isOverride || false}
           isLoading={isSelling}
           error={saleError || commissionError}
           onConfirm={handleConfirmSaleWithVoucher}

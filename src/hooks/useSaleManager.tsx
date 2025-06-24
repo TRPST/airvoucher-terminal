@@ -31,6 +31,7 @@ type CommissionData = {
   rate: number;
   amount: number;
   groupName: string;
+  isOverride: boolean;
 };
 
 export function useSaleManager(

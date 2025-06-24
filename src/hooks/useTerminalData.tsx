@@ -23,6 +23,7 @@ export function useTerminalData(userId: string | undefined, isAuthorized: boolea
     rate: number;
     amount: number;
     groupName: string;
+    isOverride: boolean;
   } | null>(null);
   const [commissionError, setCommissionError] = React.useState<string | null>(null);
   const [retailerCommissions, setRetailerCommissions] = React.useState<number>(0);
@@ -134,6 +135,7 @@ export function useTerminalData(userId: string | undefined, isAuthorized: boolea
           rate: data?.rate || 0,
           amount: data?.amount || 0,
           groupName: data?.groupName || '',
+          isOverride: data?.isOverride || false,
         };
 
         setCommissionData(commData);
