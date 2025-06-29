@@ -449,6 +449,7 @@ export async function fetchSalesHistory({
     created_at,
     sale_amount,
     retailer_commission,
+    ref_number,
     terminals(name),
     voucher_inventory(
       pin,
@@ -485,12 +486,13 @@ export async function fetchSalesHistory({
     created_at: sale.created_at,
     sale_amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
-    terminal_name: sale.terminals?.name || "",
-    voucher_type: sale.voucher_inventory?.voucher_types?.name || "",
-    voucher_amount: sale.voucher_inventory?.amount || 0,
-    pin: sale.voucher_inventory?.pin || "",
+    terminal_name: sale.terminals?.name || '',
+    // All sales now have voucher_inventory records (including OTT)
+    voucher_type: sale.voucher_inventory?.voucher_types?.name || 'Unknown',
+    voucher_amount: sale.voucher_inventory?.amount || sale.sale_amount,
+    pin: sale.voucher_inventory?.pin || 'N/A',
     serial_number: sale.voucher_inventory?.serial_number,
-    ref_number: `REF-${sale.id.slice(0, 8)}` // Generate a reference number based on sale ID
+    ref_number: sale.ref_number || `REF-${sale.id.slice(0, 8)}`,
   }));
 
   return { data: sales, error: null };

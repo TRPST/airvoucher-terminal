@@ -44,7 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Forward the response from the OTT API
     return res.status(200).json(response.data);
   } catch (error: any) {
-    console.error('OTT API Error:', error.response?.data || error.message);
     return res.status(error.response?.status || 500).json({
       success: false,
       message: error.response?.data?.message || 'Failed to fetch OTT balance',
