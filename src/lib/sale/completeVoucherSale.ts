@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from '@/utils/supabase/client';
 
 export interface CompleteVoucherSaleParams {
   voucher_inventory_id: string;
@@ -54,6 +54,10 @@ export const completeVoucherSale = async (
       retailer_commission_pct: params.retailer_commission_pct,
       agent_commission_pct: params.agent_commission_pct,
     });
+//     // Call the RPC function
+//     console.log('Params for complete_voucher_sale:', params);
+
+//     const { data, error } = await supabase.rpc('complete_voucher_sale', params);
 
     if (error) {
       console.error('Error completing voucher sale:', error);
