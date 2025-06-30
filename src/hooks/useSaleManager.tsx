@@ -58,7 +58,6 @@ export function useSaleManager(
 
   // Handle value selection
   const handleValueSelect = React.useCallback((value: number) => {
-    setSaleError(null); // Clear any previous errors
     setSelectedValue(value);
     setShowConfirmDialog(true);
   }, []);
@@ -94,10 +93,6 @@ export function useSaleManager(
         if (selectedCategory === 'OTT') {
           // Handle OTT sale
           const uniqueReference = generateUniqueReference();
-
-          // Use the correct vendor code as per OTT documentation
-          const vendorCode = 11; // Fixed vendor code as per OTT docs
-
           const params = {
             branch: 'DEFAULT_BRANCH',
             cashier: 'SYSTEM',
@@ -105,7 +100,7 @@ export function useSaleManager(
             till: 'WEB',
             uniqueReference,
             value: selectedValue,
-            vendorCode: vendorCode,
+            vendorCode: '11',
           };
 
           const hash = generateHash(params);
@@ -132,10 +127,7 @@ export function useSaleManager(
           if (response.data.success === 'true') {
             const voucherData = JSON.parse(response.data.voucher);
             const voucherCode = voucherData.voucher_code || voucherData.pin;
-
-            // Only get serial number from API response - no fallbacks
-            const serialNumber =
-              voucherData.serial_number || voucherData.serialNumber || voucherData.serial;
+            const serialNumber = voucherData.serial_number;
 
             // Calculate new balance and credit
             const saleAmount = selectedValue;
@@ -180,79 +172,6 @@ export function useSaleManager(
               throw new Error('Failed to create transaction record');
             }
 
-            // Get or create OTT voucher type
-            let ottVoucherTypeId: string;
-            const { data: ottVoucherType, error: voucherTypeError } = await supabase
-              .from('voucher_types')
-              .select('id')
-              .eq('name', 'OTT')
-              .single();
-
-            if (voucherTypeError && voucherTypeError.code === 'PGRST116') {
-              // OTT voucher type doesn't exist, create it
-              const { data: newVoucherType, error: createTypeError } = await supabase
-                .from('voucher_types')
-                .insert({
-                  name: 'OTT',
-                  supplier_commission_pct: 0, // No supplier commission for OTT
-                })
-                .select('id')
-                .single();
-
-              if (createTypeError || !newVoucherType) {
-                throw new Error('Failed to create OTT voucher type');
-              }
-              ottVoucherTypeId = newVoucherType.id;
-            } else if (voucherTypeError) {
-              throw new Error('Failed to check OTT voucher type');
-            } else {
-              ottVoucherTypeId = ottVoucherType.id;
-            }
-
-            // Create voucher inventory record for OTT sale (placeholder record)
-            const { data: voucherInventory, error: inventoryError } = await supabase
-              .from('voucher_inventory')
-              .insert({
-                voucher_type_id: ottVoucherTypeId,
-                amount: selectedValue,
-                pin: voucherCode,
-                serial_number: serialNumber,
-                status: 'sold', // Mark as sold immediately since it's generated via API
-              })
-              .select('id')
-              .single();
-
-            if (inventoryError || !voucherInventory) {
-              throw new Error('Failed to create voucher inventory record');
-            }
-
-            // Create sales record for sales history
-            const { error: salesError } = await supabase.from('sales').insert({
-              terminal_id: terminal.terminal_id,
-              voucher_inventory_id: voucherInventory.id,
-              sale_amount: saleAmount,
-              retailer_commission: commissionAmount,
-              agent_commission: 0, // No agent commission for OTT
-              supplier_commission: 0, // No supplier commission for OTT
-              profit: saleAmount - commissionAmount, // Profit is sale amount minus retailer commission
-              ref_number: uniqueReference,
-            });
-
-            if (salesError) {
-              throw new Error(`Failed to create sales record: ${salesError.message}`);
-            }
-
-            // Update the voucher inventory record to set sold_at timestamp
-            const { error: soldAtError } = await supabase
-              .from('voucher_inventory')
-              .update({ sold_at: new Date().toISOString() })
-              .eq('id', voucherInventory.id);
-
-            if (soldAtError) {
-              // Don't fail the sale for this, just log it
-              console.warn('Failed to update sold_at timestamp:', soldAtError);
-            }
-
             setSaleInfo({
               pin: voucherCode,
               serial_number: serialNumber,
@@ -295,26 +214,7 @@ export function useSaleManager(
               setShowConfetti(false);
             }, 3000);
           } else {
-            // Handle specific error messages from OTT API
-            const errorMessage = response.data.message || 'Failed to issue OTT voucher';
-
-            if (
-              errorMessage.toLowerCase().includes('invalid amount') ||
-              errorMessage.toLowerCase().includes('minimum') ||
-              errorMessage.toLowerCase().includes('denomination')
-            ) {
-              // Error code 3 means "Cannot Find a Matching Product for this value"
-              // This means the amount is not available as a product in the OTT system
-              throw new Error(
-                `R${selectedValue} voucher is not available as an OTT product. Please try a different amount.`
-              );
-            } else if (errorMessage.toLowerCase().includes('insufficient')) {
-              throw new Error('Insufficient balance with OTT provider');
-            } else if (errorMessage.toLowerCase().includes('vendor')) {
-              throw new Error('Vendor configuration error. Please contact support.');
-            } else {
-              throw new Error(`OTT API Error: ${errorMessage}`);
-            }
+            throw new Error(response.data.message || 'Failed to issue OTT voucher');
           }
         } else {
           // Handle regular voucher sale
@@ -392,14 +292,10 @@ export function useSaleManager(
         setSaleError(
           `Failed to process sale: ${error instanceof Error ? error.message : String(error)}`
         );
-        // Don't close the dialog on error - let the user see the error message
-        return;
       } finally {
         setIsSelling(false);
+        setShowConfirmDialog(false);
       }
-
-      // Only close dialog on successful completion
-      setShowConfirmDialog(false);
     },
     [selectedCategory, selectedValue, terminal, updateBalanceAfterSale, setTerminal, supabase]
   );
@@ -410,12 +306,6 @@ export function useSaleManager(
     setSaleComplete(false);
     setSelectedCategory(null);
     setSelectedValue(null);
-  }, []);
-
-  // Handle cancel dialog
-  const handleCancelDialog = React.useCallback(() => {
-    setSaleError(null); // Clear any errors
-    setShowConfirmDialog(false);
   }, []);
 
   return {
@@ -443,6 +333,5 @@ export function useSaleManager(
     handleValueSelect,
     handleConfirmSale,
     handleCloseReceipt,
-    handleCancelDialog,
   };
 }
