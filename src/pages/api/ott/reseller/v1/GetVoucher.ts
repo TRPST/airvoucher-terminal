@@ -38,9 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get parameters from request body
-    const params = req.body;
-    const { branch, cashier, mobileForSMS, till, uniqueReference, value, vendorCode } = params;
+    // Get parameters from request body (now JSON instead of form data)
+    const { branch, cashier, mobileForSMS, till, uniqueReference, value, vendorCode } = req.body;
 
     // Validate required parameters
     if (!branch || !cashier || !till || !uniqueReference || !value || !vendorCode) {

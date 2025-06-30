@@ -11,6 +11,7 @@ type ConfirmSaleDialogProps = {
   error: string | null;
   onCancel: () => void;
   onConfirm: () => void;
+  onClearError?: () => void;
 };
 
 export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
@@ -23,7 +24,14 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
   error,
   onCancel,
   onConfirm,
+  onClearError,
 }) => {
+  const handleConfirm = () => {
+    if (error && onClearError) {
+      onClearError();
+    }
+    onConfirm();
+  };
   // Effect to prevent body scrolling when modal is open
   React.useEffect(() => {
     // Disable scrolling on body when modal is open
@@ -78,14 +86,14 @@ export const ConfirmSaleDialog: React.FC<ConfirmSaleDialogProps> = ({
               onClick={onCancel}
               className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              Cancel
+              {error ? 'Close' : 'Cancel'}
             </button>
             <button
-              onClick={onConfirm}
-              disabled={isLoading || error !== null}
+              onClick={handleConfirm}
+              disabled={isLoading}
               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? 'Processing...' : 'Complete Sale'}
+              {isLoading ? 'Processing...' : error ? 'Try Again' : 'Complete Sale'}
             </button>
           </div>
         </div>
