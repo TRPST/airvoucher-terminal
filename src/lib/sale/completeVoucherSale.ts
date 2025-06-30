@@ -44,10 +44,21 @@ export const completeVoucherSale = async (
   const supabase = createClient();
 
   try {
-    // Call the RPC function
-    console.log('Params for complete_voucher_sale:', params);
+    // Call the RPC function with parameters in the exact order expected by the SQL function
+    const { data, error } = await supabase.rpc('complete_voucher_sale', {
+      voucher_inventory_id: params.voucher_inventory_id,
+      retailer_id: params.retailer_id,
+      terminal_id: params.terminal_id,
+      in_voucher_type_id: params.in_voucher_type_id,
+      sale_amount: params.sale_amount,
+      retailer_commission_pct: params.retailer_commission_pct,
+      agent_commission_pct: params.agent_commission_pct,
+    });
+//     // Call the RPC function
+//     console.log('Params for complete_voucher_sale:', params);
 
-    const { data, error } = await supabase.rpc('complete_voucher_sale', params);
+//     const { data, error } = await supabase.rpc('complete_voucher_sale', params);
+// >>>>>>> main
 
     if (error) {
       console.error('Error completing voucher sale:', error);
