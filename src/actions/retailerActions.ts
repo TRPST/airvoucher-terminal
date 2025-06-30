@@ -375,7 +375,7 @@ export async function sellVoucher({
       voucher_inventory_id: voucher.id,
       retailer_id: retailer.id,
       terminal_id: terminalId,
-      voucher_type_id: voucherTypeId,
+      in_voucher_type_id: voucherTypeId,
       sale_amount: voucher.amount,
       retailer_commission_pct: commissionRate.retailer_pct,
       agent_commission_pct: commissionRate.agent_pct,

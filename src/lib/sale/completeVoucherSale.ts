@@ -4,7 +4,7 @@ export interface CompleteVoucherSaleParams {
   voucher_inventory_id: string;
   retailer_id: string;
   terminal_id: string;
-  voucher_type_id: string;
+  in_voucher_type_id: string;
   sale_amount: number;
   retailer_commission_pct: number;
   agent_commission_pct: number;
@@ -28,28 +28,28 @@ export interface VoucherSaleReceipt {
 
 /**
  * Completes a voucher sale transaction by calling the Supabase RPC function
- * 
+ *
  * This function will:
  * 1. Mark the voucher as sold in voucher_inventory
  * 2. Create a new sale record
  * 3. Add a transaction record
  * 4. Update retailer balance and commission
  * 5. Update terminal last_active timestamp
- * 
+ *
  * All operations are performed in a single database transaction
  */
 export const completeVoucherSale = async (
   params: CompleteVoucherSaleParams
 ): Promise<{ data: VoucherSaleReceipt | null; error: Error | null }> => {
   const supabase = createClient();
-  
+
   try {
     // Call the RPC function with parameters in the exact order expected by the SQL function
     const { data, error } = await supabase.rpc('complete_voucher_sale', {
       voucher_inventory_id: params.voucher_inventory_id,
       retailer_id: params.retailer_id,
       terminal_id: params.terminal_id,
-      in_voucher_type_id: params.voucher_type_id, // Note: parameter name difference!
+      in_voucher_type_id: params.in_voucher_type_id,
       sale_amount: params.sale_amount,
       retailer_commission_pct: params.retailer_commission_pct,
       agent_commission_pct: params.agent_commission_pct,
@@ -96,10 +96,10 @@ export const completeVoucherSale = async (
 
     return { data: receiptData, error: null };
   } catch (err) {
-    console.error("Unexpected error in completeVoucherSale:", err);
-    return { 
-      data: null, 
-      error: err instanceof Error ? err : new Error(String(err)) 
+    console.error('Unexpected error in completeVoucherSale:', err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
     };
   }
 };
