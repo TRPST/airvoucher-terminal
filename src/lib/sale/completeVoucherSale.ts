@@ -1,10 +1,10 @@
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from '@/utils/supabase/client';
 
 export interface CompleteVoucherSaleParams {
   voucher_inventory_id: string;
   retailer_id: string;
   terminal_id: string;
-  voucher_type_id: string;
+  in_voucher_type_id: string;
   sale_amount: number;
   retailer_commission_pct: number;
   agent_commission_pct: number;
@@ -28,21 +28,21 @@ export interface VoucherSaleReceipt {
 
 /**
  * Completes a voucher sale transaction by calling the Supabase RPC function
- * 
+ *
  * This function will:
  * 1. Mark the voucher as sold in voucher_inventory
  * 2. Create a new sale record
  * 3. Add a transaction record
  * 4. Update retailer balance and commission
  * 5. Update terminal last_active timestamp
- * 
+ *
  * All operations are performed in a single database transaction
  */
 export const completeVoucherSale = async (
   params: CompleteVoucherSaleParams
 ): Promise<{ data: VoucherSaleReceipt | null; error: Error | null }> => {
   const supabase = createClient();
-  
+
   try {
     // Call the RPC function with parameters in the exact order expected by the SQL function
     const { data, error } = await supabase.rpc('complete_voucher_sale', {
@@ -54,6 +54,10 @@ export const completeVoucherSale = async (
       retailer_commission_pct: params.retailer_commission_pct,
       agent_commission_pct: params.agent_commission_pct,
     });
+//     // Call the RPC function
+//     console.log('Params for complete_voucher_sale:', params);
+
+//     const { data, error } = await supabase.rpc('complete_voucher_sale', params);
 
     if (error) {
       console.error('Error completing voucher sale:', error);
@@ -96,10 +100,10 @@ export const completeVoucherSale = async (
 
     return { data: receiptData, error: null };
   } catch (err) {
-    console.error("Unexpected error in completeVoucherSale:", err);
-    return { 
-      data: null, 
-      error: err instanceof Error ? err : new Error(String(err)) 
+    console.error('Unexpected error in completeVoucherSale:', err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
     };
   }
 };
