@@ -70,6 +70,7 @@ export default function TerminalPOS() {
     handleValueSelect,
     handleConfirmSale,
     handleCloseReceipt,
+    handleCancelDialog,
   } = saleManager;
 
   // Admin and bill payments options
@@ -230,7 +231,7 @@ export default function TerminalPOS() {
           isLoading={isSelling}
           error={saleError || commissionError}
           onConfirm={handleConfirmSaleWithVoucher}
-          onCancel={() => setShowConfirmDialog(false)}
+          onCancel={handleCancelDialog}
         />
       )}
 
