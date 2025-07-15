@@ -407,6 +407,7 @@ export async function sellVoucher({
         serial_number: voucher.serial_number || '',
         ref_number: refNumber,
         retailer_name: retailer.name,
+        retailer_id: retailer.id,
         terminal_name: terminal.name,
         terminal_id: terminalId,
         product_name: voucherType.name,
@@ -414,6 +415,11 @@ export async function sellVoucher({
         retailer_commission: voucher.amount * commissionRate.retailer_pct,
         agent_commission: voucher.amount * commissionRate.agent_pct,
         timestamp: new Date().toISOString(),
+        amount_from_balance: voucher.amount, // Fallback assumption
+        amount_from_credit: 0, // Fallback assumption
+        redemption_instructions: '', // Will be populated from database
+        help_instructions: '', // Will be populated from database
+        website_url: '', // Will be populated from database
         instructions: 'Dial *136*(voucher number)#',
       };
     }

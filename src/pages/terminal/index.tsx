@@ -230,6 +230,7 @@ export default function TerminalPOS() {
           onClose={handleCloseReceipt}
           terminalName={terminal?.terminal_name || ''}
           retailerName={terminal?.retailer_name || ''}
+          retailerId={terminal?.retailer_id}
         />
       )}
 

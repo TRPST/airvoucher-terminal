@@ -16,6 +16,7 @@ export interface VoucherSaleReceipt {
   serial_number: string;
   ref_number: string;
   retailer_name: string;
+  retailer_id: string;
   terminal_name: string;
   terminal_id: string;
   product_name: string;
@@ -23,7 +24,11 @@ export interface VoucherSaleReceipt {
   retailer_commission: number;
   agent_commission: number;
   timestamp: string;
+  amount_from_balance: number;
+  amount_from_credit: number;
   instructions: string;
+  help: string;
+  website_url: string;
 }
 
 /**
@@ -45,8 +50,6 @@ export const completeVoucherSale = async (
 
   try {
     // Call the RPC function
-    console.log('Params for complete_voucher_sale:', params);
-
     const { data, error } = await supabase.rpc('complete_voucher_sale', params);
 
     if (error) {
@@ -61,31 +64,29 @@ export const completeVoucherSale = async (
       };
     }
 
-    // Generate instructions based on product type
-    // In a real implementation, these would come from the database
-    // or be determined based on the voucher type
-    let instructions = 'Dial *136*(voucher number)#';
-    if (data.product_name) {
+    // Use instructions from database, fallback to generated instructions if empty
+    let fallbackInstructions = 'Dial *136*(voucher number)#';
+    if (data.product_name && !data.instructions) {
       const productLower = data.product_name.toLowerCase();
 
       // Simple instruction generation based on product name
       if (productLower.includes('vodacom')) {
-        instructions = 'Dial *135*(voucher number)#';
+        fallbackInstructions = 'Dial *135*(voucher number)#';
       } else if (productLower.includes('mtn')) {
-        instructions = 'Dial *136*(voucher number)#';
+        fallbackInstructions = 'Dial *136*(voucher number)#';
       } else if (productLower.includes('telkom')) {
-        instructions = 'Dial *180*(voucher number)#';
+        fallbackInstructions = 'Dial *180*(voucher number)#';
       } else if (productLower.includes('cellc')) {
-        instructions = 'Dial *102*(voucher number)#';
+        fallbackInstructions = 'Dial *102*(voucher number)#';
       } else if (productLower.includes('netflix') || productLower.includes('showmax')) {
-        instructions = "Visit provider website and enter code in 'Redeem Voucher' section";
+        fallbackInstructions = "Visit provider website and enter code in 'Redeem Voucher' section";
       }
     }
 
-    // Add instructions to the receipt
+    // Prepare receipt data with fallback instructions if needed
     const receiptData: VoucherSaleReceipt = {
       ...data,
-      instructions,
+      instructions: data.instructions || fallbackInstructions,
     };
 
     return { data: receiptData, error: null };
