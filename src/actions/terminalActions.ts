@@ -492,6 +492,7 @@ export async function sellVoucher({
         serial_number: voucher.serial_number || '',
         ref_number: refNumber,
         retailer_name: retailer.name,
+        retailer_id: retailer.id,
         terminal_name: `${retailer.name} Terminal`,
         terminal_id: terminalId,
         product_name: voucherType.name,
@@ -499,7 +500,11 @@ export async function sellVoucher({
         retailer_commission: receiptData.retailer_commission || 0,
         agent_commission: receiptData.agent_commission || 0,
         timestamp: new Date().toISOString(),
+        amount_from_balance: voucher.amount, // Assume full amount from balance for now
+        amount_from_credit: 0, // Default to 0 for credit
         instructions: 'Dial *136*(voucher number)#',
+        help: '', // Default empty help
+        website_url: '', // Default empty website URL
       };
     }
 
@@ -575,7 +580,7 @@ export async function fetchVoucherTypesByNetwork(
   const { data, error } = await supabase
     .from('voucher_types')
     .select('*')
-    .eq('network_provider', networkProvider)
+    .ilike('network_provider', networkProvider)
     .order('category, sub_category, name');
 
   return { data, error };
@@ -593,7 +598,7 @@ export async function fetchVoucherTypesByNetworkAndCategory(
   const { data, error } = await supabase
     .from('voucher_types')
     .select('*')
-    .eq('network_provider', networkProvider)
+    .ilike('network_provider', networkProvider)
     .eq('category', category)
     .order('sub_category, name');
 
@@ -613,7 +618,7 @@ export async function fetchVoucherTypesByNetworkCategoryAndDuration(
   const { data, error } = await supabase
     .from('voucher_types')
     .select('*')
-    .eq('network_provider', networkProvider)
+    .ilike('network_provider', networkProvider)
     .eq('category', category)
     .eq('sub_category', subCategory)
     .order('name');

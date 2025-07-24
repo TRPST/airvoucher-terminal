@@ -124,9 +124,10 @@ export function useNetworkVoucherInventory() {
         return [];
       }
 
-      // Filter voucher types that match our criteria
+      // Filter voucher types that match our criteria (case-insensitive)
       const matchingTypes = currentVoucherTypes.filter((type) => {
-        if (type.network_provider !== networkProvider.toLowerCase()) return false;
+        // Case-insensitive comparison for network provider
+        if (type.network_provider?.toLowerCase() !== networkProvider.toLowerCase()) return false;
         if (type.category !== category) return false;
         if (subCategory && type.sub_category !== subCategory) return false;
         return true;
@@ -149,9 +150,10 @@ export function useNetworkVoucherInventory() {
       const currentVoucherInventory = voucherInventoryRef.current;
       const currentVoucherTypes = voucherTypesRef.current;
 
-      // Filter voucher types that match our criteria
+      // Filter voucher types that match our criteria (case-insensitive)
       const matchingTypes = currentVoucherTypes.filter((type) => {
-        if (type.network_provider !== networkProvider.toLowerCase()) return false;
+        // Case-insensitive comparison for network provider
+        if (type.network_provider?.toLowerCase() !== networkProvider.toLowerCase()) return false;
         if (type.category !== category) return false;
         if (subCategory && type.sub_category !== subCategory) return false;
         return true;
@@ -181,7 +183,7 @@ export function useNetworkVoucherInventory() {
 
       currentVoucherTypes.forEach((type) => {
         if (
-          type.network_provider === networkProvider.toLowerCase() &&
+          type.network_provider?.toLowerCase() === networkProvider.toLowerCase() &&
           type.category === 'data' &&
           type.sub_category
         ) {

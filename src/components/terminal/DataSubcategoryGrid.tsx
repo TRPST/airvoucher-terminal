@@ -19,7 +19,6 @@ export function DataSubcategoryGrid({
   onSubcategorySelect,
   onBack,
 }: DataSubcategoryGridProps) {
-  console.log('loading? ', isLoading);
   // Get the appropriate logo based on network provider
   const getNetworkLogo = (provider: string) => {
     const providerLower = provider.toLowerCase();

@@ -228,7 +228,7 @@ export default function NetworkDataDurationPage() {
     <>
       {/* Custom Header - consistent with other terminal screens */}
       <div className="px-4 py-6">
-        <div className="mb-6 flex-col items-center justify-between sm:flex-row">
+        <div className="mb-6 flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -238,7 +238,7 @@ export default function NetworkDataDurationPage() {
             <ChevronLeft className="h-4 w-4" />
             <span>Back</span>
           </Button>
-          <h2 className="mt-3 text-xl font-bold">
+          <h2 className="text-xl font-bold text-center flex-1">
             {providerName} {durationName} Data Vouchers
           </h2>
           <div className="w-20"></div> {/* Spacer for alignment */}
