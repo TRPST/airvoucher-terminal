@@ -14,7 +14,7 @@ import {
 export function useNetworkVoucherInventory() {
   const [voucherTypes, setVoucherTypes] = React.useState<EnhancedVoucherType[]>([]);
   const [voucherInventory, setVoucherInventory] = React.useState<VoucherType[]>([]);
-  const [isVoucherInventoryLoading, setIsVoucherInventoryLoading] = React.useState(false);
+  const [isVoucherInventoryLoading, setIsVoucherInventoryLoading] = React.useState(true);
 
   // Use refs to store latest state values without causing re-renders
   const voucherTypesRef = React.useRef<EnhancedVoucherType[]>([]);
@@ -28,6 +28,35 @@ export function useNetworkVoucherInventory() {
   React.useEffect(() => {
     voucherInventoryRef.current = voucherInventory;
   }, [voucherInventory]);
+
+  // Function to fetch only voucher types (without inventory) for a network provider and category
+  const fetchNetworkVoucherTypes = React.useCallback(
+    async (networkProvider: string, category: string) => {
+      setIsVoucherInventoryLoading(true);
+      try {
+        // Fetch by network and category (types only, no inventory)
+        const { data, error } = await fetchVoucherTypesByNetworkAndCategory(
+          networkProvider as NetworkProvider,
+          category as VoucherCategory
+        );
+        if (error) {
+          console.error('Error fetching network category voucher types:', error);
+          return;
+        }
+
+        const voucherTypesData = data || [];
+        setVoucherTypes(voucherTypesData);
+
+        // Don't fetch inventory - just set empty array
+        setVoucherInventory([]);
+      } catch (error) {
+        console.error('Error fetching network voucher types:', error);
+      } finally {
+        setIsVoucherInventoryLoading(false);
+      }
+    },
+    []
+  );
 
   // Function to fetch voucher types and inventory for a network provider and category
   const fetchNetworkVoucherInventory = React.useCallback(
@@ -168,6 +197,7 @@ export function useNetworkVoucherInventory() {
   return {
     voucherInventory,
     isVoucherInventoryLoading,
+    fetchNetworkVoucherTypes,
     fetchNetworkVoucherInventory,
     getVouchersForNetworkCategory,
     findNetworkVoucher,

@@ -19,22 +19,32 @@ export default function NetworkDataPage() {
   }, [provider]);
 
   // Network-specific voucher inventory management
-  const { fetchNetworkVoucherInventory, getAvailableDataSubcategories, isVoucherInventoryLoading } =
+  const { fetchNetworkVoucherTypes, getAvailableDataSubcategories, isVoucherInventoryLoading } =
     useNetworkVoucherInventory();
 
   // Available data subcategories
   const [availableSubcategories, setAvailableSubcategories] = React.useState<string[]>([]);
+  const [isProcessingSubcategories, setIsProcessingSubcategories] = React.useState(false);
 
-  // Fetch voucher inventory for this network's data category
+  // Fetch voucher types (not inventory) for this network's data category
   React.useEffect(() => {
     if (provider && typeof provider === 'string' && isAuthorized) {
-      fetchNetworkVoucherInventory(provider, 'data').then(() => {
-        // After fetching, get available subcategories
+      fetchNetworkVoucherTypes(provider, 'data');
+    }
+  }, [provider, isAuthorized, fetchNetworkVoucherTypes]);
+
+  // Separate effect to extract subcategories after voucher types are loaded
+  React.useEffect(() => {
+    if (!isVoucherInventoryLoading && provider && typeof provider === 'string') {
+      setIsProcessingSubcategories(true);
+      // Use a small delay to ensure refs are updated
+      setTimeout(() => {
         const subcategories = getAvailableDataSubcategories(provider);
         setAvailableSubcategories(subcategories);
-      });
+        setIsProcessingSubcategories(false);
+      }, 100);
     }
-  }, [provider, isAuthorized, fetchNetworkVoucherInventory, getAvailableDataSubcategories]);
+  }, [isVoucherInventoryLoading, provider, getAvailableDataSubcategories]);
 
   // Handle subcategory selection
   const handleSubcategorySelect = React.useCallback(
@@ -62,25 +72,14 @@ export default function NetworkDataPage() {
 
   return (
     <>
-      {/* Header with back button */}
-      <div className="flex items-center gap-4 border-b p-4">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to {providerName}
-        </button>
-        <h1 className="text-xl font-semibold">{providerName} Data Packages</h1>
-      </div>
-
       {/* Main Content Area */}
       <main className="flex-1">
         <DataSubcategoryGrid
           networkProvider={providerName}
           availableSubcategories={availableSubcategories}
-          isLoading={isVoucherInventoryLoading}
+          isLoading={isVoucherInventoryLoading || isProcessingSubcategories}
           onSubcategorySelect={handleSubcategorySelect}
+          onBack={handleBack}
         />
       </main>
     </>
