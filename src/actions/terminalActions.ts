@@ -1,6 +1,13 @@
 import { createClient } from '@/utils/supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
 import { VoucherSaleReceipt, completeVoucherSale } from '@/lib/sale/completeVoucherSale';
+import {
+  NetworkProvider,
+  VoucherCategory,
+  DataDuration,
+  VoucherType as EnhancedVoucherType,
+  ResponseType,
+} from './types/adminTypes';
 
 export type TerminalProfile = {
   id: string;
@@ -555,4 +562,61 @@ export async function fetchSalesHistory(terminalId: string): Promise<{
       error: err instanceof Error ? err : new Error(String(err)),
     };
   }
+}
+
+/**
+ * Fetch voucher types by network provider
+ */
+export async function fetchVoucherTypesByNetwork(
+  networkProvider: NetworkProvider
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .order('category, sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network and category
+ */
+export async function fetchVoucherTypesByNetworkAndCategory(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .eq('category', category)
+    .order('sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network, category, and sub-category
+ */
+export async function fetchVoucherTypesByNetworkCategoryAndDuration(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory,
+  subCategory: DataDuration
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .eq('network_provider', networkProvider)
+    .eq('category', category)
+    .eq('sub_category', subCategory)
+    .order('name');
+
+  return { data, error };
 }

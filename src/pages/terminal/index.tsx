@@ -32,8 +32,11 @@ export default function TerminalPOS() {
         router.push('/terminal/admin');
       } else if (category === 'Bill Payments') {
         router.push('/terminal/bills');
+      } else if (['Vodacom', 'MTN', 'CellC', 'Telkom'].includes(category)) {
+        // Navigate to mobile network selection page (Airtime/Data options)
+        router.push(`/terminal/network/${encodeURIComponent(category.toLowerCase())}`);
       } else {
-        // Navigate to category-specific voucher values page
+        // Navigate to category-specific voucher values page for other services
         router.push(`/terminal/category/${encodeURIComponent(category.toLowerCase())}`);
       }
     },
