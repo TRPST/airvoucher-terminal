@@ -91,6 +91,7 @@ export {
   fetchTerminalProfile,
   fetchAvailableVoucherTypes as fetchTerminalVoucherTypes,
   fetchVoucherInventoryByType as fetchTerminalVoucherInventoryByType,
+  fetchVoucherInventoryByTypeId,
   fetchRetailerCommissionData as fetchTerminalCommissionData,
   sellVoucher as sellTerminalVoucher,
   fetchSalesHistory as fetchTerminalSalesHistory,

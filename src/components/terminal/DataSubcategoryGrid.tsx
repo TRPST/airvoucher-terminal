@@ -62,6 +62,9 @@ export function DataSubcategoryGrid({
     },
   };
 
+  // Change the order of subcategories here to affect display order
+  const subcategoryOrder = ['daily', 'weekly', 'monthly'];
+
   // Header component similar to NetworkOptionsGrid
   const Header = () => (
     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -120,19 +123,21 @@ export function DataSubcategoryGrid({
       <Header />
 
       <div className="mx-auto flex max-w-4xl justify-center gap-8">
-        {availableSubcategories.map((subcategory) => {
-          const info = subcategoryInfo[subcategory as keyof typeof subcategoryInfo];
-          if (!info) return null;
+        {subcategoryOrder
+          .filter((subcategory) => availableSubcategories.includes(subcategory))
+          .map((subcategory) => {
+            const info = subcategoryInfo[subcategory as keyof typeof subcategoryInfo];
+            if (!info) return null;
 
-          return (
-            <SubcategoryCard
-              key={subcategory}
-              subcategory={subcategory}
-              info={info}
-              onClick={() => onSubcategorySelect(subcategory)}
-            />
-          );
-        })}
+            return (
+              <SubcategoryCard
+                key={subcategory}
+                subcategory={subcategory}
+                info={info}
+                onClick={() => onSubcategorySelect(subcategory)}
+              />
+            );
+          })}
       </div>
     </div>
   );

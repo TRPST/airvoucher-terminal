@@ -4,6 +4,7 @@ import {
   fetchVoucherTypesByNetworkAndCategory,
   fetchVoucherTypesByNetworkCategoryAndDuration,
   fetchVoucherInventoryByType,
+  fetchVoucherInventoryByTypeId,
   type EnhancedVoucherType,
   type NetworkProvider,
   type VoucherCategory,
@@ -93,14 +94,18 @@ export function useNetworkVoucherInventory() {
 
         setVoucherTypes(voucherTypesData);
 
-        // Now fetch inventory for each voucher type
+        // Now fetch inventory for each voucher type using ID (more reliable)
         const allInventory: VoucherType[] = [];
         for (const voucherType of voucherTypesData) {
-          const { data: inventoryData, error: inventoryError } = await fetchVoucherInventoryByType(
-            voucherType.name
+          console.log(`Fetching inventory for voucher type: ${voucherType.name} (ID: ${voucherType.id})`);
+          const { data: inventoryData, error: inventoryError } = await fetchVoucherInventoryByTypeId(
+            voucherType.id
           );
           if (!inventoryError && inventoryData) {
+            console.log(`Found ${inventoryData.length} inventory items for ${voucherType.name}`);
             allInventory.push(...inventoryData);
+          } else if (inventoryError) {
+            console.error(`Error fetching inventory for ${voucherType.name}:`, inventoryError);
           }
         }
 

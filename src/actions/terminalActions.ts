@@ -157,6 +157,125 @@ export async function fetchAvailableVoucherTypes(): Promise<{
 }
 
 /**
+ * Fetch voucher inventory by voucher type ID (more efficient and reliable)
+ */
+export async function fetchVoucherInventoryByTypeId(voucherTypeId: string): Promise<{
+  data: VoucherType[] | null;
+  error: PostgrestError | Error | null;
+}> {
+  const supabase = createClient();
+
+  try {
+    console.log(`Fetching inventory for voucher type ID: ${voucherTypeId}`);
+
+    // Get the voucher type details first
+    const { data: voucherType, error: voucherTypeError } = await supabase
+      .from('voucher_types')
+      .select('id, name, supplier_commission_pct')
+      .eq('id', voucherTypeId)
+      .single();
+
+    if (voucherTypeError) {
+      console.error('Error fetching voucher type:', voucherTypeError);
+      return { data: null, error: voucherTypeError };
+    }
+
+    if (!voucherType) {
+      console.log(`No voucher type found with ID: ${voucherTypeId}`);
+      return { data: [], error: null };
+    }
+
+    // Get all available vouchers of this type with pagination to handle large inventories
+    let allVouchers: any[] = [];
+    let hasMore = true;
+    let page = 0;
+    const pageSize = 1000;
+
+    while (hasMore) {
+      // Query vouchers with status = available
+      const { data: pageData, error: pageError } = await supabase
+        .from('voucher_inventory')
+        .select('id, voucher_type_id, amount')
+        .eq('voucher_type_id', voucherTypeId)
+        .eq('status', 'available')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (pageError) {
+        console.error(`Error fetching voucher inventory page ${page}:`, pageError);
+        return { data: null, error: pageError };
+      }
+
+      if (pageData && pageData.length > 0) {
+        allVouchers = [...allVouchers, ...pageData];
+        page++;
+        console.log(
+          `Fetched page ${page} with ${pageData.length} vouchers. Total: ${allVouchers.length}`
+        );
+      } else {
+        hasMore = false;
+      }
+
+      // Safety check to prevent infinite loops
+      if (page > 10) {
+        console.warn('Stopped pagination after 10 pages to prevent infinite loops');
+        hasMore = false;
+      }
+    }
+
+    if (allVouchers.length === 0) {
+      console.log(`No available vouchers found for type ID: ${voucherTypeId}`);
+      return { data: [], error: null };
+    }
+
+    // Group vouchers by amount and count them
+    const amountGroups = new Map<
+      number,
+      { id: string; name: string; count: number; supplier_commission_pct: number }
+    >();
+
+    // Group and count vouchers by amount
+    allVouchers.forEach((voucher) => {
+      const amount = voucher.amount;
+
+      if (!amountGroups.has(amount)) {
+        amountGroups.set(amount, {
+          id: voucherType.id,
+          name: voucherType.name,
+          count: 1,
+          supplier_commission_pct: voucherType.supplier_commission_pct || 0,
+        });
+      } else {
+        const group = amountGroups.get(amount)!;
+        group.count++;
+      }
+    });
+
+    // Convert to array and sort by amount
+    const result: VoucherType[] = Array.from(amountGroups.entries())
+      .map(([amount, group]) => ({
+        id: group.id,
+        name: group.name,
+        amount,
+        count: group.count,
+        supplier_commission_pct: group.supplier_commission_pct,
+      }))
+      .sort((a, b) => a.amount - b.amount);
+
+    console.log(
+      `Grouped ${allVouchers.length} vouchers into ${result.length} amount options for ${voucherType.name}`
+    );
+
+    return { data: result, error: null };
+  } catch (err) {
+    console.error(`Unexpected error in fetchVoucherInventoryByTypeId for ${voucherTypeId}:`, err);
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
  * Fetch all available voucher inventory options for a specific voucher type
  */
 export async function fetchVoucherInventoryByType(voucherTypeName: string): Promise<{
