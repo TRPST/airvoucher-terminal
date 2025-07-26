@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "github.com/AgentDeskAI/browser-tools-mcp": {
+      "command": "node",
+      "args": ["/Users/j1000/Documents/Cline/MCP/node_modules/@agentdeskai/browser-tools-mcp/dist/index.js"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
