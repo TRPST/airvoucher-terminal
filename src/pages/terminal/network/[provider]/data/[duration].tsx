@@ -9,9 +9,10 @@ import useRequireRole from '@/hooks/useRequireRole';
 
 // Import hooks
 import { useTerminalData } from '@/hooks/useTerminalData';
-import { useNetworkVoucherInventory } from '@/hooks/useNetworkVoucherInventory';
+import { useSimpleNetworkVouchers } from '@/hooks/useSimpleNetworkVouchers';
 import { useSale } from '@/contexts/SaleContext';
 import { useSaleManager } from '@/hooks/useSaleManager';
+import { useTerminal } from '@/contexts/TerminalContext';
 
 // Import components
 import { POSValuesGrid } from '@/components/terminal/POSValuesGrid';
@@ -46,14 +47,17 @@ export default function NetworkDataDurationPage() {
     return duration.charAt(0).toUpperCase() + duration.slice(1);
   }, [duration]);
 
-  // Network-specific voucher inventory management
+  // Network-specific voucher inventory management using simplified hook
   const {
-    voucherInventory,
-    isVoucherInventoryLoading,
-    fetchNetworkVoucherInventory,
-    getVouchersForNetworkCategory,
-    findNetworkVoucher,
-  } = useNetworkVoucherInventory();
+    vouchers,
+    isLoading: isVoucherInventoryLoading,
+    voucherTypeId,
+    findVoucherByAmount,
+  } = useSimpleNetworkVouchers({
+    networkProvider: provider as string,
+    category: 'data',
+    subCategory: duration as string,
+  });
 
   // Real sale manager with actual sale logic
   const saleManager = useSaleManager(terminal, setTerminal);
@@ -84,12 +88,17 @@ export default function NetworkDataDurationPage() {
     setShowConfirmDialog,
     setShowToast,
     setShowReceiptDialog,
+    setShowConfetti,
+    setSaleComplete,
     handleValueSelect: realHandleValueSelect,
     handleConfirmSale: realHandleConfirmSale,
     handleCloseReceipt,
     setSelectedCategory: setSaleManagerCategory,
     setSelectedValue: setSaleManagerValue,
   } = saleManager;
+
+  // Get the missing functions from useTerminal context
+  const { updateBalanceAfterSale } = useTerminal();
 
   // Set selected category when component mounts
   React.useEffect(() => {
@@ -99,19 +108,6 @@ export default function NetworkDataDurationPage() {
       setSaleManagerCategory(categoryName);
     }
   }, [providerName, durationName, selectedCategory, setSelectedCategory, setSaleManagerCategory]);
-
-  // Fetch voucher inventory for this network, category, and subcategory
-  React.useEffect(() => {
-    if (
-      provider &&
-      typeof provider === 'string' &&
-      duration &&
-      typeof duration === 'string' &&
-      isAuthorized
-    ) {
-      fetchNetworkVoucherInventory(provider, 'data', duration);
-    }
-  }, [provider, duration, isAuthorized, fetchNetworkVoucherInventory]);
 
   // Handle value selection with commission fetch
   const handleValueSelectWithCommission = React.useCallback(
@@ -125,15 +121,17 @@ export default function NetworkDataDurationPage() {
       )
         return;
 
-      // Use real sale manager's value selection
-      realHandleValueSelect(value);
+      console.log('Handling value selection:', value);
 
-      // Also update context for coordination
+      // First, set the selected value and category
       setSaleManagerValue(value);
+      setSaleManagerCategory(`${providerName} ${durationName} Data`);
 
       // Fetch commission data for selected voucher
       try {
-        const selectedVoucher = findNetworkVoucher(provider, 'data', value, duration);
+        const selectedVoucher = findVoucherByAmount(value);
+        console.log('Found voucher:', selectedVoucher);
+
         if (selectedVoucher) {
           const commissionResult = await fetchRetailerCommissionData({
             retailerId: terminal.retailer_id,
@@ -141,27 +139,58 @@ export default function NetworkDataDurationPage() {
             voucherValue: value,
           });
 
+          console.log('Commission result:', commissionResult);
+
           // Transform the commission result to match our context interface
           if (commissionResult.data) {
             setCommissionData({
               rate: commissionResult.data.rate,
               amount: commissionResult.data.amount,
+              isOverride: (commissionResult.data as any).isOverride || false,
+            });
+          } else {
+            // Set default commission data if fetch failed
+            console.warn('No commission data found, using defaults');
+            setCommissionData({
+              rate: 0,
+              amount: 0,
               isOverride: false,
             });
           }
+        } else {
+          console.warn('No voucher found for selection');
+          // Set default commission data
+          setCommissionData({
+            rate: 0,
+            amount: 0,
+            isOverride: false,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch commission data:', error);
+        // Set default commission data on error
+        setCommissionData({
+          rate: 0,
+          amount: 0,
+          isOverride: false,
+        });
       }
+
+      // Show the confirm dialog regardless of commission fetch success
+      console.log('Showing confirm dialog');
+      setShowConfirmDialog(true);
     },
     [
       provider,
       duration,
       terminal,
-      findNetworkVoucher,
-      realHandleValueSelect,
+      providerName,
+      durationName,
+      findVoucherByAmount,
       setSaleManagerValue,
+      setSaleManagerCategory,
       setCommissionData,
+      setShowConfirmDialog,
     ]
   );
 
@@ -177,12 +206,12 @@ export default function NetworkDataDurationPage() {
     )
       return;
 
-    const selectedVoucher = findNetworkVoucher(
-      provider,
-      'data',
-      saleManagerSelectedValue,
-      duration
-    );
+    const selectedVoucher = findVoucherByAmount(saleManagerSelectedValue);
+
+    if (!selectedVoucher) {
+      console.error('No voucher found for the selected criteria');
+      return;
+    }
 
     // Transform commission data to match useSaleManager expectations
     const saleManagerCommissionData = commissionData
@@ -194,14 +223,14 @@ export default function NetworkDataDurationPage() {
         }
       : null;
 
-    // Call the real sale confirmation handler
+    // Call the real sale confirmation handler with the properly structured voucher
     await realHandleConfirmSale(selectedVoucher, saleManagerCommissionData);
   }, [
     provider,
     duration,
     saleManagerSelectedValue,
     terminal,
-    findNetworkVoucher,
+    findVoucherByAmount,
     commissionData,
     realHandleConfirmSale,
   ]);
@@ -254,8 +283,8 @@ export default function NetworkDataDurationPage() {
                 <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 <h3 className="text-lg font-medium">Loading Vouchers</h3>
               </div>
-            ) : getVouchersForNetworkCategory(provider, 'data', duration).length > 0 ? (
-              getVouchersForNetworkCategory(provider, 'data', duration).map((voucher) => (
+            ) : vouchers.length > 0 ? (
+              vouchers.map((voucher) => (
                 <motion.button
                   key={`${voucher.id}-${voucher.amount}`}
                   whileHover={{ scale: 1.03 }}

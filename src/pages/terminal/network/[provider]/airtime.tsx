@@ -6,7 +6,7 @@ import useRequireRole from '@/hooks/useRequireRole';
 
 // Import hooks
 import { useTerminalData } from '@/hooks/useTerminalData';
-import { useNetworkVoucherInventory } from '@/hooks/useNetworkVoucherInventory';
+import { useSimpleNetworkVouchers } from '@/hooks/useSimpleNetworkVouchers';
 import { useSale } from '@/contexts/SaleContext';
 import { useSaleManager } from '@/hooks/useSaleManager';
 
@@ -38,14 +38,16 @@ export default function NetworkAirtimePage() {
     return provider.charAt(0).toUpperCase() + provider.slice(1);
   }, [provider]);
 
-  // Network-specific voucher inventory management
+  // Network-specific voucher inventory management using simplified hook
   const {
-    voucherInventory,
-    isVoucherInventoryLoading,
-    fetchNetworkVoucherInventory,
-    getVouchersForNetworkCategory,
-    findNetworkVoucher,
-  } = useNetworkVoucherInventory();
+    vouchers,
+    isLoading: isVoucherInventoryLoading,
+    voucherTypeId,
+    findVoucherByAmount,
+  } = useSimpleNetworkVouchers({
+    networkProvider: provider as string,
+    category: 'airtime',
+  });
 
   // Real sale manager with actual sale logic
   const saleManager = useSaleManager(terminal, setTerminal);
@@ -92,13 +94,6 @@ export default function NetworkAirtimePage() {
     }
   }, [providerName, selectedCategory, setSelectedCategory, setSaleManagerCategory]);
 
-  // Fetch voucher inventory for this network and category
-  React.useEffect(() => {
-    if (provider && typeof provider === 'string' && isAuthorized) {
-      fetchNetworkVoucherInventory(provider, 'airtime');
-    }
-  }, [provider, isAuthorized, fetchNetworkVoucherInventory]);
-
   // Handle value selection with commission fetch
   const handleValueSelectWithCommission = React.useCallback(
     async (value: number) => {
@@ -112,7 +107,7 @@ export default function NetworkAirtimePage() {
 
       // Fetch commission data for selected voucher
       try {
-        const selectedVoucher = findNetworkVoucher(provider, 'airtime', value);
+        const selectedVoucher = findVoucherByAmount(value);
         if (selectedVoucher) {
           const commissionResult = await fetchRetailerCommissionData({
             retailerId: terminal.retailer_id,
@@ -136,7 +131,7 @@ export default function NetworkAirtimePage() {
     [
       provider,
       terminal,
-      findNetworkVoucher,
+      findVoucherByAmount,
       realHandleValueSelect,
       setSaleManagerValue,
       setCommissionData,
@@ -147,7 +142,7 @@ export default function NetworkAirtimePage() {
   const handleConfirmSaleWithVoucher = React.useCallback(async () => {
     if (!provider || typeof provider !== 'string' || !saleManagerSelectedValue || !terminal) return;
 
-    const selectedVoucher = findNetworkVoucher(provider, 'airtime', saleManagerSelectedValue);
+    const selectedVoucher = findVoucherByAmount(saleManagerSelectedValue);
 
     // Transform commission data to match useSaleManager expectations
     const saleManagerCommissionData = commissionData
@@ -165,7 +160,7 @@ export default function NetworkAirtimePage() {
     provider,
     saleManagerSelectedValue,
     terminal,
-    findNetworkVoucher,
+    findVoucherByAmount,
     commissionData,
     realHandleConfirmSale,
   ]);
@@ -193,7 +188,7 @@ export default function NetworkAirtimePage() {
         <POSValuesGrid
           selectedCategory={`${providerName} Airtime`}
           isLoading={isVoucherInventoryLoading}
-          vouchers={getVouchersForNetworkCategory(provider, 'airtime')}
+          vouchers={vouchers}
           onValueSelect={handleValueSelectWithCommission}
           onBackToCategories={handleBackToNetwork}
         />

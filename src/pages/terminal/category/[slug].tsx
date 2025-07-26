@@ -6,7 +6,7 @@ import useRequireRole from '@/hooks/useRequireRole';
 
 // Import hooks
 import { useTerminalData } from '@/hooks/useTerminalData';
-import { useVoucherInventory } from '@/hooks/useVoucherInventory';
+import { useSimpleVouchers } from '@/hooks/useSimpleVouchers';
 import { useSale } from '@/contexts/SaleContext';
 import { useSaleManager } from '@/hooks/useSaleManager';
 
@@ -26,20 +26,24 @@ export default function VoucherCategoryPage() {
   // Get the current user ID
   const userId = user?.id;
 
+  // Convert slug back to category name
+  const categoryName = React.useMemo(() => {
+    if (!slug || typeof slug !== 'string') return '';
+    return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ');
+  }, [slug]);
+
   // Terminal and voucher data
   const { terminal, setTerminal, commissionData, commissionError } = useTerminalData(
     userId,
     isAuthorized
   );
 
-  // Voucher inventory management
+  // Voucher inventory management using simplified hook
   const {
-    voucherInventory,
-    isVoucherInventoryLoading,
-    fetchVoucherInventory,
-    getVouchersForCategory,
-    findVoucher,
-  } = useVoucherInventory();
+    vouchers,
+    isLoading: isVoucherInventoryLoading,
+    findVoucherByAmount,
+  } = useSimpleVouchers({ category: categoryName });
 
   // Real sale manager with actual sale logic
   const saleManager = useSaleManager(terminal, setTerminal);
@@ -77,12 +81,6 @@ export default function VoucherCategoryPage() {
     setSelectedValue: setSaleManagerValue,
   } = saleManager;
 
-  // Convert slug back to category name
-  const categoryName = React.useMemo(() => {
-    if (!slug || typeof slug !== 'string') return '';
-    return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ');
-  }, [slug]);
-
   // Set selected category when component mounts
   React.useEffect(() => {
     if (categoryName && categoryName !== selectedCategory) {
@@ -90,13 +88,6 @@ export default function VoucherCategoryPage() {
       setSaleManagerCategory(categoryName); // Also set in sale manager
     }
   }, [categoryName, selectedCategory, setSelectedCategory, setSaleManagerCategory]);
-
-  // Fetch voucher inventory for this category
-  React.useEffect(() => {
-    if (categoryName && isAuthorized) {
-      fetchVoucherInventory(categoryName);
-    }
-  }, [categoryName, isAuthorized, fetchVoucherInventory]);
 
   // Handle value selection with commission fetch
   const handleValueSelectWithCommission = React.useCallback(
@@ -111,7 +102,7 @@ export default function VoucherCategoryPage() {
 
       // Fetch commission data for selected voucher
       try {
-        const selectedVoucher = findVoucher(categoryName, value);
+        const selectedVoucher = findVoucherByAmount(value);
         if (selectedVoucher) {
           const commissionResult = await fetchRetailerCommissionData({
             retailerId: terminal.retailer_id,
@@ -135,7 +126,7 @@ export default function VoucherCategoryPage() {
     [
       categoryName,
       terminal,
-      findVoucher,
+      findVoucherByAmount,
       realHandleValueSelect,
       setSaleManagerValue,
       setCommissionData,
@@ -146,7 +137,7 @@ export default function VoucherCategoryPage() {
   const handleConfirmSaleWithVoucher = React.useCallback(async () => {
     if (!categoryName || !saleManagerSelectedValue || !terminal) return;
 
-    const selectedVoucher = findVoucher(categoryName, saleManagerSelectedValue);
+    const selectedVoucher = findVoucherByAmount(saleManagerSelectedValue);
 
     // Transform commission data to match useSaleManager expectations
     const saleManagerCommissionData = commissionData
@@ -164,7 +155,7 @@ export default function VoucherCategoryPage() {
     categoryName,
     saleManagerSelectedValue,
     terminal,
-    findVoucher,
+    findVoucherByAmount,
     commissionData,
     realHandleConfirmSale,
   ]);
@@ -192,7 +183,7 @@ export default function VoucherCategoryPage() {
         <POSValuesGrid
           selectedCategory={categoryName}
           isLoading={isVoucherInventoryLoading}
-          vouchers={getVouchersForCategory(categoryName)}
+          vouchers={vouchers}
           onValueSelect={handleValueSelectWithCommission}
           onBackToCategories={handleBackToCategories}
         />

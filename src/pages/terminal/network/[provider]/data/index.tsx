@@ -2,7 +2,6 @@ import * as React from 'react';
 import { useRouter } from 'next/router';
 import { ArrowLeft } from 'lucide-react';
 import useRequireRole from '@/hooks/useRequireRole';
-import { useNetworkVoucherInventory } from '@/hooks/useNetworkVoucherInventory';
 import { DataSubcategoryGrid } from '@/components/terminal/DataSubcategoryGrid';
 
 export default function NetworkDataPage() {
@@ -18,33 +17,10 @@ export default function NetworkDataPage() {
     return provider.charAt(0).toUpperCase() + provider.slice(1);
   }, [provider]);
 
-  // Network-specific voucher inventory management
-  const { fetchNetworkVoucherTypes, getAvailableDataSubcategories, isVoucherInventoryLoading } =
-    useNetworkVoucherInventory();
-
-  // Available data subcategories
-  const [availableSubcategories, setAvailableSubcategories] = React.useState<string[]>([]);
-  const [isProcessingSubcategories, setIsProcessingSubcategories] = React.useState(false);
-
-  // Fetch voucher types (not inventory) for this network's data category
-  React.useEffect(() => {
-    if (provider && typeof provider === 'string' && isAuthorized) {
-      fetchNetworkVoucherTypes(provider, 'data');
-    }
-  }, [provider, isAuthorized, fetchNetworkVoucherTypes]);
-
-  // Separate effect to extract subcategories after voucher types are loaded
-  React.useEffect(() => {
-    if (!isVoucherInventoryLoading && provider && typeof provider === 'string') {
-      setIsProcessingSubcategories(true);
-      // Use a small delay to ensure refs are updated
-      setTimeout(() => {
-        const subcategories = getAvailableDataSubcategories(provider);
-        setAvailableSubcategories(subcategories);
-        setIsProcessingSubcategories(false);
-      }, 100);
-    }
-  }, [isVoucherInventoryLoading, provider, getAvailableDataSubcategories]);
+  // For now, we'll use hardcoded subcategories since we know the data structure
+  // In a real app, you might want to fetch these from the database
+  const availableSubcategories = ['daily', 'weekly', 'monthly'];
+  const isProcessingSubcategories = false;
 
   // Handle subcategory selection
   const handleSubcategorySelect = React.useCallback(
@@ -77,7 +53,7 @@ export default function NetworkDataPage() {
         <DataSubcategoryGrid
           networkProvider={providerName}
           availableSubcategories={availableSubcategories}
-          isLoading={isVoucherInventoryLoading || isProcessingSubcategories}
+          isLoading={isProcessingSubcategories}
           onSubcategorySelect={handleSubcategorySelect}
           onBack={handleBack}
         />
