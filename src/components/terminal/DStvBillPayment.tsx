@@ -1,47 +1,40 @@
 import * as React from 'react';
-import { ChevronLeft, Zap, AlertCircle, CheckCircle, User, Home } from 'lucide-react';
+import { ChevronLeft, Tv, AlertCircle, CheckCircle, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
 
-interface ElectricityBillPaymentProps {
+interface DStvBillPaymentProps {
   onBackToCategories: () => void;
   onPaymentComplete: (paymentData: any) => void;
 }
 
-interface ConfirmationDetails {
-  utility: string;
-  consumer: {
-    name: string;
-    address: string;
-  };
+interface AccountValidationDetails {
   reference: string;
+  amountDue: number;
+  accountNumber: string;
+  vendorId: string;
+  productId: string;
+  accountHolder: string;
 }
 
-export function ElectricityBillPayment({
+export function DStvBillPayment({
   onBackToCategories,
   onPaymentComplete,
-}: ElectricityBillPaymentProps) {
+}: DStvBillPaymentProps) {
   const [step, setStep] = React.useState<'input' | 'confirm' | 'success'>('input');
-  const [meterNumber, setMeterNumber] = React.useState('');
-  const [amount, setAmount] = React.useState('');
-  const [transactionType, setTransactionType] = React.useState('Syntell');
+  const [accountNumber, setAccountNumber] = React.useState('');
+  const [productId, setProductId] = React.useState('');
+  const [vendorId, setVendorId] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [confirmationDetails, setConfirmationDetails] = React.useState<ConfirmationDetails | null>(
+  const [accountDetails, setAccountDetails] = React.useState<AccountValidationDetails | null>(
     null
   );
   const [paymentResult, setPaymentResult] = React.useState<any>(null);
 
-  const predefinedAmounts = [50, 100, 200, 500, 1000, 2000];
-  const transactionTypes = [
-    { value: 'Syntell', label: 'Syntell' },
-    { value: 'MeterMan', label: 'MeterMan' },
-    { value: 'EkurhuleniDirectIMS', label: 'Ekurhuleni Direct IMS' },
-  ];
-
-  const handleConfirmCustomer = async () => {
-    if (!meterNumber.trim() || !amount || parseFloat(amount) <= 0) {
-      setError('Please enter a valid meter number and amount.');
+  const handleValidateAccount = async () => {
+    if (!accountNumber.trim() || !productId.trim() || !vendorId.trim()) {
+      setError('Please enter a valid account number, product ID, and vendor ID.');
       return;
     }
 
@@ -49,24 +42,24 @@ export function ElectricityBillPayment({
     setError('');
 
     try {
-      const response = await axios.post('/api/glocell/electricity/confirmCustomer', {
-        meterNumber: meterNumber.trim(),
-        amount: parseFloat(amount),
-        transactionType: transactionType,
+      const response = await axios.post('/api/glocell/dstv/validateAccount', {
+        accountNumber: accountNumber.trim(),
+        productId: productId.trim(),
+        vendorId: vendorId.trim(),
       });
 
-      setConfirmationDetails(response.data);
+      setAccountDetails(response.data);
       setStep('confirm');
     } catch (error: any) {
-      console.error('Error confirming customer:', error);
-      setError(error.response?.data?.message || 'Failed to confirm meter number.');
+      console.error('Error validating account:', error);
+      setError(error.response?.data?.message || 'Failed to validate account number.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVendPayment = async () => {
-    if (!confirmationDetails?.reference) {
+  const handleProcessPayment = async () => {
+    if (!accountDetails?.reference) {
       setError('No transaction reference found. Please go back and try again.');
       return;
     }
@@ -75,9 +68,12 @@ export function ElectricityBillPayment({
     setError('');
 
     try {
-      const response = await axios.post('/api/glocell/electricity/vend', {
-        reference: confirmationDetails.reference,
-        meterNumber: meterNumber,
+      const response = await axios.post('/api/glocell/dstv/processPayment', {
+        reference: accountDetails.reference,
+        accountNumber: accountNumber,
+        productId: productId,
+        vendorId: vendorId,
+        amountDue: accountDetails.amountDue,
       });
 
       setPaymentResult(response.data);
@@ -95,7 +91,7 @@ export function ElectricityBillPayment({
     setError('');
     if (step === 'confirm') {
       setStep('input');
-      setConfirmationDetails(null);
+      setAccountDetails(null);
     } else {
       onBackToCategories();
     }
@@ -113,60 +109,45 @@ export function ElectricityBillPayment({
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </Button>
-        <h2 className="text-xl font-bold">Electricity</h2>
+        <h2 className="text-xl font-bold">DStv Bill Payment</h2>
         <div className="w-20"></div>
       </div>
       <div className="mx-auto max-w-md space-y-6">
         <div className="mb-6 text-center">
-          <h3 className="text-lg font-semibold">Enter Meter and Amount</h3>
+          <h3 className="text-lg font-semibold">Enter Account Details</h3>
           <p className="text-sm text-muted-foreground">
-            Enter the meter number and desired amount to continue.
+            Enter the DStv account number, product ID, and vendor ID to continue.
           </p>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium">Meter Number</label>
+            <label className="mb-2 block text-sm font-medium">Account Number</label>
             <input
               type="text"
-              value={meterNumber}
-              onChange={(e) => setMeterNumber(e.target.value)}
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
               className="w-full rounded-md border border-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter meter number"
+              placeholder="Enter DStv account number"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">Transaction Type</label>
-            <select
-              value={transactionType}
-              onChange={(e) => setTransactionType(e.target.value)}
+            <label className="mb-2 block text-sm font-medium">Product ID</label>
+            <input
+              type="text"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
               className="w-full rounded-md border border-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {transactionTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g., 298"
+            />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">Amount (R)</label>
-            <div className="mb-2 grid grid-cols-3 gap-2">
-              {predefinedAmounts.map((predefinedAmount) => (
-                <Button
-                  key={predefinedAmount}
-                  variant={amount === predefinedAmount.toString() ? 'default' : 'outline'}
-                  onClick={() => setAmount(predefinedAmount.toString())}
-                >
-                  R {predefinedAmount}
-                </Button>
-              ))}
-            </div>
+            <label className="mb-2 block text-sm font-medium">Vendor ID</label>
             <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              type="text"
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
               className="w-full rounded-md border border-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Or enter custom amount"
+              placeholder="e.g., 198"
             />
           </div>
           {error && (
@@ -176,11 +157,11 @@ export function ElectricityBillPayment({
             </div>
           )}
           <Button
-            onClick={handleConfirmCustomer}
-            disabled={isLoading || !meterNumber || !amount}
+            onClick={handleValidateAccount}
+            disabled={isLoading || !accountNumber || !productId || !vendorId}
             className="w-full"
           >
-            {isLoading ? 'Confirming...' : 'Confirm Meter Details'}
+            {isLoading ? 'Validating...' : 'Validate Account'}
           </Button>
         </div>
       </div>
@@ -204,32 +185,32 @@ export function ElectricityBillPayment({
       </div>
       <div className="mx-auto max-w-md space-y-6">
         <div className="mb-6 text-center">
-          <h3 className="text-lg font-semibold">Please Confirm Customer Details</h3>
+          <h3 className="text-lg font-semibold">Please Confirm Account Details</h3>
           <p className="text-sm text-muted-foreground">
             Ensure the following details are correct before proceeding with the payment.
           </p>
         </div>
-        {confirmationDetails && (
+        {accountDetails && (
           <div className="space-y-3 rounded-lg bg-muted p-4">
             <div className="flex items-start space-x-3">
               <User className="mt-1 h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Name</p>
-                <p className="font-semibold">{confirmationDetails.consumer.name}</p>
+                <p className="text-sm font-medium text-muted-foreground">Account Holder</p>
+                <p className="font-semibold">{accountDetails.accountHolder}</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
-              <Home className="mt-1 h-5 w-5 text-muted-foreground" />
+              <CreditCard className="mt-1 h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Address</p>
-                <p className="font-semibold">{confirmationDetails.consumer.address}</p>
+                <p className="text-sm font-medium text-muted-foreground">Account Number</p>
+                <p className="font-semibold">{accountDetails.accountNumber}</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
-              <Zap className="mt-1 h-5 w-5 text-muted-foreground" />
+              <Tv className="mt-1 h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Utility</p>
-                <p className="font-semibold">{confirmationDetails.utility}</p>
+                <p className="text-sm font-medium text-muted-foreground">Amount Due</p>
+                <p className="font-semibold">R {(accountDetails.amountDue / 100).toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -240,15 +221,14 @@ export function ElectricityBillPayment({
             <span>{error}</span>
           </div>
         )}
-        <Button onClick={handleVendPayment} disabled={isLoading} className="w-full">
-          {isLoading ? 'Processing Payment...' : `Pay R ${amount}`}
+        <Button onClick={handleProcessPayment} disabled={isLoading} className="w-full">
+          {isLoading ? 'Processing Payment...' : `Pay R ${accountDetails ? (accountDetails.amountDue / 100).toFixed(2) : '0.00'}`}
         </Button>
       </div>
     </div>
   );
 
   const renderSuccessStep = () => {
-    const token = paymentResult?.tokens?.[0];
     return (
       <div className="px-4 py-6">
         <div className="mx-auto max-w-md space-y-6 text-center">
@@ -256,30 +236,34 @@ export function ElectricityBillPayment({
             <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-600" />
             <h2 className="text-xl font-bold">Payment Successful!</h2>
             <p className="text-sm text-muted-foreground">
-              Your electricity token has been generated.
+              Your DStv bill payment has been processed successfully.
             </p>
           </div>
           {paymentResult && (
             <div className="space-y-3 rounded-lg bg-muted p-4 text-left">
-              <div className="mb-3 border-b pb-3 text-center">
-                <p className="text-sm text-muted-foreground">Token</p>
-                <p className="text-lg font-bold tracking-wider">{token?.token || 'N/A'}</p>
-              </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Amount:</span>
                 <span className="font-medium">R {(paymentResult.amount / 100).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Utility:</span>
-                <span className="font-medium">{paymentResult.utility}</span>
+                <span className="text-sm text-muted-foreground">Account:</span>
+                <span className="font-medium">{paymentResult.accountNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Meter:</span>
-                <span className="font-medium">{paymentResult.meter.meterNumber}</span>
+                <span className="text-sm text-muted-foreground">Account Holder:</span>
+                <span className="font-medium">{paymentResult.accountHolder}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Reference:</span>
                 <span className="font-medium">{paymentResult.reference}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Vendor Reference:</span>
+                <span className="font-medium">{paymentResult.vendorReference}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Service Provider:</span>
+                <span className="font-medium">{paymentResult.serviceProviderName}</span>
               </div>
             </div>
           )}
@@ -301,4 +285,4 @@ export function ElectricityBillPayment({
     default:
       return renderInputStep();
   }
-}
+} 

@@ -11,27 +11,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { meterNumber, amount, transactionType = 'Syntell' } = req.body;
+  const { accountNumber, productId, vendorId } = req.body;
 
-  if (!meterNumber || !amount) {
-    return res.status(400).json({ message: 'Meter number and amount are required.' });
+  if (!accountNumber || !productId || !vendorId) {
+    return res.status(400).json({ message: 'Account number, product ID, and vendor ID are required.' });
   }
-
-  const amountInCents = Math.round(amount * 100);
 
   const glocellAuth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
 
   const params = new URLSearchParams({
-    'meter-number': meterNumber,
-    amount: amountInCents.toString(),
-    'free-basic-electricity': 'false',
-    'transaction-type': transactionType,
+    'account-number': accountNumber,
+    'product-id': productId,
+    'vendor-id': vendorId,
   });
 
   try {
-    const response = await axios.get(`${BASE_URL}/electricity/info?${params.toString()}`, {
+    const response = await axios.get(`${BASE_URL}/billpayment/info?${params.toString()}`, {
       headers: {
         accept: 'application/json',
+        'Trade-Vend-Channel': 'API',
         apikey: API_KEY,
         authorization: `Basic ${glocellAuth}`,
       },
@@ -39,9 +37,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json(response.data);
   } catch (error: any) {
-    console.error('Glocell Confirm Customer Error:', error.response?.data || error.message);
+    console.error('DStv Account Validation Error:', error.response?.data || error.message);
     const status = error.response?.status || 500;
     const data = error.response?.data || { message: 'An internal server error occurred.' };
     return res.status(status).json(data);
   }
-}
+} 

@@ -14,10 +14,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { reference, meterNumber } = req.body;
+  const { reference, accountNumber, productId, vendorId, amountDue } = req.body;
 
-  if (!reference || !meterNumber) {
-    return res.status(400).json({ message: 'Reference and meter number are required.' });
+  if (!reference || !accountNumber || !productId || !vendorId) {
+    return res.status(400).json({ 
+      message: 'Reference, account number, product ID, and vendor ID are required.' 
+    });
   }
 
   const glocellAuth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
@@ -25,18 +27,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const requestBody = {
     requestId: requestId,
-    reference: reference, // Use the reference from confirmCustomer step
+    vendorId: parseInt(vendorId),
+    productId: parseInt(productId),
+    accountNumber: parseInt(accountNumber),
+    aeonTransactionId: reference, // Use the reference from account validation
+    amount: amountDue || 0, // Use the amount due from account validation
+    tenderType: 'CASH',
     vendMetaData: {
       transactionRequestDateTime: new Date().toISOString(),
-      transactionReference: requestId, // Use requestId as transactionReference
+      transactionReference: requestId,
       vendorId: VENDOR_ID,
       deviceId: DEVICE_ID,
-      consumerAccountNumber: meterNumber,
+      consumerAccountNumber: accountNumber,
+      clientId: VENDOR_ID,
+      emailAddress: '',
+      cellphoneNumber: '',
     },
   };
 
   try {
-    const response = await axios.post(`${BASE_URL}/electricity/sales`, requestBody, {
+    const response = await axios.post(`${BASE_URL}/billpayment/sales`, requestBody, {
       headers: {
         'Content-Type': 'application/json',
         accept: 'application/json',
@@ -47,9 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(response.status).json(response.data);
   } catch (error: any) {
-    console.error('Glocell Vend Error:', error.response?.data || error.message);
+    console.error('DStv Payment Processing Error:', error.response?.data || error.message);
     const status = error.response?.status || 500;
     const data = error.response?.data || { message: 'An internal server error occurred.' };
     return res.status(status).json(data);
   }
-}
+} 

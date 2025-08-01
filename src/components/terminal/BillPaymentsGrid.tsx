@@ -47,7 +47,7 @@ export function BillPaymentsGrid({
   
   return (
     <div className="px-4 py-6">
-      <div className="mb-6 flex-col sm:flex-row items-center justify-between">
+      <div className="mb-6 flex-col items-center justify-between sm:flex-row">
         <Button
           variant="outline"
           size="sm"
@@ -57,19 +57,19 @@ export function BillPaymentsGrid({
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </Button>
-        <h2 className="text-xl font-bold mt-3">Bill Payments</h2>
+        <h2 className="mt-3 text-xl font-bold">Bill Payments</h2>
         <div className="w-20"></div> {/* Spacer for alignment */}
       </div>
-      
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-4 max-w-4xl mx-auto">
+
+      <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 md:grid-cols-4">
         {billPaymentOptions.map((option) => (
-           <POSButton
-           key={option.name}
-           name={option.name}
-           icon={option.icon}
-           color={option.color}
-           onClick={() => onOptionSelect(option.name)}           
-         />
+          <BillPaymentButton
+            key={option.name}
+            name={option.name}
+            icon={option.icon}
+            color={option.color}
+            onClick={() => onOptionSelect(option.name)}
+          />
         ))}
       </div>
     </div>

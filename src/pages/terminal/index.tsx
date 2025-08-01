@@ -23,6 +23,7 @@ import { ConfirmSaleDialog } from '@/components/terminal/ConfirmSaleDialog';
 import { SuccessToast } from '@/components/terminal/SuccessToast';
 import { SaleReceiptDialog } from '@/components/dialogs/SaleReceiptDialog';
 import { ElectricityBillPayment } from '@/components/terminal/ElectricityBillPayment';
+import { DStvBillPayment } from '@/components/terminal/DStvBillPayment';
 
 export default function TerminalPOS() {
   // Protect this route - only allow cashier role
@@ -80,23 +81,41 @@ export default function TerminalPOS() {
     selectedAdminOption,
     showBillPayments,
     handleAdminOptionSelect,
-    handleBillPaymentOptionSelect,
+    handleBillPaymentOptionSelect: adminHandleBillPaymentOptionSelect,
     handleBackToAdmin,
     handleBackToCategories: adminHandleBackToCategories,
   } = adminOptions;
 
-  // Electricity payment state
+  // Bill payment states
   const [showElectricityPayment, setShowElectricityPayment] = React.useState(false);
+  const [showDStvPayment, setShowDStvPayment] = React.useState(false);
 
   // Wrapper function to handle back to categories
   const handleBackToCategories = React.useCallback(() => {
     adminHandleBackToCategories();
     setSelectedCategory(null);
     setShowElectricityPayment(false);
+    setShowDStvPayment(false);
   }, [adminHandleBackToCategories, setSelectedCategory]);
 
   // Process voucher categories
   const voucherCategories = useVoucherCategories(voucherTypeNames);
+
+  // Handle bill payment option selection
+  const handleBillPaymentOptionSelect = React.useCallback(
+    async (option: string) => {
+      adminHandleBillPaymentOptionSelect(option);
+
+      if (option === 'Electricity') {
+        setShowElectricityPayment(true);
+        adminOptions.setShowBillPayments(false);
+      } else if (option === 'DSTV') {
+        setShowDStvPayment(true);
+        adminOptions.setShowBillPayments(false);
+      }
+    },
+    [adminHandleBillPaymentOptionSelect, adminOptions]
+  );
 
   // Handle category selection
   const handleCategorySelect = React.useCallback(
@@ -107,6 +126,10 @@ export default function TerminalPOS() {
         adminOptions.handleCategorySelect(category);
       } else if (category === 'Electricity') {
         setShowElectricityPayment(true);
+        adminOptions.setShowAdminOptions(false);
+        adminOptions.setShowBillPayments(false);
+      } else if (category === 'DSTV') {
+        setShowDStvPayment(true);
         adminOptions.setShowAdminOptions(false);
         adminOptions.setShowBillPayments(false);
       } else {
@@ -159,6 +182,13 @@ export default function TerminalPOS() {
     // and show success feedback
   }, []);
 
+  // Handle DStv payment completion
+  const handleDStvPaymentComplete = React.useCallback((paymentData: any) => {
+    console.log('DStv payment completed:', paymentData);
+    // Here you can add logic to record the payment in your database
+    // and show success feedback
+  }, []);
+
   return (
     <>
       {/* Main Content Area */}
@@ -179,6 +209,11 @@ export default function TerminalPOS() {
         ) : showElectricityPayment ? (
           <ElectricityBillPayment
             onPaymentComplete={handleElectricityPaymentComplete}
+            onBackToCategories={handleBackToCategories}
+          />
+        ) : showDStvPayment ? (
+          <DStvBillPayment
+            onPaymentComplete={handleDStvPaymentComplete}
             onBackToCategories={handleBackToCategories}
           />
         ) : showAdminOptions && selectedAdminOption === 'Account Balance' && terminal ? (
