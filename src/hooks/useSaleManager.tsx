@@ -73,6 +73,18 @@ export function useSaleManager(
       try {
         if (selectedCategory === 'OTT') {
           // Handle OTT sale
+          
+          // Validate sufficient balance and credit before processing
+          const saleAmount = selectedValue;
+          const availableCredit = terminal.retailer_credit_limit - terminal.retailer_credit_used;
+          const totalAvailable = terminal.retailer_balance + availableCredit;
+          
+          if (totalAvailable < saleAmount) {
+            setSaleError(`Insufficient balance and credit. Available: R${totalAvailable.toFixed(2)}, Required: R${saleAmount.toFixed(2)}`);
+            setIsSelling(false);
+            return;
+          }
+          
           const uniqueReference = generateUniqueReference();
           const params = {
             branch: 'DEFAULT_BRANCH',
@@ -103,15 +115,18 @@ export function useSaleManager(
             const commissionAmount = commissionData?.amount || 0;
             let newBalance = terminal.retailer_balance;
             let newCreditUsed = terminal.retailer_credit_used;
+            let amountFromCredit = 0;
 
             if (terminal.retailer_balance >= saleAmount) {
               // If balance covers the full amount
               newBalance = terminal.retailer_balance - saleAmount + commissionAmount;
+              console.log(`OTT Sale: Full amount (R${saleAmount}) deducted from balance. New balance: R${newBalance}`);
             } else {
               // If balance doesn't cover it, use credit for the remainder
-              const amountFromCredit = saleAmount - terminal.retailer_balance;
+              amountFromCredit = saleAmount - terminal.retailer_balance;
               newBalance = 0 + commissionAmount;
               newCreditUsed = terminal.retailer_credit_used + amountFromCredit;
+              console.log(`OTT Sale: R${terminal.retailer_balance} from balance, R${amountFromCredit} from credit. New credit used: R${newCreditUsed}`);
             }
 
             // Update retailer balance in database
@@ -195,12 +210,16 @@ export function useSaleManager(
             }
 
             // Create transaction record
+            const transactionNotes = amountFromCredit > 0 
+              ? `OTT Voucher Sale - R${saleAmount - amountFromCredit} from balance, R${amountFromCredit} from credit`
+              : 'OTT Voucher Sale';
+              
             const { error: transactionError } = await supabase.from('transactions').insert({
               type: 'sale',
               amount: saleAmount,
               balance_after: newBalance,
               retailer_id: terminal.retailer_id,
-              notes: 'OTT Voucher Sale',
+              notes: transactionNotes,
             });
 
             if (transactionError) {
@@ -258,6 +277,17 @@ export function useSaleManager(
         } else {
           // Handle regular voucher sale
           if (!selectedVoucher) return;
+          
+          // Validate sufficient balance and credit before processing
+          const saleAmount = selectedValue;
+          const availableCredit = terminal.retailer_credit_limit - terminal.retailer_credit_used;
+          const totalAvailable = terminal.retailer_balance + availableCredit;
+          
+          if (totalAvailable < saleAmount) {
+            setSaleError(`Insufficient balance and credit. Available: R${totalAvailable.toFixed(2)}, Required: R${saleAmount.toFixed(2)}`);
+            setIsSelling(false);
+            return;
+          }
 
           const { data, error } = await sellVoucher({
             terminalId: terminal.terminal_id,
@@ -297,15 +327,18 @@ export function useSaleManager(
               // Calculate new balance and credit - mirroring the logic in TerminalContext
               let newBalance = prev.retailer_balance;
               let newCreditUsed = prev.retailer_credit_used;
+              let amountFromCredit = 0;
 
               if (prev.retailer_balance >= saleAmount) {
                 // If balance covers the full amount
                 newBalance = prev.retailer_balance - saleAmount + commissionAmount;
+                console.log(`Regular Sale: Full amount (R${saleAmount}) deducted from balance. New balance: R${newBalance}`);
               } else {
                 // If balance doesn't cover it, use credit for the remainder
-                const amountFromCredit = saleAmount - prev.retailer_balance;
+                amountFromCredit = saleAmount - prev.retailer_balance;
                 newBalance = 0 + commissionAmount;
                 newCreditUsed = prev.retailer_credit_used + amountFromCredit;
+                console.log(`Regular Sale: R${prev.retailer_balance} from balance, R${amountFromCredit} from credit. New credit used: R${newCreditUsed}`);
               }
 
               return {

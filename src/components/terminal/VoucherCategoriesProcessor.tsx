@@ -267,7 +267,7 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
 
     // Add any remaining services not in the order array
     otherServices.forEach((service) => {
-      if (!reorderedServices.includes(service)) {
+      if (!reorderedServices.some((s) => s.name.toLowerCase() === service.name.toLowerCase())) {
         reorderedServices.push(service);
       }
     });

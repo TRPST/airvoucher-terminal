@@ -2,10 +2,15 @@ import * as React from 'react';
 import { ChevronLeft, Tv, AlertCircle, CheckCircle, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
+import { createClient } from '@/utils/supabase/client';
+import { useTerminal } from '@/contexts/TerminalContext';
+import type { CashierTerminalProfile } from '@/actions/cashierActions';
 
 interface DStvBillPaymentProps {
   onBackToCategories: () => void;
   onPaymentComplete: (paymentData: any) => void;
+  terminal: CashierTerminalProfile | null;
+  setTerminal: React.Dispatch<React.SetStateAction<CashierTerminalProfile | null>>;
 }
 
 interface AccountValidationDetails {
@@ -20,16 +25,23 @@ interface AccountValidationDetails {
 export function DStvBillPayment({
   onBackToCategories,
   onPaymentComplete,
+  terminal,
+  setTerminal,
 }: DStvBillPaymentProps) {
+  // Terminal context for balance updates
+  const supabase = createClient();
+
+  // Generate unique reference for transactions
+  const generateUniqueReference = () =>
+    `ref-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+
   const [step, setStep] = React.useState<'input' | 'confirm' | 'success'>('input');
   const [accountNumber, setAccountNumber] = React.useState('');
-  const [productId, setProductId] = React.useState('');
-  const [vendorId, setVendorId] = React.useState('');
+  const [productId, setProductId] = React.useState('298'); // Default DStv product ID
+  const [vendorId, setVendorId] = React.useState('198'); // Default DStv vendor ID
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [accountDetails, setAccountDetails] = React.useState<AccountValidationDetails | null>(
-    null
-  );
+  const [accountDetails, setAccountDetails] = React.useState<AccountValidationDetails | null>(null);
   const [paymentResult, setPaymentResult] = React.useState<any>(null);
 
   const handleValidateAccount = async () => {
@@ -42,16 +54,20 @@ export function DStvBillPayment({
     setError('');
 
     try {
-      const response = await axios.post('/api/glocell/dstv/validateAccount', {
+      const requestData = {
         accountNumber: accountNumber.trim(),
         productId: productId.trim(),
         vendorId: vendorId.trim(),
-      });
+      };
+
+      const response = await axios.post('/api/glocell/dstv/validateAccount', requestData);
 
       setAccountDetails(response.data);
       setStep('confirm');
     } catch (error: any) {
       console.error('Error validating account:', error);
+      console.error('Validation error response data:', error.response?.data);
+      console.error('Validation error response status:', error.response?.status);
       setError(error.response?.data?.message || 'Failed to validate account number.');
     } finally {
       setIsLoading(false);
@@ -59,8 +75,22 @@ export function DStvBillPayment({
   };
 
   const handleProcessPayment = async () => {
-    if (!accountDetails?.reference) {
-      setError('No transaction reference found. Please go back and try again.');
+    if (!accountDetails?.reference || !terminal) {
+      setError(
+        'No transaction reference found or terminal not available. Please go back and try again.'
+      );
+      return;
+    }
+
+    // Validate sufficient balance and credit before processing
+    const saleAmount = accountDetails.amountDue / 100; // Convert from cents to rands
+    const availableCredit = terminal.retailer_credit_limit - terminal.retailer_credit_used;
+    const totalAvailable = terminal.retailer_balance + availableCredit;
+
+    if (totalAvailable < saleAmount) {
+      setError(
+        `Insufficient balance and credit. Available: R${totalAvailable.toFixed(2)}, Required: R${saleAmount.toFixed(2)}`
+      );
       return;
     }
 
@@ -68,19 +98,117 @@ export function DStvBillPayment({
     setError('');
 
     try {
-      const response = await axios.post('/api/glocell/dstv/processPayment', {
+      const requestData = {
         reference: accountDetails.reference,
         accountNumber: accountNumber,
         productId: productId,
         vendorId: vendorId,
         amountDue: accountDetails.amountDue,
-      });
+      };
+
+      const response = await axios.post('/api/glocell/dstv/processPayment', requestData);
+
+      // If payment is successful, update balance and credit
+      if (response.data) {
+        // Validate terminal data
+        if (!terminal.retailer_id) {
+          throw new Error('Invalid terminal data: missing retailer_id');
+        }
+
+        const saleAmount = accountDetails.amountDue / 100; // Convert from cents to rands
+        const commissionAmount = 0; // DStv typically has no commission
+        let newBalance = terminal.retailer_balance ?? 0;
+        let newCreditUsed = terminal.retailer_credit_used ?? 0;
+        let amountFromCredit = 0;
+
+        if (newBalance >= saleAmount) {
+          // If balance covers the full amount
+          newBalance = newBalance - saleAmount + commissionAmount;
+        } else {
+          // If balance doesn't cover it, use credit for the remainder
+          amountFromCredit = saleAmount - newBalance;
+          newBalance = 0 + commissionAmount;
+          newCreditUsed = newCreditUsed + amountFromCredit;
+        }
+
+        // Ensure non-null, finite numbers before DB write
+        const safeBalance = Number.isFinite(newBalance) ? newBalance : 0;
+        const safeCreditUsed = Number.isFinite(newCreditUsed) ? newCreditUsed : 0;
+        const baseCommissionBalance = Number.isFinite(Number(terminal.retailer_commission_balance))
+          ? Number(terminal.retailer_commission_balance)
+          : 0;
+
+        const { error: updateError } = await supabase
+          .from('retailers')
+          .update({
+            balance: safeBalance,
+            credit_used: safeCreditUsed,
+            commission_balance: baseCommissionBalance + commissionAmount,
+          })
+          .eq('id', terminal.retailer_id);
+
+        if (updateError) {
+          console.error('Database update error (DStv):', updateError);
+          throw new Error(`Failed to update retailer balance: ${updateError.message}`);
+        }
+
+        // For DStv (bill settlement), we do not create voucher inventory or sales records.
+        // We only log a transaction record with detailed notes and update balances above.
+
+        const transactionNotes = (() => {
+          const parts: string[] = [];
+          parts.push('DStv Bill Payment');
+          if (amountFromCredit > 0) {
+            parts.push(
+              `Split: R${(saleAmount - amountFromCredit).toFixed(2)} from balance, R${amountFromCredit.toFixed(2)} from credit`
+            );
+          } else {
+            parts.push('Paid fully from balance');
+          }
+          if (response.data?.paymentReference || response.data?.reference) {
+            parts.push(`Ref: ${response.data.paymentReference ?? response.data.reference}`);
+          }
+          if (response.data?.status) {
+            parts.push(`Status: ${response.data.status}`);
+          }
+          return parts.join(' | ');
+        })();
+
+        const { error: transactionError } = await supabase.from('transactions').insert({
+          type: 'sale',
+          amount: saleAmount,
+          balance_after: safeBalance,
+          retailer_id: terminal.retailer_id,
+          notes: transactionNotes,
+        });
+
+        if (transactionError) {
+          console.error('Transaction creation error (DStv):', transactionError);
+          throw new Error(`Failed to create transaction record: ${transactionError.message}`);
+        }
+
+        // Note: We're handling balance updates directly in the database and terminal state
+        // The context updateBalanceAfterSale is not needed since we're managing state directly
+
+        // Also update the terminal object to reflect the new balance and credit
+        setTerminal((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            retailer_balance: newBalance,
+            retailer_credit_used: newCreditUsed,
+            retailer_commission_balance: prev.retailer_commission_balance + commissionAmount,
+          };
+        });
+      }
 
       setPaymentResult(response.data);
       setStep('success');
       onPaymentComplete(response.data);
     } catch (error: any) {
       console.error('Error processing payment:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
       setError(error.response?.data?.message || 'Payment processing failed.');
     } finally {
       setIsLoading(false);
@@ -222,7 +350,9 @@ export function DStvBillPayment({
           </div>
         )}
         <Button onClick={handleProcessPayment} disabled={isLoading} className="w-full">
-          {isLoading ? 'Processing Payment...' : `Pay R ${accountDetails ? (accountDetails.amountDue / 100).toFixed(2) : '0.00'}`}
+          {isLoading
+            ? 'Processing Payment...'
+            : `Pay R ${accountDetails ? (accountDetails.amountDue / 100).toFixed(2) : '0.00'}`}
         </Button>
       </div>
     </div>

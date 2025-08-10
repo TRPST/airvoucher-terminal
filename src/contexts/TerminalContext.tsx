@@ -55,8 +55,8 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateBalanceAfterSale = (saleAmount: number, commissionAmount: number) => {
     // Calculate new balance after sale and commission
     let newBalance = balance;
-    let newCredit = availableCredit;
-    
+    let newAvailableCredit = availableCredit;
+
     // First, deduct the sale amount from balance if possible
     if (balance >= saleAmount) {
       // If balance covers the full amount
@@ -65,15 +65,15 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // If balance doesn't cover it, use credit for the remainder
       const amountFromCredit = saleAmount - balance;
       newBalance = 0 + commissionAmount; // Balance becomes 0 plus any commission
-      newCredit = availableCredit - amountFromCredit; // Reduce available credit
+      newAvailableCredit = availableCredit - amountFromCredit; // Reduce available credit
     }
-    
+
     // Update both values in state
     setBalance(newBalance);
-    setAvailableCredit(newCredit);
-    
+    setAvailableCredit(newAvailableCredit);
+
     // Call setBalanceInfo to ensure context subscribers are notified
-    setBalanceInfo(newBalance, newCredit);
+    setBalanceInfo(newBalance, newAvailableCredit);
   };
 
   return (
