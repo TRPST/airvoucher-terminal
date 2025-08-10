@@ -90,6 +90,10 @@ export default function TerminalPOS() {
   const [showElectricityPayment, setShowElectricityPayment] = React.useState(false);
   const [showDStvPayment, setShowDStvPayment] = React.useState(false);
 
+  // Local receipt modal for bill payments (e.g., Electricity via RPC)
+  const [billReceiptData, setBillReceiptData] = React.useState<any | null>(null);
+  const [showBillReceipt, setShowBillReceipt] = React.useState(false);
+
   // Wrapper function to handle back to categories
   const handleBackToCategories = React.useCallback(() => {
     adminHandleBackToCategories();
@@ -175,18 +179,16 @@ export default function TerminalPOS() {
     handleConfirmSale(selectedVoucher, commissionData);
   }, [selectedCategory, selectedValue, findVoucher, handleConfirmSale, commissionData]);
 
-  // Handle electricity payment completion
+  // Handle electricity payment completion (show receipt dialog)
   const handleElectricityPaymentComplete = React.useCallback((paymentData: any) => {
-    console.log('Electricity payment completed:', paymentData);
-    // Here you can add logic to record the payment in your database
-    // and show success feedback
+    // paymentData is expected to be the RPC receipt
+    setBillReceiptData(paymentData);
+    setShowBillReceipt(true);
   }, []);
 
   // Handle DStv payment completion
   const handleDStvPaymentComplete = React.useCallback((paymentData: any) => {
     console.log('DStv payment completed:', paymentData);
-    // Here you can add logic to record the payment in your database
-    // and show success feedback
   }, []);
 
   return (
@@ -210,11 +212,15 @@ export default function TerminalPOS() {
           <ElectricityBillPayment
             onPaymentComplete={handleElectricityPaymentComplete}
             onBackToCategories={handleBackToCategories}
+            terminal={terminal}
+            setTerminal={setTerminal}
           />
         ) : showDStvPayment ? (
           <DStvBillPayment
             onPaymentComplete={handleDStvPaymentComplete}
             onBackToCategories={handleBackToCategories}
+            terminal={terminal}
+            setTerminal={setTerminal}
           />
         ) : showAdminOptions && selectedAdminOption === 'Account Balance' && terminal ? (
           <AccountBalanceScreen
@@ -258,8 +264,8 @@ export default function TerminalPOS() {
       {/* Dialogs and Feedback */}
       {showConfirmDialog && selectedCategory && selectedValue && (
         <ConfirmSaleDialog
-          voucherType={selectedCategory}
-          amount={selectedValue}
+          voucherType={selectedCategory || ''}
+          amount={selectedValue || 0}
           commissionRate={commissionData?.rate || 0}
           commissionAmount={commissionData?.amount || 0}
           isOverride={commissionData?.isOverride || false}
@@ -286,6 +292,18 @@ export default function TerminalPOS() {
         <SaleReceiptDialog
           receiptData={receiptData}
           onClose={handleCloseReceipt}
+          terminalName={terminal?.terminal_name || ''}
+          retailerName={terminal?.retailer_name || ''}
+        />
+      )}
+
+      {showBillReceipt && billReceiptData && (
+        <SaleReceiptDialog
+          receiptData={billReceiptData}
+          onClose={() => {
+            setShowBillReceipt(false);
+            setBillReceiptData(null);
+          }}
           terminalName={terminal?.terminal_name || ''}
           retailerName={terminal?.retailer_name || ''}
         />
