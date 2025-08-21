@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { ToastProvider } from '@/components/ToastProvider';
 import { Layout } from '@/components/Layout';
 import { TerminalProvider } from '@/contexts/TerminalContext';
+import { SaleProvider } from '@/contexts/SaleContext';
 import { useRouter } from 'next/router';
 import type { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
@@ -50,9 +51,11 @@ export default function App({ Component, pageProps }: AppProps) {
     <ThemeProvider attribute="class">
       <ToastProvider>
         <TerminalProvider>
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
+          <SaleProvider>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          </SaleProvider>
         </TerminalProvider>
       </ToastProvider>
     </ThemeProvider>

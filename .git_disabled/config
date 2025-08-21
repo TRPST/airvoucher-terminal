@@ -1,0 +1,36 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = https://github.com/TRPST/airvoucher-cashier.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "authentication"]
+	remote = origin
+	merge = refs/heads/authentication
+	vscode-merge-base = origin/authentication
+[branch "main"]
+	vscode-merge-base = origin/authentication
+	remote = origin
+	merge = refs/heads/main
+[branch "update--refactoring-codebase"]
+	vscode-merge-base = origin/main
+	remote = origin
+	merge = refs/heads/update--refactoring-codebase
+[pull]
+	rebase = false
+[branch "ott-custom-screen"]
+	vscode-merge-base = origin/main
+	remote = origin
+	merge = refs/heads/ott-custom-screen
+[branch "feat--updated-receipts"]
+	vscode-merge-base = origin/main
+	remote = origin
+	merge = refs/heads/feat--updated-receipts
+[branch "feat--terminal-refactoring"]
+	vscode-merge-base = origin/feat--updated-receipts
+	remote = origin
+	merge = refs/heads/feat--terminal-refactoring

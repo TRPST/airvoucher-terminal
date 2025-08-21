@@ -1,0 +1,16 @@
+# pack-refs with: peeled fully-peeled sorted 
+aca01c9aef021988992113ae68aa7baa6e617b79 refs/remotes/origin/authentication
+8377fa96f094676abca6d6378e07e397cded52e2 refs/remotes/origin/cashiers-portal
+a19b5dd3c51476647e55bf7142e0e661ae35b75e refs/remotes/origin/commission-groups
+50f549f0da59ef8a524db6c07d708fd17f48bb70 refs/remotes/origin/fixed-auth-issue
+d9b30f0b13da4358fc94155dafc647df1ac0542b refs/remotes/origin/main
+6ac49fcae20eab811e10e9680a715211635e4b0a refs/remotes/origin/production
+e0bce90a407700c41e27e22346e157f76a7cd500 refs/remotes/origin/retailers-sell
+6573f3628d3a7a749c5cd2b298bc37a7e9c9da07 refs/remotes/origin/sales-agent
+7c54ff0a650944cdd7c9b061d36b2e1faf3c6793 refs/remotes/origin/sales-agent-redone
+db5eb0d118780ba4c2512a547393adcee0478ae9 refs/remotes/origin/sticky-headers
+4a105bfe4e1f4d6862f5303e4a0c734c0c2587a2 refs/remotes/origin/subdomain-routing
+f5495757db8aea07ef85a352f69838f8600c6b80 refs/remotes/origin/supabase-auth-update
+6c7ac37ee36b4337e800b7704d91bb1d7c63b471 refs/remotes/origin/supabase-connection
+9328853963370ac30d7a21655d9913440d91a2e2 refs/remotes/origin/vouchers
+e0bce90a407700c41e27e22346e157f76a7cd500 refs/remotes/origin/we-did-it

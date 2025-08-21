@@ -1,0 +1,40 @@
+0000000000000000000000000000000000000000 aca01c9aef021988992113ae68aa7baa6e617b79 Your GitHub Username <jabulani.kunene@athstat.com> 1748710501 +0200	clone: from https://github.com/TRPST/airvoucher-new.git
+aca01c9aef021988992113ae68aa7baa6e617b79 6ac49fcae20eab811e10e9680a715211635e4b0a Your GitHub Username <jabulani.kunene@athstat.com> 1748710646 +0200	pull origin production: Fast-forward
+6ac49fcae20eab811e10e9680a715211635e4b0a 6b8bdd747ca7161c0204754488f28ca4bc75e1e7 Your GitHub Username <jabulani.kunene@athstat.com> 1748711281 +0200	commit: just focusing on cashier
+6b8bdd747ca7161c0204754488f28ca4bc75e1e7 6b8bdd747ca7161c0204754488f28ca4bc75e1e7 Your GitHub Username <jabulani.kunene@athstat.com> 1748711409 +0200	checkout: moving from authentication to main
+6b8bdd747ca7161c0204754488f28ca4bc75e1e7 c38b48a8ccbd816c0b204123a8818ebc8e50bea1 Your GitHub Username <jabulani.kunene@athstat.com> 1748711977 +0200	commit: balance
+c38b48a8ccbd816c0b204123a8818ebc8e50bea1 589e883241ce5ab17858d7c7708f11fdaf0b8131 Your GitHub Username <jabulani.kunene@athstat.com> 1748712030 +0200	commit: latest
+589e883241ce5ab17858d7c7708f11fdaf0b8131 c541548745166127f43e0deaf8c1a352b617c71a Your GitHub Username <jabulani.kunene@athstat.com> 1748880188 +0200	commit: latest
+c541548745166127f43e0deaf8c1a352b617c71a 6e5c30febc4837b569b5252c0c455d2016990d64 Your GitHub Username <jabulani.kunene@athstat.com> 1748881325 +0200	commit: added bill payments
+6e5c30febc4837b569b5252c0c455d2016990d64 6180514402740a5ed54cd65a9f6c349d6a79ced4 Your GitHub Username <jabulani.kunene@athstat.com> 1748881672 +0200	commit: styling
+6180514402740a5ed54cd65a9f6c349d6a79ced4 49a5b6cf2f5ac4f321bcf6294447d426cec9fbdf Your GitHub Username <jabulani.kunene@athstat.com> 1748882243 +0200	commit: styling
+49a5b6cf2f5ac4f321bcf6294447d426cec9fbdf 39841b1d6827fd8977b14dc57885436d64cd32a9 Your GitHub Username <jabulani.kunene@athstat.com> 1749028567 +0200	commit: latest on grid updates
+39841b1d6827fd8977b14dc57885436d64cd32a9 943a3ef11b48f8a0201aa96db18b4dd29baccfd3 Your GitHub Username <jabulani.kunene@athstat.com> 1749029529 +0200	commit: latest on logos
+943a3ef11b48f8a0201aa96db18b4dd29baccfd3 aab989fbee72a53084f87ef7a5c0667ad073b575 Your GitHub Username <jabulani.kunene@athstat.com> 1749030331 +0200	commit: latest on reordering
+aab989fbee72a53084f87ef7a5c0667ad073b575 f8ef721c4207c0cf77bb7ed6c4453badef7264e3 Your GitHub Username <jabulani.kunene@athstat.com> 1749143420 +0200	commit: latest on refactoring
+f8ef721c4207c0cf77bb7ed6c4453badef7264e3 f8ef721c4207c0cf77bb7ed6c4453badef7264e3 Your GitHub Username <jabulani.kunene@athstat.com> 1749143462 +0200	checkout: moving from main to update--refactoring-codebase
+f8ef721c4207c0cf77bb7ed6c4453badef7264e3 7d6b453eb59ef57704165a26dda4759956060c92 Your GitHub Username <jabulani.kunene@athstat.com> 1749143888 +0200	commit: latest on layout
+7d6b453eb59ef57704165a26dda4759956060c92 7603557e3ad900735cd0f4092bce9896fed880b9 Your GitHub Username <jabulani.kunene@athstat.com> 1749144856 +0200	commit: latest
+7603557e3ad900735cd0f4092bce9896fed880b9 959e3efdb6daae3b30892afb34547e8f49476756 Your GitHub Username <jabulani.kunene@athstat.com> 1749145549 +0200	commit: latest on refactoring
+959e3efdb6daae3b30892afb34547e8f49476756 9f2f2860a4a84a908bb2d50c99fef48df0964d2f Your GitHub Username <jabulani.kunene@athstat.com> 1749146500 +0200	commit: latest on refactoring
+9f2f2860a4a84a908bb2d50c99fef48df0964d2f f8ef721c4207c0cf77bb7ed6c4453badef7264e3 Your GitHub Username <jabulani.kunene@athstat.com> 1749146540 +0200	checkout: moving from update--refactoring-codebase to main
+f8ef721c4207c0cf77bb7ed6c4453badef7264e3 83b6cd256d54d1abf3ec098706d82ea1f233c915 Your GitHub Username <jabulani.kunene@athstat.com> 1749146543 +0200	pull --tags origin main: Fast-forward
+83b6cd256d54d1abf3ec098706d82ea1f233c915 bd9b48423cb38d0159a18d9e093d783f6c246caa Your GitHub Username <jabulani.kunene@athstat.com> 1749146595 +0200	pull --tags origin update--refactoring-codebase: Merge made by the 'ort' strategy.
+bd9b48423cb38d0159a18d9e093d783f6c246caa 85a0253d71d9dd7afa3b7493909a80435576c584 Your GitHub Username <jabulani.kunene@athstat.com> 1749653174 +0200	commit: using user_auth_id instead of cashier_auth_id
+85a0253d71d9dd7afa3b7493909a80435576c584 4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 Your GitHub Username <jabulani.kunene@athstat.com> 1749660511 +0200	commit: custom ott
+4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 Your GitHub Username <jabulani.kunene@athstat.com> 1749660533 +0200	checkout: moving from main to ott-custom-screen
+4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 Your GitHub Username <jabulani.kunene@athstat.com> 1749669017 +0200	checkout: moving from ott-custom-screen to main
+4d8d0b92f8de565ea9bffbd9a00aac8070ac8a32 dc483ab57a45b2c8944125cae83c8f21eecbc0b7 Your GitHub Username <jabulani.kunene@athstat.com> 1749669064 +0200	commit: made the back button work
+dc483ab57a45b2c8944125cae83c8f21eecbc0b7 aa8b70a032c70652df91e88ba3b6a92d472b6af6 Your GitHub Username <jabulani.kunene@athstat.com> 1749669163 +0200	commit: made the back button work
+aa8b70a032c70652df91e88ba3b6a92d472b6af6 3e257146cf40348c75ef146e20de51d316040368 Your GitHub Username <jabulani.kunene@athstat.com> 1750716707 +0200	pull --tags origin main: Fast-forward
+3e257146cf40348c75ef146e20de51d316040368 350e3ac45ea6f4b144b81b3c925d2165afb6eeb9 Your GitHub Username <jabulani.kunene@athstat.com> 1750746646 +0200	commit: latest on commissions
+350e3ac45ea6f4b144b81b3c925d2165afb6eeb9 c125a5668f664d58a4343692e3a3fce24e488024 Your GitHub Username <jabulani.kunene@athstat.com> 1750754375 +0200	commit: latest on unipin
+c125a5668f664d58a4343692e3a3fce24e488024 9407708b21e935826118b30803cf3ac9eea8bbb5 Your GitHub Username <jabulani.kunene@athstat.com> 1752596615 +0200	commit: latest
+9407708b21e935826118b30803cf3ac9eea8bbb5 9407708b21e935826118b30803cf3ac9eea8bbb5 Your GitHub Username <jabulani.kunene@athstat.com> 1752596640 +0200	checkout: moving from main to feat--updated-receipts
+9407708b21e935826118b30803cf3ac9eea8bbb5 1c8ec07cc9aa9eac294d019fdb8827b5831972bc Your GitHub Username <jabulani.kunene@athstat.com> 1753205046 +0200	commit: refactored terminal pages
+1c8ec07cc9aa9eac294d019fdb8827b5831972bc 1c8ec07cc9aa9eac294d019fdb8827b5831972bc Your GitHub Username <jabulani.kunene@athstat.com> 1753205069 +0200	checkout: moving from feat--updated-receipts to feat--terminal-refactoring
+1c8ec07cc9aa9eac294d019fdb8827b5831972bc 28938af61f604d1080b4173ff3ffb5aa00854893 Your GitHub Username <jabulani.kunene@athstat.com> 1753368820 +0200	commit: cursor tried... sigh
+28938af61f604d1080b4173ff3ffb5aa00854893 6f37ef922d731080d1df0d7ae5ae768c50e9bb0b Your GitHub Username <jabulani.kunene@athstat.com> 1753381234 +0200	commit: latest on data duration types
+6f37ef922d731080d1df0d7ae5ae768c50e9bb0b 67e81b7209e93356a5ffa0ad55ec890fa3095325 Your GitHub Username <jabulani.kunene@athstat.com> 1753383256 +0200	commit: latest
+67e81b7209e93356a5ffa0ad55ec890fa3095325 3ead00eb5c7af086ea28cde2ccd0689a917e27dc Your GitHub Username <jabulani.kunene@athstat.com> 1753431893 +0200	commit: latest on mobile data vouchers
+3ead00eb5c7af086ea28cde2ccd0689a917e27dc f15ddab16f1e753c495a8f10b28a84c9bacf212f Your GitHub Username <jabulani.kunene@athstat.com> 1753537809 +0200	commit: latest on simplifying things

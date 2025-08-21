@@ -31,6 +31,7 @@ export function POSValuesGrid({
   onBackToCategories,
 }: POSValuesGridProps) {
   const [ottAmounts] = React.useState([10, 20, 50, 100, 200, 1000, 2000]);
+  const [isOttLoading, setIsOttLoading] = React.useState(false);
 
   // OTT API Helper Functions
   const generateHash = (params: { [key: string]: any }) => {
@@ -57,9 +58,43 @@ export function POSValuesGrid({
 
   // Issue OTT Voucher
   const issueOttVoucher = async (amount: number) => {
-    // Don't make API call here - just select the value
-    // The actual OTT API call will happen in the sale confirmation flow
-    onValueSelect(amount);
+    setIsOttLoading(true);
+    try {
+      const uniqueReference = generateUniqueReference();
+      const params = {
+        branch: 'DEFAULT_BRANCH',
+        cashier: 'SYSTEM',
+        mobileForSMS: '',
+        till: 'WEB',
+        uniqueReference,
+        value: amount,
+        vendorCode: '11',
+      };
+
+      // Call our backend API route instead of OTT directly
+      const response = await axios.post('/api/ott/reseller/v1/GetVoucher', params, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.data.success === 'true') {
+        onValueSelect(amount);
+        toast.success('OTT voucher issued successfully');
+      } else {
+        throw new Error(response.data.message || 'Failed to issue voucher');
+      }
+    } catch (error: any) {
+      console.error('Error issuing OTT voucher:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error(error.response?.data?.message || 'Failed to issue OTT voucher');
+    } finally {
+      setIsOttLoading(false);
+    }
   };
 
   // Common header component
@@ -116,6 +151,7 @@ export function POSValuesGrid({
             <motion.button
               key={amount}
               onClick={() => issueOttVoucher(amount)}
+              disabled={isOttLoading}
               className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-primary hover:shadow-md"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -128,6 +164,11 @@ export function POSValuesGrid({
                 />
                 <span className="text-lg font-semibold">R {amount}</span>
               </div>
+              {isOttLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
             </motion.button>
           ))}
         </div>

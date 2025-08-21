@@ -1,18 +1,13 @@
 import * as React from 'react';
 import { CreditCard } from 'lucide-react';
-import { ConfettiOverlay } from '@/components/ConfettiOverlay';
-import { fetchRetailerCommissionData } from '@/actions';
+import { useRouter } from 'next/router';
 import useRequireRole from '@/hooks/useRequireRole';
 
 // Import hooks
 import { useTerminalData } from '@/hooks/useTerminalData';
 import { useVoucherCategories } from '@/components/terminal/VoucherCategoriesProcessor';
-import { useSaleManager } from '@/hooks/useSaleManager';
-import { useAdminOptions } from '@/hooks/useAdminOptions';
-import { useVoucherInventory } from '@/hooks/useVoucherInventory';
 
 // Import components
-import { TopNavBar } from '@/components/terminal/TopNavBar';
 import { POSGrid } from '@/components/terminal/POSGrid';
 import { POSValuesGrid } from '@/components/terminal/POSValuesGrid';
 import { AdminOptionsGrid } from '@/components/terminal/AdminOptionsGrid';
@@ -26,6 +21,8 @@ import { ElectricityBillPayment } from '@/components/terminal/ElectricityBillPay
 import { DStvBillPayment } from '@/components/terminal/DStvBillPayment';
 
 export default function TerminalPOS() {
+  const router = useRouter();
+
   // Protect this route - only allow cashier role
   const { isLoading, user, isAuthorized } = useRequireRole('terminal');
 
@@ -123,9 +120,9 @@ export default function TerminalPOS() {
 
   // Handle category selection
   const handleCategorySelect = React.useCallback(
-    async (category: string) => {
+    (category: string) => {
       if (category === 'Admin') {
-        adminOptions.handleCategorySelect(category);
+        router.push('/terminal/admin');
       } else if (category === 'Bill Payments') {
         adminOptions.handleCategorySelect(category);
       } else if (category === 'Electricity') {
@@ -137,13 +134,11 @@ export default function TerminalPOS() {
         adminOptions.setShowAdminOptions(false);
         adminOptions.setShowBillPayments(false);
       } else {
-        setSelectedCategory(category);
-        adminOptions.setShowAdminOptions(false);
-        adminOptions.setShowBillPayments(false);
-        await fetchVoucherInventory(category);
+        // Navigate to category-specific voucher values page for other services
+        router.push(`/terminal/category/${encodeURIComponent(category.toLowerCase())}`);
       }
     },
-    [adminOptions, fetchVoucherInventory, setSelectedCategory]
+    [router]
   );
 
   // Handle value selection with commission fetch
@@ -190,7 +185,7 @@ export default function TerminalPOS() {
   const handleDStvPaymentComplete = React.useCallback((paymentData: any) => {
     console.log('DStv payment completed:', paymentData);
   }, []);
-
+    
   return (
     <>
       {/* Main Content Area */}
@@ -256,6 +251,7 @@ export default function TerminalPOS() {
             onValueSelect={handleValueSelectWithCommission}
             onBackToCategories={handleBackToCategories}
           />
+
         ) : (
           <POSGrid categories={voucherCategories} onCategorySelect={handleCategorySelect} />
         )}
