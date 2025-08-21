@@ -123,6 +123,23 @@ export type CreateRetailerParams = {
   password: string;
 };
 
+// Network voucher types for mobile data categorization
+export type NetworkProvider = 'cellc' | 'mtn' | 'vodacom' | 'telkom';
+export type VoucherCategory = 'airtime' | 'data' | 'other';
+export type DataDuration = 'daily' | 'weekly' | 'monthly';
+
+// Enhanced voucher type with categorization fields
+export type VoucherType = {
+  id: string;
+  name: string;
+  supplier_commission_pct: number;
+  category: 'airtime' | 'data' | 'other' | null;
+  sub_category: 'daily' | 'weekly' | 'monthly' | null;
+  network_provider: 'cellc' | 'mtn' | 'vodacom' | 'telkom' | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ResponseType<T> = {
   data: T | null;
   error: PostgrestError | Error | null;

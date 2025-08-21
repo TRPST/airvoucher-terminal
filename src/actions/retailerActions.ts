@@ -407,6 +407,7 @@ export async function sellVoucher({
         serial_number: voucher.serial_number || '',
         ref_number: refNumber,
         retailer_name: retailer.name,
+        retailer_id: retailer.id,
         terminal_name: terminal.name,
         terminal_id: terminalId,
         product_name: voucherType.name,
@@ -414,6 +415,11 @@ export async function sellVoucher({
         retailer_commission: voucher.amount * commissionRate.retailer_pct,
         agent_commission: voucher.amount * commissionRate.agent_pct,
         timestamp: new Date().toISOString(),
+        amount_from_balance: voucher.amount, // Fallback assumption
+        amount_from_credit: 0, // Fallback assumption
+        redemption_instructions: '', // Will be populated from database
+        help_instructions: '', // Will be populated from database
+        website_url: '', // Will be populated from database
         instructions: 'Dial *136*(voucher number)#',
       };
     }
@@ -456,7 +462,7 @@ export async function fetchSalesHistory({
     created_at,
     sale_amount,
     retailer_commission,
-    ref_number,
+        ref_number,
     terminals(name),
     voucher_inventory(
       pin,
@@ -494,11 +500,11 @@ export async function fetchSalesHistory({
     sale_amount: sale.sale_amount,
     retailer_commission: sale.retailer_commission,
     terminal_name: sale.terminals?.name || '',
-    voucher_type: sale.voucher_inventory?.voucher_types?.name || 'Unknown',
-    voucher_amount: sale.voucher_inventory?.amount || sale.sale_amount,
-    pin: sale.voucher_inventory?.pin || 'N/A',
+    voucher_type: sale.voucher_inventory?.voucher_types?.name || '',
+    voucher_amount: sale.voucher_inventory?.amount || 0,
+    pin: sale.voucher_inventory?.pin || '',
     serial_number: sale.voucher_inventory?.serial_number,
-    ref_number: sale.ref_number || `REF-${sale.id.slice(0, 8)}`,
+    ref_number: `REF-${sale.id.slice(0, 8)}`, // Generate a reference number based on sale ID
   }));
 
   return { data: sales, error: null };

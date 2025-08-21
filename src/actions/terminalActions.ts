@@ -1,6 +1,13 @@
 import { createClient } from '@/utils/supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
 import { VoucherSaleReceipt, completeVoucherSale } from '@/lib/sale/completeVoucherSale';
+import {
+  NetworkProvider,
+  VoucherCategory,
+  DataDuration,
+  VoucherType as EnhancedVoucherType,
+  ResponseType,
+} from './types/adminTypes';
 
 export type TerminalProfile = {
   id: string;
@@ -142,6 +149,125 @@ export async function fetchAvailableVoucherTypes(): Promise<{
 
     return { data: uniqueNames, error: null };
   } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Fetch voucher inventory by voucher type ID (more efficient and reliable)
+ */
+export async function fetchVoucherInventoryByTypeId(voucherTypeId: string): Promise<{
+  data: VoucherType[] | null;
+  error: PostgrestError | Error | null;
+}> {
+  const supabase = createClient();
+
+  try {
+    console.log(`Fetching inventory for voucher type ID: ${voucherTypeId}`);
+
+    // Get the voucher type details first
+    const { data: voucherType, error: voucherTypeError } = await supabase
+      .from('voucher_types')
+      .select('id, name, supplier_commission_pct')
+      .eq('id', voucherTypeId)
+      .single();
+
+    if (voucherTypeError) {
+      console.error('Error fetching voucher type:', voucherTypeError);
+      return { data: null, error: voucherTypeError };
+    }
+
+    if (!voucherType) {
+      console.log(`No voucher type found with ID: ${voucherTypeId}`);
+      return { data: [], error: null };
+    }
+
+    // Get all available vouchers of this type with pagination to handle large inventories
+    let allVouchers: any[] = [];
+    let hasMore = true;
+    let page = 0;
+    const pageSize = 1000;
+
+    while (hasMore) {
+      // Query vouchers with status = available
+      const { data: pageData, error: pageError } = await supabase
+        .from('voucher_inventory')
+        .select('id, voucher_type_id, amount')
+        .eq('voucher_type_id', voucherTypeId)
+        .eq('status', 'available')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (pageError) {
+        console.error(`Error fetching voucher inventory page ${page}:`, pageError);
+        return { data: null, error: pageError };
+      }
+
+      if (pageData && pageData.length > 0) {
+        allVouchers = [...allVouchers, ...pageData];
+        page++;
+        console.log(
+          `Fetched page ${page} with ${pageData.length} vouchers. Total: ${allVouchers.length}`
+        );
+      } else {
+        hasMore = false;
+      }
+
+      // Safety check to prevent infinite loops
+      if (page > 10) {
+        console.warn('Stopped pagination after 10 pages to prevent infinite loops');
+        hasMore = false;
+      }
+    }
+
+    if (allVouchers.length === 0) {
+      console.log(`No available vouchers found for type ID: ${voucherTypeId}`);
+      return { data: [], error: null };
+    }
+
+    // Group vouchers by amount and count them
+    const amountGroups = new Map<
+      number,
+      { id: string; name: string; count: number; supplier_commission_pct: number }
+    >();
+
+    // Group and count vouchers by amount
+    allVouchers.forEach((voucher) => {
+      const amount = voucher.amount;
+
+      if (!amountGroups.has(amount)) {
+        amountGroups.set(amount, {
+          id: voucherType.id,
+          name: voucherType.name,
+          count: 1,
+          supplier_commission_pct: voucherType.supplier_commission_pct || 0,
+        });
+      } else {
+        const group = amountGroups.get(amount)!;
+        group.count++;
+      }
+    });
+
+    // Convert to array and sort by amount
+    const result: VoucherType[] = Array.from(amountGroups.entries())
+      .map(([amount, group]) => ({
+        id: group.id,
+        name: group.name,
+        amount,
+        count: group.count,
+        supplier_commission_pct: group.supplier_commission_pct,
+      }))
+      .sort((a, b) => a.amount - b.amount);
+
+    console.log(
+      `Grouped ${allVouchers.length} vouchers into ${result.length} amount options for ${voucherType.name}`
+    );
+
+    return { data: result, error: null };
+  } catch (err) {
+    console.error(`Unexpected error in fetchVoucherInventoryByTypeId for ${voucherTypeId}:`, err);
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err)),
@@ -459,7 +585,7 @@ export async function sellVoucher({
       voucher_inventory_id: voucher.id,
       retailer_id: retailer.id,
       terminal_id: terminalId, // Use the userId as the terminal_id
-      in_voucher_type_id: voucherTypeId,
+      in_voucher_type_id: voucherTypeId, // updated name
       sale_amount: voucher.amount,
       retailer_commission_pct: commissionRate.retailer_pct,
       agent_commission_pct: commissionRate.agent_pct,
@@ -485,6 +611,7 @@ export async function sellVoucher({
         serial_number: voucher.serial_number || '',
         ref_number: refNumber,
         retailer_name: retailer.name,
+        retailer_id: retailer.id,
         terminal_name: `${retailer.name} Terminal`,
         terminal_id: terminalId,
         product_name: voucherType.name,
@@ -492,7 +619,11 @@ export async function sellVoucher({
         retailer_commission: receiptData.retailer_commission || 0,
         agent_commission: receiptData.agent_commission || 0,
         timestamp: new Date().toISOString(),
+        amount_from_balance: voucher.amount, // Assume full amount from balance for now
+        amount_from_credit: 0, // Default to 0 for credit
         instructions: 'Dial *136*(voucher number)#',
+        help: '', // Default empty help
+        website_url: '', // Default empty website URL
       };
     }
 
@@ -555,4 +686,61 @@ export async function fetchSalesHistory(terminalId: string): Promise<{
       error: err instanceof Error ? err : new Error(String(err)),
     };
   }
+}
+
+/**
+ * Fetch voucher types by network provider
+ */
+export async function fetchVoucherTypesByNetwork(
+  networkProvider: NetworkProvider
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .ilike('network_provider', networkProvider)
+    .order('category, sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network and category
+ */
+export async function fetchVoucherTypesByNetworkAndCategory(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .ilike('network_provider', networkProvider)
+    .eq('category', category)
+    .order('sub_category, name');
+
+  return { data, error };
+}
+
+/**
+ * Fetch voucher types by network, category, and sub-category
+ */
+export async function fetchVoucherTypesByNetworkCategoryAndDuration(
+  networkProvider: NetworkProvider,
+  category: VoucherCategory,
+  subCategory: DataDuration
+): Promise<ResponseType<EnhancedVoucherType[]>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('voucher_types')
+    .select('*')
+    .ilike('network_provider', networkProvider)
+    .eq('category', category)
+    .eq('sub_category', subCategory)
+    .order('name');
+
+  return { data, error };
 }

@@ -3,7 +3,16 @@ import { sellVoucher, type VoucherType } from '@/actions';
 import { useTerminal } from '@/contexts/TerminalContext';
 import type { CashierTerminalProfile } from '@/actions';
 import axios from 'axios';
+import crypto from 'crypto-js';
 import { createClient } from '@/utils/supabase/client';
+
+// OTT API Configuration
+const OTT_CONFIG = {
+  BASE_URL: '/api/ott/reseller/v1',
+  username: process.env.NEXT_PUBLIC_OTT_API_USERNAME!,
+  password: process.env.NEXT_PUBLIC_OTT_API_PASSWORD!,
+  apiKey: process.env.NEXT_PUBLIC_OTT_API_KEY!,
+};
 
 type SaleInfo = {
   pin: string;
@@ -41,10 +50,6 @@ export function useSaleManager(
   // Sale process state
   const [isSelling, setIsSelling] = React.useState(false);
   const [saleError, setSaleError] = React.useState<string | null>(null);
-
-  const clearSaleError = () => {
-    setSaleError(null);
-  };
   const [saleInfo, setSaleInfo] = React.useState<SaleInfo | null>(null);
   const [receiptData, setReceiptData] = React.useState<ReceiptData | null>(null);
 
@@ -56,6 +61,20 @@ export function useSaleManager(
     setSelectedValue(value);
     setShowConfirmDialog(true);
   }, []);
+
+  // OTT API Helper Functions
+  const generateHash = (params: { [key: string]: any }) => {
+    const sortedKeys = Object.keys(params).sort();
+    const concatenatedString = [OTT_CONFIG.apiKey, ...sortedKeys.map((key) => params[key])].join(
+      ''
+    );
+    return crypto.SHA256(concatenatedString).toString();
+  };
+
+  const getAuthHeaders = () => {
+    const token = btoa(`${OTT_CONFIG.username}:${OTT_CONFIG.password}`);
+    return { Authorization: `Basic ${token}` };
+  };
 
   const generateUniqueReference = () =>
     `ref-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
@@ -84,19 +103,31 @@ export function useSaleManager(
             vendorCode: '11',
           };
 
-          const response = await axios.post('/api/ott/reseller/v1/GetVoucher', params, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
+          const hash = generateHash(params);
+
+          const response = await axios.post(
+            '/api/ott/reseller/v1/GetVoucher',
+            new URLSearchParams(
+              Object.entries({ ...params, hash }).reduce(
+                (acc, [key, value]) => {
+                  acc[key] = String(value);
+                  return acc;
+                },
+                {} as Record<string, string>
+              )
+            ),
+            {
+              headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+            }
+          );
 
           if (response.data.success === 'true') {
             const voucherData = JSON.parse(response.data.voucher);
-            console.log('OTT API Response Data:', response.data);
-            console.log('Parsed Voucher Data:', voucherData);
-
             const voucherCode = voucherData.voucher_code || voucherData.pin;
-            const serialNumber = voucherData.serial_number || voucherData.serialNumber;
+            const serialNumber = voucherData.serial_number;
 
             // Calculate new balance and credit
             const saleAmount = selectedValue;
@@ -128,72 +159,6 @@ export function useSaleManager(
               throw new Error('Failed to update retailer balance');
             }
 
-            // Create or find OTT voucher type
-            let ottVoucherTypeId = null;
-            let ottSupplierCommissionPct = null;
-            const { data: existingOttType, error: ottTypeError } = await supabase
-              .from('voucher_types')
-              .select('id, supplier_commission_pct')
-              .eq('name', 'OTT')
-              .single();
-
-            if (existingOttType) {
-              ottVoucherTypeId = existingOttType.id;
-              ottSupplierCommissionPct = existingOttType.supplier_commission_pct;
-            } else {
-              // Create OTT voucher type if it doesn't exist (with default 5% - can be changed later)
-              const { data: newOttType, error: createTypeError } = await supabase
-                .from('voucher_types')
-                .insert({
-                  name: 'OTT',
-                  supplier_commission_pct: 5.0, // Default 5% - can be updated later in admin
-                })
-                .select('id, supplier_commission_pct')
-                .single();
-
-              if (createTypeError) {
-                throw new Error('Failed to create OTT voucher type');
-              }
-              ottVoucherTypeId = newOttType.id;
-              ottSupplierCommissionPct = newOttType.supplier_commission_pct;
-            }
-
-            // Create voucher inventory record for OTT sale
-            const { data: voucherInventory, error: voucherInventoryError } = await supabase
-              .from('voucher_inventory')
-              .insert({
-                voucher_type_id: ottVoucherTypeId,
-                amount: saleAmount,
-                pin: voucherCode,
-                serial_number: serialNumber,
-                status: 'sold',
-              })
-              .select('id')
-              .single();
-
-            if (voucherInventoryError) {
-              throw new Error('Failed to create voucher inventory record');
-            }
-
-            // Calculate supplier commission using the rate from database
-            const supplierCommission = saleAmount * (ottSupplierCommissionPct / 100);
-
-            // Create sale record for sales history
-            const { error: salesError } = await supabase.from('sales').insert({
-              voucher_inventory_id: voucherInventory.id,
-              terminal_id: terminal.terminal_id,
-              sale_amount: saleAmount,
-              supplier_commission: supplierCommission,
-              retailer_commission: commissionAmount,
-              agent_commission: 0,
-              profit: supplierCommission - commissionAmount,
-              ref_number: uniqueReference,
-            });
-
-            if (salesError) {
-              throw new Error('Failed to create sales record');
-            }
-
             // Create transaction record
             const { error: transactionError } = await supabase.from('transactions').insert({
               type: 'sale',
@@ -212,7 +177,7 @@ export function useSaleManager(
               serial_number: serialNumber,
             });
 
-            const receiptData = {
+            setReceiptData({
               voucherType: selectedCategory,
               amount: saleAmount,
               commissionAmount: commissionAmount,
@@ -222,10 +187,7 @@ export function useSaleManager(
               ref_number: uniqueReference,
               timestamp: new Date().toISOString(),
               instructions: 'Use the voucher code to recharge your OTT account',
-            };
-
-            console.log('Receipt Data for OTT Sale:', receiptData);
-            setReceiptData(receiptData);
+            });
 
             // Update balance in context immediately after successful sale
             updateBalanceAfterSale(saleAmount, commissionAmount);
@@ -246,7 +208,6 @@ export function useSaleManager(
             setShowConfetti(true);
             setShowToast(true);
             setShowReceiptDialog(true);
-            setShowConfirmDialog(false);
 
             // Auto-hide confetti after 3 seconds
             setTimeout(() => {
@@ -320,7 +281,6 @@ export function useSaleManager(
             setShowConfetti(true);
             setShowToast(true);
             setShowReceiptDialog(true);
-            setShowConfirmDialog(false);
 
             // Auto-hide confetti after 3 seconds
             setTimeout(() => {
@@ -332,11 +292,9 @@ export function useSaleManager(
         setSaleError(
           `Failed to process sale: ${error instanceof Error ? error.message : String(error)}`
         );
-        setIsSelling(false);
-        // Don't close the dialog on error so user can see the error and try again
-        return;
       } finally {
         setIsSelling(false);
+        setShowConfirmDialog(false);
       }
     },
     [selectedCategory, selectedValue, terminal, updateBalanceAfterSale, setTerminal, supabase]
@@ -375,6 +333,5 @@ export function useSaleManager(
     handleValueSelect,
     handleConfirmSale,
     handleCloseReceipt,
-    clearSaleError,
   };
 }
