@@ -22,62 +22,71 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
     const validVoucherTypeNames = voucherTypeNames.filter((name) => name && name.trim() !== '');
 
     // Categorize voucher types into Mobile Networks and Other Services
-    // First, get unique mobile network providers
-    const networkProviders = ['Vodacom', 'MTN', 'CellC', 'Telkom'];
-    const availableNetworks = networkProviders.filter((network) =>
-      validVoucherTypeNames.some((name) => name && name.includes(network))
+    const mobileNetworkItems = validVoucherTypeNames
+      .filter((name) =>
+        ['Vodacom', 'MTN', 'CellC', 'Telkom'].some((network) => name && name.includes(network))
+      )
+      .map((name) => {
+        let icon = <CreditCard className="h-6 w-6" />;
+        let color = 'bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20';
+        let networkName = '';
+
+        if (name?.includes('Vodacom')) {
+          icon = (
+            <img
+              src="/assets/vouchers/vodacom-logo.png"
+              alt="Vodacom"
+              className="h-full w-full rounded-lg object-cover"
+            />
+          );
+          color = 'bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20';
+          networkName = 'Vodacom';
+        } else if (name?.includes('MTN')) {
+          icon = (
+            <img
+              src="/assets/vouchers/mtn-logo.jpg"
+              alt="MTN"
+              className="h-full w-full rounded-lg object-cover"
+            />
+          );
+          color =
+            'bg-yellow-500/5 hover:bg-yellow-500/10 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20';
+          networkName = 'MTN';
+        } else if (name?.includes('CellC')) {
+          icon = (
+            <img
+              src="/assets/vouchers/cellc-logo.png"
+              alt="Cell C"
+              className="h-full w-full rounded-lg object-cover"
+            />
+          );
+          color =
+            'bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20';
+          networkName = 'CellC';
+        } else if (name?.includes('Telkom')) {
+          icon = (
+            <img
+              src="/assets/vouchers/telkom-logo.png"
+              alt="Telkom"
+              className="h-full w-full rounded-lg object-cover"
+            />
+          );
+          color =
+            'bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20';
+          networkName = 'Telkom';
+        }
+
+        return {
+          name: networkName,
+          icon,
+          color,
+        };
+      });
+
+    // Deduplicate mobile networks by name
+    const mobileNetworks = mobileNetworkItems.filter(
+      (item, index, self) => index === self.findIndex((t) => t.name === item.name)
     );
-
-    const mobileNetworks = availableNetworks.map((network) => {
-      let icon = <CreditCard className="h-6 w-6" />;
-      let color = 'bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20';
-
-      if (network === 'Vodacom') {
-        icon = (
-          <img
-            src="/assets/vouchers/vodacom-logo.png"
-            alt="Vodacom"
-            className="h-full w-full rounded-lg object-cover"
-          />
-        );
-        color = 'bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20';
-      } else if (network === 'MTN') {
-        icon = (
-          <img
-            src="/assets/vouchers/mtn-logo.jpg"
-            alt="MTN"
-            className="h-full w-full rounded-lg object-cover"
-          />
-        );
-        color =
-          'bg-yellow-500/5 hover:bg-yellow-500/10 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20';
-      } else if (network === 'CellC') {
-        icon = (
-          <img
-            src="/assets/vouchers/cellc-logo.png"
-            alt="Cell C"
-            className="h-full w-full rounded-lg object-cover"
-          />
-        );
-        color =
-          'bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20';
-      } else if (network === 'Telkom') {
-        icon = (
-          <img
-            src="/assets/vouchers/telkom-logo.png"
-            alt="Telkom"
-            className="h-full w-full rounded-lg object-cover"
-          />
-        );
-        color = 'bg-teal-500/5 hover:bg-teal-500/10 dark:bg-teal-500/10 dark:hover:bg-teal-500/20';
-      }
-
-      return {
-        name: network,
-        icon,
-        color,
-      };
-    });
 
     // Filter otherServices to exclude any bill payment options
     const otherServices = validVoucherTypeNames
@@ -256,7 +265,7 @@ export function useVoucherCategories(voucherTypeNames: string[]) {
 
     // Add any remaining services not in the order array
     otherServices.forEach((service) => {
-      if (!reorderedServices.includes(service)) {
+      if (!reorderedServices.some((s) => s.name.toLowerCase() === service.name.toLowerCase())) {
         reorderedServices.push(service);
       }
     });

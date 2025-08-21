@@ -65,11 +65,15 @@ export const SaleReceiptDialog: React.FC<SaleReceiptDialogProps> = ({
   };
 
   if (!receiptData) return null;
-
-  const saleDate = receiptData.timestamp || receiptData.created_at || new Date().toISOString();
-  const voucherAmount = receiptData.amount || receiptData.sale_amount || 0;
-  const pin = receiptData.voucher_code || receiptData.pin || '';
-  const serialNumber = receiptData.serial_number || '';
+  const saleDate = receiptData.timestamp || new Date().toISOString();
+  const voucherAmount = Number(
+    receiptData.sale_amount ?? // RPC receipt field
+      receiptData.voucher_amount ??
+      receiptData.amount ??
+      0
+  );
+  const pin = receiptData.voucher_code || receiptData.pin || "";
+  const serialNumber = receiptData.serial_number || "";
   const refNumber = receiptData.ref_number || `REF-${Date.now()}`;
   const voucherType =
     receiptData.voucherType ||

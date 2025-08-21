@@ -462,6 +462,7 @@ export async function fetchSalesHistory({
     created_at,
     sale_amount,
     retailer_commission,
+        ref_number,
     terminals(name),
     voucher_inventory(
       pin,
