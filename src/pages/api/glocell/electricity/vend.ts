@@ -14,12 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { transactionReference, meterNumber } = req.body;
+  const { reference, meterNumber } = req.body;
 
-  if (!transactionReference || !meterNumber) {
-    return res
-      .status(400)
-      .json({ message: 'Transaction reference and meter number are required.' });
+  if (!reference || !meterNumber) {
+    return res.status(400).json({ message: 'Reference and meter number are required.' });
   }
 
   const glocellAuth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
@@ -27,10 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const requestBody = {
     requestId: requestId,
-    reference: requestId,
+    reference: reference, // Use the reference from confirmCustomer step
     vendMetaData: {
       transactionRequestDateTime: new Date().toISOString(),
-      transactionReference: transactionReference,
+      transactionReference: requestId, // Use requestId as transactionReference
       vendorId: VENDOR_ID,
       deviceId: DEVICE_ID,
       consumerAccountNumber: meterNumber,
