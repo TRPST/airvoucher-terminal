@@ -19,6 +19,10 @@ import { SuccessToast } from '@/components/terminal/SuccessToast';
 import { SaleReceiptDialog } from '@/components/dialogs/SaleReceiptDialog';
 import { ElectricityBillPayment } from '@/components/terminal/ElectricityBillPayment';
 import { DStvBillPayment } from '@/components/terminal/DStvBillPayment';
+import { useVoucherInventory } from '@/hooks/useVoucherInventory';
+import { useSaleManager } from '@/hooks/useSaleManager';
+import { fetchRetailerCommissionData } from '@/actions';
+import { useAdminOptions } from '@/hooks/useAdminOptions';
 
 export default function TerminalPOS() {
   const router = useRouter();
